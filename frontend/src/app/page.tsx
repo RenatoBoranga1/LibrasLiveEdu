@@ -42,7 +42,8 @@ export default function HomePage() {
       <AppHeader />
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:py-14">
         <div className="flex flex-col justify-center gap-6">
-          <ModeBadge />
+          <ModeBadge label={demoMode ? "modo demonstração" : "ambiente de produção"} />
+
           <div>
             <h1 className="max-w-3xl text-4xl font-black leading-tight text-ink dark:text-white md:text-6xl">
               LibrasLive Edu
@@ -52,6 +53,7 @@ export default function HomePage() {
               cards visuais, historico da aula, resumo automatico e glossario por disciplina.
             </p>
           </div>
+
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {roles.map((role) => {
               const Icon = role.icon;
@@ -67,6 +69,7 @@ export default function HomePage() {
             })}
           </div>
         </div>
+
         <div className="flex flex-col gap-4">
           <div className="rounded-lg border border-ink/10 bg-white p-6 shadow-soft dark:border-white/10 dark:bg-zinc-900">
             <div className="grid gap-4">
@@ -76,11 +79,13 @@ export default function HomePage() {
                   professor fala, aluno acompanha por legenda, avatar e cards visuais
                 </p>
               </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg bg-amber/15 p-4">
                   <p className="text-3xl font-black text-ink">150+</p>
                   <p className="text-sm font-semibold text-ink/70">palavras iniciais para curadoria</p>
                 </div>
+
                 <div className="rounded-lg bg-ocean/10 p-4">
                   <p className="text-3xl font-black text-ink dark:text-white">PWA</p>
                   <p className="text-sm font-semibold text-ink/70 dark:text-white/70">
@@ -90,7 +95,9 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
           <InstitutionalNotice />
+
           <Link href={demoMode ? "/join/AULA-4821" : "/aluno"} className="focus-ring rounded-lg">
             <span className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-amber px-4 py-3 text-base font-bold text-ink transition hover:bg-yellow-500">
               {demoMode ? "Entrar na demonstracao" : "Entrar como aluno"}

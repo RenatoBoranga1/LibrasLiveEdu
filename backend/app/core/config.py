@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     demo_mode: bool = True
+    secret_key: str = "change-me-in-production"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+    class_join_token_expire_hours: int = 8
+    transcript_retention_days: int = 30
     vlibras_api_url: str | None = None
     vlibras_api_key: str | None = None
     trusted_dictionary_sources: str = "VLibras"

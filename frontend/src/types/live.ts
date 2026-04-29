@@ -3,6 +3,11 @@ export type ClassSession = {
   title: string;
   subject_id: number | null;
   access_code: string;
+  join_token?: string | null;
+  join_token_expires_at?: string | null;
+  max_participants?: number;
+  allow_anonymous_students?: boolean;
+  require_teacher_approval?: boolean;
   status: "active" | "paused" | "finished";
   started_at?: string | null;
   finished_at?: string | null;
@@ -39,6 +44,22 @@ export type SignCard = {
 export type LiveEvent = {
   event: string;
   payload: Record<string, unknown>;
+};
+
+export type AuthUser = {
+  id: number;
+  name: string;
+  email: string;
+  role: "admin" | "professor" | "student" | "curator" | "guardian" | string;
+  guardian_email?: string | null;
+  school_name?: string | null;
+};
+
+export type AuthResponse = {
+  access_token: string;
+  refresh_token: string;
+  token_type: "bearer";
+  user: AuthUser;
 };
 
 export type Subject = {

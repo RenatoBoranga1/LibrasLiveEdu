@@ -6,15 +6,18 @@ import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { ModeBadge } from "@/components/ModeBadge";
+import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
   approveSign,
   getAdminStats,
   importSampleCsv,
   importSampleJson,
   importViaApi,
+  listSignAudit,
   listCategories,
   listSigns,
   listSubjects,
+  rejectSign,
   updateSign
 } from "@/services/api";
 import type { AdminStats, SignCategory, SignRecord, Subject } from "@/types/live";
@@ -35,6 +38,7 @@ const fallbackSigns: SignRecord[] = [
 ];
 
 export default function AdminPage() {
+  const auth = useRequireRole(["admin", "curator"]);
   const [stats, setStats] = useState<AdminStats>(fallbackStats);
   const [signs, setSigns] = useState<SignRecord[]>(fallbackSigns);
   const [word, setWord] = useState("");
@@ -44,6 +48,7 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<SignCategory[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selected, setSelected] = useState<SignRecord | null>(fallbackSigns[0]);
+  const [auditLog, setAuditLog] = useState<Array<{ id: number; action: string; created_at: string }>>([]);
   const [message, setMessage] = useState("Modo demo ativo: dados locais aparecem se a API estiver offline.");
 
   const params = useMemo(() => {
@@ -74,9 +79,30 @@ export default function AdminPage() {
 
   async function approveSelected() {
     if (!selected) return;
-    const updated = await approveSign(selected.id).catch(() => ({ ...selected, status: "approved" }));
+    const updated = await approveSign(selected.id).catch(() => null);
+    if (!updated) {
+      setMessage("Aprovacao bloqueada. Confirme fonte, licenca e evidencias antes de aprovar.");
+      return;
+    }
     setSelected(updated);
     setSigns((current) => current.map((sign) => (sign.id === updated.id ? updated : sign)));
+  }
+
+  function selectSign(sign: SignRecord) {
+    setSelected(sign);
+    listSignAudit(sign.id).then(setAuditLog).catch(() => setAuditLog([]));
+  }
+
+  async function rejectSelected() {
+    if (!selected) return;
+    const updated = await rejectSign(selected.id, selected.curator_notes || "Reprovado durante curadoria.").catch(() => null);
+    if (!updated) {
+      setMessage("Nao foi possivel reprovar agora. Verifique login de admin/curador.");
+      return;
+    }
+    setSelected(updated);
+    setSigns((current) => current.map((sign) => (sign.id === updated.id ? updated : sign)));
+    setMessage("Sinal rejeitado com justificativa registrada no historico.");
   }
 
   async function saveSelected() {
@@ -104,6 +130,17 @@ export default function AdminPage() {
   async function runApiImport() {
     const result = await importViaApi().catch(() => null);
     setMessage(result ? "Importação via API solicitada." : "VLibras/API não configurada ou backend offline.");
+  }
+
+  if (auth.loading) {
+    return (
+      <main className="min-h-screen bg-paper dark:bg-zinc-950">
+        <AppHeader />
+        <div role="status" className="mx-auto max-w-lg px-4 py-10 text-lg font-black text-ink dark:text-white">
+          Verificando permissao...
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -178,6 +215,7 @@ export default function AdminPage() {
                   <option value="approved">Aprovados</option>
                   <option value="pending">Pendentes</option>
                   <option value="review">Revisão</option>
+                  <option value="needs_specialist_review">Especialista</option>
                   <option value="rejected">Rejeitados</option>
                 </select>
               </div>
@@ -242,7 +280,7 @@ export default function AdminPage() {
                       <td className="px-3 py-3">{sign.source_name}</td>
                       <td className="px-3 py-3">{sign.license}</td>
                       <td className="rounded-r-lg px-3 py-3">
-                        <button className="focus-ring rounded-lg bg-white px-3 py-2 font-bold text-ocean dark:bg-zinc-950 dark:text-mint" onClick={() => setSelected(sign)}>
+                        <button className="focus-ring rounded-lg bg-white px-3 py-2 font-bold text-ocean dark:bg-zinc-950 dark:text-mint" onClick={() => selectSign(sign)}>
                           Revisar
                         </button>
                       </td>
@@ -282,9 +320,12 @@ export default function AdminPage() {
                       onChange={(event) => setSelected({ ...selected, curator_notes: event.target.value })}
                     />
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <ActionButton tone="quiet" onClick={saveSelected}>
                       Salvar
+                    </ActionButton>
+                    <ActionButton tone="danger" onClick={rejectSelected}>
+                      Reprovar
                     </ActionButton>
                     <ActionButton onClick={approveSelected}>
                       <Check className="h-5 w-5" aria-hidden="true" />
@@ -293,6 +334,16 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+            </section>
+            <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+              <h2 className="text-xl font-black text-ink dark:text-white">Historico de alteracoes</h2>
+              <div className="mt-3 space-y-2 text-sm font-semibold text-ink/70 dark:text-white/70">
+                {(auditLog.length ? auditLog : [{ id: 0, action: "Sem historico carregado", created_at: "" }]).map((item) => (
+                  <p key={item.id} className="rounded-lg bg-teal-50 p-3 dark:bg-zinc-800">
+                    {item.action} {item.created_at ? `- ${new Date(item.created_at).toLocaleString("pt-BR")}` : ""}
+                  </p>
+                ))}
+              </div>
             </section>
             <div className="rounded-lg bg-amber/15 p-4 text-sm font-bold leading-relaxed text-ink dark:text-white">{message}</div>
             <InstitutionalNotice />

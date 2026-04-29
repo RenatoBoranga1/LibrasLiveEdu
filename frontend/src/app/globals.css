@@ -27,6 +27,14 @@ textarea {
   font: inherit;
 }
 
+button,
+a,
+input,
+select,
+textarea {
+  min-height: 44px;
+}
+
 .high-contrast {
   background: #000 !important;
   color: #fff !important;
@@ -46,4 +54,15 @@ textarea {
 
 .focus-ring {
   @apply focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-amber;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

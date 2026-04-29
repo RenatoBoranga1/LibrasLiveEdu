@@ -1,27 +1,41 @@
 # LibrasLive Edu
 
-PWA educacional inclusiva para apoiar alunos surdos em sala de aula com legenda ao vivo, avatar em Libras, cards visuais, histórico, resumo automático e glossário visual por disciplina.
+PWA educacional inclusiva para apoiar alunos surdos ou com deficiencia auditiva em sala de aula com legenda ao vivo, avatar em Libras, cards visuais, historico, resumo automatico e glossario por disciplina.
 
-> Esta ferramenta é um recurso de apoio à acessibilidade e à inclusão educacional. Ela não substitui intérpretes humanos de Libras em situações formais, mas oferece suporte complementar por meio de legenda em tempo real, avatar em Libras e recursos visuais.
+> Esta ferramenta e um recurso de apoio a acessibilidade e a inclusao educacional. Ela nao substitui interpretes humanos de Libras em situacoes formais, mas oferece suporte complementar por meio de legenda em tempo real, avatar em Libras e recursos visuais.
 
-## Fluxo Principal
+## Status Real
 
-1. O professor acessa `/teacher`.
-2. Cria uma aula e inicia a transmissão demo.
-3. O sistema gera um código curto no padrão `AULA-4821`.
-4. O sistema gera o link `/join/[accessCode]` e um QR Code real.
-5. O aluno escaneia o QR Code pelo celular.
-6. O aluno acompanha legenda grande, avatar placeholder, cards visuais e histórico.
-7. O aluno salva palavras e revisa a aula em `/review/[accessCode]`.
-8. O administrador gerencia sinais em `/admin`.
+- Funcional em modo demo, sem depender de APIs externas.
+- Backend FastAPI com JWT, perfis, rotas protegidas, WebSocket separado para professor/aluno e tokens temporarios de aula.
+- Frontend Next.js PWA mobile-first com telas `/aluno`, `/join/[accessCode]`, `/teacher`, `/admin`, `/login`, `/register`, `/privacy`, `/terms`, `/consent` e `/data-rights`.
+- Banco PostgreSQL com migrations, seeds robustos, importador CSV/JSON/API autorizada e curadoria de sinais.
+- Pronto para integrar Speech-to-Text real e avatar real, mas sem prometer traducao perfeita.
 
-## Stack
+## Modo Demo x Producao
 
-- Frontend: Next.js, TypeScript, Tailwind CSS, PWA.
-- Backend: Python, FastAPI, WebSocket, SQLAlchemy, Alembic.
-- Banco/infra: PostgreSQL, Redis, Docker Compose.
-- Dados: seeds com categorias, disciplinas e mais de 150 palavras educacionais.
-- Android opcional: cliente nativo em `android/`, mas o foco principal agora é a PWA mobile-first.
+Use `DEMO_MODE=true` e `NEXT_PUBLIC_DEMO_MODE=true` para apresentacao. Esse modo permite aula demo, fallbacks locais e botao de demonstracao.
+
+Use `DEMO_MODE=false` e `NEXT_PUBLIC_DEMO_MODE=false` para producao. Nesse modo:
+
+- professor/admin precisam de login;
+- endpoints demo ficam bloqueados;
+- usuario demo nao deve ser usado;
+- aluno entra por `/aluno`, codigo ou QR Code;
+- tokens, admin e transcricoes nao sao cacheados pela PWA.
+
+Se `ENVIRONMENT=production` e `DEMO_MODE=true`, o backend emite alerta forte no startup.
+
+## Contas Seed
+
+Depois de `python scripts/seed_database.py`:
+
+- Admin: `admin@libraslive.local`
+- Professor: `professor.demo@libraslive.local`
+- Curador: `curador.demo@libraslive.local`
+- Senha: `LibrasLive#2026`
+
+Troque essas credenciais antes de qualquer validacao real.
 
 ## Rodar com Docker
 
@@ -42,9 +56,9 @@ URLs:
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
 - OpenAPI: http://localhost:8000/docs
+- Aluno: http://localhost:3000/aluno
 - Professor: http://localhost:3000/teacher
-- Aluno demo: http://localhost:3000/join/AULA-4821
-- Admin: http://localhost:3000/admin
+- Admin/Curador: http://localhost:3000/admin
 
 ## Rodar Localmente
 
@@ -86,54 +100,77 @@ npm run dev
 2. Rode backend com `--host 0.0.0.0`.
 3. Rode frontend com `npm run dev -- --hostname 0.0.0.0`.
 4. Descubra o IP do computador com `ipconfig`.
-5. Configure no frontend:
+5. Configure:
 
 ```env
 NEXT_PUBLIC_API_URL=http://IP_DO_COMPUTADOR:8000
 NEXT_PUBLIC_APP_URL=http://IP_DO_COMPUTADOR:3000
 ```
 
-6. Abra no computador `http://IP_DO_COMPUTADOR:3000/teacher`.
-7. Crie a aula e escaneie o QR Code no celular.
+6. Abra `http://IP_DO_COMPUTADOR:3000/teacher`.
+7. Faca login, crie a aula e escaneie o QR Code pelo celular.
 
-No celular, não use `localhost`, porque `localhost` aponta para o próprio celular.
+No celular, nao use `localhost`, porque `localhost` aponta para o proprio celular.
 
-## PWA
+## Fluxo Seguro da Aula
 
-O frontend inclui:
+- Professor logado cria aula em `/teacher`.
+- Backend gera `access_code` no formato `AULA-8F4K-29QX`.
+- Backend gera `join_token` seguro e temporario.
+- QR Code aponta para `/join/[accessCode]?token=...`.
+- Aluno anonimo pode entrar sem conta quando a aula permitir.
+- Aula finalizada bloqueia entrada e expira token.
+- WebSocket do aluno apenas recebe eventos.
+- WebSocket do professor exige JWT e permite enviar transcricao.
 
-- `public/manifest.json`
-- ícones SVG em vários tamanhos
-- `public/sw.js`
-- cache básico
-- `public/offline.html`
-- instrução visual para “Adicionar à tela inicial”
-- layout standalone e mobile-first
+Eventos WebSocket:
 
-Para instalação como PWA em produção, use HTTPS. Em rede local, o navegador pode limitar instalação e service worker dependendo do dispositivo.
+- `class.started`
+- `class.paused`
+- `class.finished`
+- `student.joined`
+- `student.left`
+- `transcript.segment.created`
+- `translation.created`
+- `keywords.detected`
+- `sign.card.created`
+- `summary.created`
+- `connection.warning`
+- `connection.restored`
+- `error`
 
-## Dados e Curadoria
+## Autenticacao e Perfis
 
-O seed local cria categorias, disciplinas e mais de 150 palavras educacionais. Todos os sinais do seed entram com:
+Endpoints:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/auth/refresh`
+
+Perfis:
+
+- `admin`: estatisticas, importacao, aprovacao, gestao ampla.
+- `curator`: revisao/aprovacao/rejeicao de sinais.
+- `professor`: criar, pausar, finalizar, resumir, exportar e anonimizar aulas proprias.
+- `student`: revisao e recursos pessoais quando autenticado.
+- `guardian`: consentimento e direitos de dados.
+
+## Dados e Curadoria de Libras
+
+O seed local cria categorias, disciplinas e mais de 150 palavras educacionais. Todos os registros do seed entram como:
 
 - `status = pending`
 - `source_name = Seed educacional inicial`
 - `license = Aguardando curadoria`
-- notas para revisão por especialista em Libras
+- `curator_notes = Registro inicial para curadoria por especialista em Libras`
 
-O sistema não inventa sinais oficiais de Libras e não marca dados demonstrativos como oficiais.
+O sistema nao inventa sinais oficiais de Libras. Sinais pendentes exibem aviso de curadoria.
 
-## Importação de Sinais
+## Importacao de Sinais
 
-O `LibrasDictionaryImporter` aceita:
-
-- CSV autorizado
-- JSON autorizado
-- API autorizada, incluindo ponto de integração para VLibras
-
-Ele valida campos obrigatórios, fonte, licença, duplicidade, preserva sinais aprovados sem confirmação e registra logs em `ImportJob`.
-
-Exemplos:
+O `LibrasDictionaryImporter` aceita CSV, JSON e API autorizada. Ele valida campos obrigatorios, fonte, licenca, duplicidade, preserva sinais aprovados sem confirmacao e registra relatorio em `ImportJob`.
 
 ```bash
 python scripts/import_libras_dictionary.py --source data/sample_libras_dictionary.json
@@ -141,17 +178,39 @@ python scripts/import_libras_dictionary.py --source data/sample_libras_dictionar
 python scripts/import_vlibras_dictionary.py
 ```
 
-## Modo Demo
+Nao faca scraping nao autorizado e nao use imagens, videos ou animacoes sem licenca.
 
-O modo demo funciona sem API externa:
+## Speech-to-Text e Avatar
 
-- aula simulada
-- transcrição simulada
-- avatar placeholder
-- cards a partir do seed
-- resumo fictício
-- professor enviando eventos por WebSocket
-- aluno recebendo eventos em `/join/[accessCode]`
+O backend possui providers placeholder:
+
+- `DemoSpeechToTextProvider`
+- `GoogleSpeechToTextProvider`
+- `AzureSpeechProvider`
+- `WhisperProvider`
+
+O frontend possui provider de reconhecimento de fala do navegador quando disponivel. Por padrao, o app envia texto transcrito e nao armazena audio bruto.
+
+O `AvatarPanel` renderiza video quando `avatar_video_url` existir, prepara `animation_payload_url` para renderer futuro e mostra fallback visual quando nao houver avatar.
+
+## PWA
+
+- Manifest completo.
+- Service worker com cache apenas de assets publicos seguros.
+- Pagina offline.
+- Instrucoes para instalar no Android/Chrome e iPhone/Safari.
+- Tokens, admin, aulas, transcricoes e endpoints sensiveis nao sao cacheados.
+- Logout solicita limpeza de cache.
+
+## LGPD e Criancas/Adolescentes
+
+Leia tambem `PRIVACY.md`.
+
+- Aluno anonimo nao precisa informar nome ou e-mail.
+- Palavras salvas anonimamente ficam no `localStorage` do dispositivo.
+- Transcricoes possuem retencao configuravel, com padrao de 30 dias em producao.
+- Audio bruto nao e armazenado por padrao.
+- Criancas e adolescentes devem usar com autorizacao da escola e/ou responsavel legal.
 
 ## Deploy
 
@@ -159,33 +218,54 @@ Frontend na Vercel:
 
 - Root: `frontend`
 - Build: `npm run build`
-- Output: `.next`
-- Variáveis:
-  - `NEXT_PUBLIC_API_URL=https://SEU-BACKEND`
-  - `NEXT_PUBLIC_APP_URL=https://SEU-FRONTEND`
+- Variaveis: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_DEMO_MODE`
 
 Backend no Render/Railway:
 
 - Root: `backend`
 - Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- Variáveis:
-  - `DATABASE_URL`
-  - `REDIS_URL`
-  - `CORS_ORIGINS`
-  - `DEMO_MODE`
-  - `VLIBRAS_API_URL`
-  - `VLIBRAS_API_KEY`
+- Variaveis: `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `SECRET_KEY`, `DEMO_MODE`, `VLIBRAS_API_URL`, `VLIBRAS_API_KEY`
 
 Banco:
 
 - PostgreSQL: Supabase ou Neon.
 - Redis: Upstash.
+- HTTPS obrigatorio em producao.
 
 ## Testes
+
+Backend:
 
 ```bash
 cd backend
 pytest
 ```
 
-Os testes cobrem normalização, divisão de frases, extração de palavras-chave e validações básicas do importador.
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run test
+npm run typecheck
+```
+
+## Checklist Antes de Uso Real
+
+- `DEMO_MODE=false` em producao.
+- `SECRET_KEY` forte e secreta.
+- CORS limitado ao dominio oficial.
+- HTTPS ativo.
+- Contas demo removidas ou senhas trocadas.
+- Admin/importacao protegidos.
+- Politica LGPD validada pela escola.
+- Termos e consentimento revisados.
+- Base de sinais revisada por especialista em Libras.
+- Contraste testado.
+- Navegacao por teclado testada.
+- Leitor de tela testado.
+- Celular Android testado.
+- iPhone testado.
+- Tablet testado.
+- Modo alto contraste testado.
+- Fonte grande testada.

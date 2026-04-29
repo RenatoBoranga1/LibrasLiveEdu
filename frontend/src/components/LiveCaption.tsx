@@ -7,8 +7,12 @@ export function LiveCaption({ text, enlarged }: { text: string; enlarged?: boole
         <Captions className="h-5 w-5" aria-hidden="true" />
         Legenda ao vivo
       </div>
-      <p className={`${enlarged ? "text-4xl md:text-5xl" : "text-2xl md:text-3xl"} min-h-28 font-black leading-tight`}>
-        {text || "Aguardando transmissão..."}
+      <p
+        role="status"
+        aria-live="polite"
+        className={`${enlarged ? "text-4xl md:text-5xl" : "text-2xl md:text-3xl"} min-h-28 font-black leading-tight`}
+      >
+        {text || "Aguardando transmissao..."}
       </p>
     </section>
   );

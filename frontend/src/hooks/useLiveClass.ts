@@ -8,21 +8,25 @@ type TranslationState = {
   status: string;
   glossText?: string | null;
   provider?: string | null;
+  avatarVideoUrl?: string | null;
+  animationPayloadUrl?: string | null;
 };
 
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+
 const demoSegments: LiveTranscriptSegment[] = [
-  { id: 1, originalText: "Bom dia, turma. Hoje vamos estudar tecnologia, dados e informação.", confidence: 0.98 },
-  { id: 2, originalText: "Um sistema usa entrada, processamento e saída para resolver problemas.", confidence: 0.97 },
-  { id: 3, originalText: "Na matemática, a soma e a divisão ajudam a comparar números.", confidence: 0.96 }
+  { id: 1, originalText: "Bom dia, turma. Hoje vamos estudar tecnologia, dados e informacao.", confidence: 0.98 },
+  { id: 2, originalText: "Um sistema usa entrada, processamento e saida para resolver problemas.", confidence: 0.97 },
+  { id: 3, originalText: "Na matematica, soma e divisao ajudam a comparar numeros.", confidence: 0.96 },
 ];
 
 const demoCards: SignCard[] = [
   { word: "tecnologia", status: "pending", curation: "pending", sourceName: "Seed educacional inicial" },
   { word: "dados", status: "pending", curation: "pending", sourceName: "Seed educacional inicial" },
-  { word: "sistema", status: "pending", curation: "pending", sourceName: "Seed educacional inicial" }
+  { word: "sistema", status: "pending", curation: "pending", sourceName: "Seed educacional inicial" },
 ];
 
-export function useLiveClass(accessCode: string | null) {
+export function useLiveClass(accessCode: string | null, token?: string | null, role: "student" | "teacher" = "student") {
   const [connected, setConnected] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -40,7 +44,8 @@ export function useLiveClass(accessCode: string | null) {
     let attempts = 0;
 
     const connect = () => {
-      socket = new WebSocket(`${WS_BASE}/ws/classes/${accessCode}`);
+      const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : "";
+      socket = new WebSocket(`${WS_BASE}/ws/classes/${encodeURIComponent(accessCode)}/${role}${tokenQuery}`);
       socket.onopen = () => {
         attempts = 0;
         setConnected(true);
@@ -52,15 +57,20 @@ export function useLiveClass(accessCode: string | null) {
         if (closedByHook) return;
         attempts += 1;
         setReconnecting(true);
-        setConnectionError("Conexão interrompida. Tentando reconectar...");
+        setConnectionError("Conexao interrompida. Tentando reconectar...");
         retryTimer = window.setTimeout(connect, Math.min(1000 * attempts, 6000));
       };
       socket.onerror = () => {
         setConnected(false);
-        setConnectionError("Não foi possível conectar ao tempo real agora.");
+        setConnectionError("Nao foi possivel conectar ao tempo real agora.");
       };
       socket.onmessage = (message) => {
-        const liveEvent = JSON.parse(message.data) as { event: string; payload: Record<string, unknown> };
+        let liveEvent: { event: string; payload: Record<string, unknown> };
+        try {
+          liveEvent = JSON.parse(message.data);
+        } catch {
+          return;
+        }
         if (liveEvent.event === "transcript.segment.created") {
           setSegments((current) => [liveEvent.payload as LiveTranscriptSegment, ...current].slice(0, 16));
         }
@@ -68,7 +78,9 @@ export function useLiveClass(accessCode: string | null) {
           setTranslation({
             status: String(liveEvent.payload.translationStatus ?? "unavailable"),
             glossText: liveEvent.payload.glossText as string | null,
-            provider: liveEvent.payload.provider as string | null
+            provider: liveEvent.payload.provider as string | null,
+            avatarVideoUrl: liveEvent.payload.avatarVideoUrl as string | null,
+            animationPayloadUrl: liveEvent.payload.animationPayloadUrl as string | null,
           });
         }
         if (liveEvent.event === "sign.card.created") {
@@ -81,6 +93,13 @@ export function useLiveClass(accessCode: string | null) {
             keywords: (liveEvent.payload.keywords ?? []) as string[],
           });
         }
+        if (liveEvent.event === "class.finished") {
+          setConnectionError("Esta aula foi encerrada.");
+          socket?.close();
+        }
+        if (liveEvent.event === "error") {
+          setConnectionError(String(liveEvent.payload.message ?? "Erro no tempo real."));
+        }
       };
     };
 
@@ -91,11 +110,12 @@ export function useLiveClass(accessCode: string | null) {
       if (retryTimer) window.clearTimeout(retryTimer);
       socket?.close();
     };
-  }, [accessCode]);
+  }, [accessCode, role, token]);
 
   const currentCaption = useMemo(() => segments[0]?.originalText ?? segments[0]?.text ?? "", [segments]);
 
   function injectDemo() {
+    if (!demoMode) return;
     const segment = demoSegments[demoStep % demoSegments.length];
     setSegments((current) => [segment, ...current].slice(0, 12));
     setCards(demoCards);
@@ -112,6 +132,6 @@ export function useLiveClass(accessCode: string | null) {
     currentCaption,
     translation,
     summary,
-    injectDemo
+    injectDemo,
   };
 }

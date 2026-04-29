@@ -22,9 +22,9 @@
       "url": "/teacher"
     },
     {
-      "name": "Aluno demo",
+      "name": "Aluno",
       "short_name": "Aluno",
-      "url": "/join/AULA-4821"
+      "url": "/aluno"
     }
   ]
 }

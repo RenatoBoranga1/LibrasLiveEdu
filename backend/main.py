@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import classes, public, signs, websocket_routes
+from app.api import auth, classes, privacy, public, signs, websocket_routes
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -24,6 +24,14 @@ app.add_middleware(
 )
 
 app.include_router(public.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
 app.include_router(classes.router, prefix="/api")
 app.include_router(signs.router, prefix="/api")
+app.include_router(privacy.router, prefix="/api")
 app.include_router(websocket_routes.router)
+
+
+@app.on_event("startup")
+async def startup_security_checks() -> None:
+    if settings.environment == "production" and settings.demo_mode:
+        print("SECURITY WARNING: DEMO_MODE=true em ENVIRONMENT=production. Desative antes de uso real.")

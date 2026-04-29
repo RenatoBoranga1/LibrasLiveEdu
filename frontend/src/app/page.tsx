@@ -1,29 +1,40 @@
 import Link from "next/link";
-import { MonitorUp, Shield, UserRound } from "lucide-react";
+import { MonitorUp, PlayCircle, Shield, UserRound } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { ModeBadge } from "@/components/ModeBadge";
+
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 
 const roles = [
   {
     href: "/teacher",
     label: "Sou Professor",
-    description: "Crie uma aula, transmita legendas e acompanhe os eventos em tempo real.",
-    icon: MonitorUp
+    description: "Crie aulas com codigo seguro, QR Code e legenda em tempo real.",
+    icon: MonitorUp,
   },
   {
-    href: "/join/AULA-4821",
+    href: "/aluno",
     label: "Sou Aluno",
-    description: "Entre com o código da sala, veja a legenda, o avatar e os cards visuais.",
-    icon: UserRound
+    description: "Digite o codigo da aula, escaneie o QR Code e acompanhe pelo celular.",
+    icon: UserRound,
   },
   {
     href: "/admin",
     label: "Administrador",
-    description: "Revise sinais, acompanhe pendências e importe dicionários autorizados.",
-    icon: Shield
-  }
+    description: "Revise sinais, proteja importacoes e acompanhe pendencias de curadoria.",
+    icon: Shield,
+  },
 ];
+
+if (demoMode) {
+  roles.push({
+    href: "/join/AULA-4821",
+    label: "Demonstracao",
+    description: "Abra uma aula simulada para testar legenda, avatar e cards visuais.",
+    icon: PlayCircle,
+  });
+}
 
 export default function HomePage() {
   return (
@@ -38,10 +49,10 @@ export default function HomePage() {
             </h1>
             <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink/75 dark:text-white/75">
               Plataforma educacional inclusiva para apoiar alunos surdos com legenda ao vivo, avatar em Libras,
-              cards visuais, histórico da aula, resumo automático e glossário por disciplina.
+              cards visuais, historico da aula, resumo automatico e glossario por disciplina.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {roles.map((role) => {
               const Icon = role.icon;
               return (
@@ -62,7 +73,7 @@ export default function HomePage() {
               <div className="rounded-lg bg-teal-50 p-5 dark:bg-zinc-800">
                 <p className="text-sm font-bold uppercase tracking-normal text-ocean dark:text-mint">Fluxo ao vivo</p>
                 <p className="mt-2 text-2xl font-black text-ink dark:text-white">
-                  fala do professor → legenda → avatar → cards → histórico
+                  professor fala, aluno acompanha por legenda, avatar e cards visuais
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -72,15 +83,17 @@ export default function HomePage() {
                 </div>
                 <div className="rounded-lg bg-ocean/10 p-4">
                   <p className="text-3xl font-black text-ink dark:text-white">PWA</p>
-                  <p className="text-sm font-semibold text-ink/70 dark:text-white/70">responsivo para celular e tablet</p>
+                  <p className="text-sm font-semibold text-ink/70 dark:text-white/70">
+                    mobile-first, instalavel e preparada para sala de aula
+                  </p>
                 </div>
               </div>
             </div>
           </div>
           <InstitutionalNotice />
-          <Link href="/join/AULA-4821" className="focus-ring rounded-lg">
+          <Link href={demoMode ? "/join/AULA-4821" : "/aluno"} className="focus-ring rounded-lg">
             <span className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-amber px-4 py-3 text-base font-bold text-ink transition hover:bg-yellow-500">
-              Entrar em modo aluno
+              {demoMode ? "Entrar na demonstracao" : "Entrar como aluno"}
             </span>
           </Link>
         </div>

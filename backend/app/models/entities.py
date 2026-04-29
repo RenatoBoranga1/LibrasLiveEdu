@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -12,6 +12,8 @@ class UserRole(str, Enum):
     admin = "admin"
     professor = "professor"
     student = "student"
+    curator = "curator"
+    guardian = "guardian"
 
 
 class ClassStatus(str, Enum):
@@ -32,6 +34,7 @@ class SignStatus(str, Enum):
     pending = "pending"
     review = "review"
     rejected = "rejected"
+    needs_specialist_review = "needs_specialist_review"
 
 
 class ImportSourceType(str, Enum):
@@ -55,9 +58,15 @@ class User(TimestampMixin, Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(30), default=UserRole.student.value, nullable=False)
+    birth_date: Mapped[date | None] = mapped_column(Date)
+    guardian_email: Mapped[str | None] = mapped_column(String(255))
+    school_name: Mapped[str | None] = mapped_column(String(220))
+    accepted_terms_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    accepted_privacy_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     class_sessions: Mapped[list["ClassSession"]] = relationship(back_populates="teacher")
     saved_words: Mapped[list["SavedWord"]] = relationship(back_populates="user")
+    consent_records: Mapped[list["ConsentRecord"]] = relationship(back_populates="user")
 
 
 class SignCategory(TimestampMixin, Base):
@@ -88,7 +97,12 @@ class ClassSession(TimestampMixin, Base):
     teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(220), nullable=False)
     subject_id: Mapped[int | None] = mapped_column(ForeignKey("subjects.id"))
-    access_code: Mapped[str] = mapped_column(String(12), unique=True, index=True, nullable=False)
+    access_code: Mapped[str] = mapped_column(String(24), unique=True, index=True, nullable=False)
+    join_token: Mapped[str | None] = mapped_column(String(160), unique=True, index=True)
+    join_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    max_participants: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
+    allow_anonymous_students: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    require_teacher_approval: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[str] = mapped_column(String(30), default=ClassStatus.active.value, nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -162,11 +176,24 @@ class Sign(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(30), default=SignStatus.pending.value, nullable=False)
     difficulty_level: Mapped[str | None] = mapped_column(String(60))
     curator_notes: Mapped[str | None] = mapped_column(Text)
+    approved_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejected_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_regional: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    region: Mapped[str | None] = mapped_column(String(120))
+    age_group_suitability: Mapped[str | None] = mapped_column(String(120))
+    educational_notes: Mapped[str | None] = mapped_column(Text)
+    risk_level: Mapped[str | None] = mapped_column(String(60))
 
     category: Mapped["SignCategory"] = relationship(back_populates="signs")
     subject: Mapped["Subject"] = relationship(back_populates="signs")
     keyword_detections: Mapped[list["KeywordDetected"]] = relationship(back_populates="sign")
     saved_words: Mapped[list["SavedWord"]] = relationship(back_populates="sign")
+    audit_logs: Mapped[list["SignAuditLog"]] = relationship(back_populates="sign")
 
 
 class KeywordDetected(Base):
@@ -227,3 +254,56 @@ class LessonSummary(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     class_session: Mapped["ClassSession"] = relationship(back_populates="summaries")
+
+
+class ConsentRecord(Base):
+    __tablename__ = "consent_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    guardian_name: Mapped[str | None] = mapped_column(String(160))
+    guardian_email: Mapped[str | None] = mapped_column(String(255))
+    consent_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    consent_text_version: Mapped[str] = mapped_column(String(40), default="v1", nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ip_address: Mapped[str | None] = mapped_column(String(80))
+    user_agent: Mapped[str | None] = mapped_column(String(500))
+
+    user: Mapped["User"] = relationship(back_populates="consent_records")
+
+
+class DataRetentionPolicy(Base):
+    __tablename__ = "data_retention_policies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    retention_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class SignAuditLog(Base):
+    __tablename__ = "sign_audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    sign_id: Mapped[int] = mapped_column(ForeignKey("signs.id"), nullable=False)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    action: Mapped[str] = mapped_column(String(80), nullable=False)
+    old_value: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    new_value: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    sign: Mapped["Sign"] = relationship(back_populates="audit_logs")
+
+
+class AccessLog(Base):
+    __tablename__ = "access_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    class_session_id: Mapped[int | None] = mapped_column(ForeignKey("class_sessions.id"))
+    action: Mapped[str] = mapped_column(String(120), nullable=False)
+    ip_address: Mapped[str | None] = mapped_column(String(80))
+    user_agent: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

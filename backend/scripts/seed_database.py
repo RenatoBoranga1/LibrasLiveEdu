@@ -1,5 +1,6 @@
 import json
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -9,7 +10,8 @@ from sqlalchemy import func, select  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.core.database import SessionLocal  # noqa: E402
-from app.models import ClassSession, ClassStatus, Sign, SignCategory, Subject, User, UserRole  # noqa: E402
+from app.core.security import create_join_token, hash_password, utc_now  # noqa: E402
+from app.models import ClassSession, ClassStatus, DataRetentionPolicy, Sign, SignCategory, Subject, User, UserRole  # noqa: E402
 from app.services.text_normalizer import TextNormalizerService  # noqa: E402
 
 DATA_DIR = ROOT / "data"
@@ -50,12 +52,48 @@ def seed_users(db: Session) -> None:
         ("Administrador Demo", "admin@libraslive.local", UserRole.admin.value),
         ("Professor Demo", "professor.demo@libraslive.local", UserRole.professor.value),
         ("Aluno Demo", "aluno.demo@libraslive.local", UserRole.student.value),
+        ("Curador Demo", "curador.demo@libraslive.local", UserRole.curator.value),
     ]
     for name, email, role in users:
         existing = db.scalar(select(User).where(User.email == email))
         if existing:
             continue
-        db.add(User(name=name, email=email, password_hash="demo-not-for-production", role=role))
+        now = utc_now()
+        db.add(
+            User(
+                name=name,
+                email=email,
+                password_hash=hash_password("LibrasLive#2026"),
+                role=role,
+                accepted_terms_at=now,
+                accepted_privacy_at=now,
+                school_name="Escola Demo LibrasLive",
+            )
+        )
+
+
+def seed_retention_policies(db: Session) -> None:
+    policies = [
+        ("TranscriptSegment", 30, "Transcricoes de aula expiram apos 30 dias em producao."),
+        ("LessonSummary", 180, "Resumos podem ser mantidos por ate 180 dias para revisao pedagogica."),
+        ("AccessLog", 90, "Logs tecnicos sao mantidos por ate 90 dias para seguranca."),
+        ("SavedWord", 365, "Palavras salvas por usuarios logados seguem a politica da escola."),
+    ]
+    for entity_name, retention_days, description in policies:
+        existing = db.scalar(select(DataRetentionPolicy).where(DataRetentionPolicy.entity_name == entity_name))
+        if existing:
+            existing.retention_days = retention_days
+            existing.description = description
+            existing.active = True
+            continue
+        db.add(
+            DataRetentionPolicy(
+                entity_name=entity_name,
+                retention_days=retention_days,
+                description=description,
+                active=True,
+            )
+        )
 
 
 def seed_categories(db: Session) -> dict[str, SignCategory]:
@@ -114,6 +152,10 @@ def seed_demo_class(db: Session) -> None:
             title="Aula demo: tecnologia, dados e informacao",
             subject_id=subject.id if subject else None,
             access_code="AULA-4821",
+            join_token=create_join_token(),
+            join_token_expires_at=utc_now() + timedelta(days=365),
+            allow_anonymous_students=True,
+            require_teacher_approval=False,
             status=ClassStatus.active.value,
         )
     )
@@ -122,6 +164,7 @@ def seed_demo_class(db: Session) -> None:
 def seed_database(include_demo: bool = True) -> dict[str, int]:
     with SessionLocal() as db:
         seed_users(db)
+        seed_retention_policies(db)
         categories = seed_categories(db)
         subjects = seed_subjects(db)
         created_words = seed_words(db, categories, subjects)

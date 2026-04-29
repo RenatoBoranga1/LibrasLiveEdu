@@ -9,7 +9,9 @@ import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { ModeBadge } from "@/components/ModeBadge";
 import { QrCode } from "@/components/QrCode";
-import { API_BASE, createClass, createSummary, finishClass, listSubjects, pauseClass, sendDemoTick } from "@/services/api";
+import { useRequireRole } from "@/features/auth/AuthProvider";
+import { createClass, createSummary, finishClass, listSubjects, pauseClass, sendDemoTick, sendTranscript } from "@/services/api";
+import { createBrowserSpeechRecognition } from "@/services/speech";
 import type { ClassSession, Subject } from "@/types/live";
 
 const fallbackSubjects: Subject[] = [
@@ -25,7 +27,10 @@ const fallbackLines = [
   "No final da aula faremos uma atividade em grupo.",
 ];
 
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+
 export default function TeacherPage() {
+  const auth = useRequireRole(["professor", "admin"]);
   const [subjects, setSubjects] = useState<Subject[]>(fallbackSubjects);
   const [title, setTitle] = useState("Aula demo: tecnologia, dados e informação");
   const [subjectId, setSubjectId] = useState<number | null>(fallbackSubjects[0].id);
@@ -36,6 +41,8 @@ export default function TeacherPage() {
   const [summary, setSummary] = useState<string | null>(null);
   const [mobileOrigin, setMobileOrigin] = useState("");
   const [copied, setCopied] = useState(false);
+  const [manualText, setManualText] = useState("");
+  const [microphoneStatus, setMicrophoneStatus] = useState("microfone aguardando");
 
   useEffect(() => {
     setMobileOrigin(process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin);
@@ -44,7 +51,7 @@ export default function TeacherPage() {
 
   const selectedSubject = useMemo(() => subjects.find((subject) => subject.id === subjectId), [subjects, subjectId]);
   const accessCode = classSession?.access_code ?? "AULA-4821";
-  const joinPath = `/join/${accessCode}`;
+  const joinPath = `/join/${accessCode}${classSession?.join_token ? `?token=${encodeURIComponent(classSession.join_token)}` : ""}`;
   const joinLink = `${mobileOrigin || "http://IP-DO-COMPUTADOR:3000"}${joinPath}`;
   const needsLanIp = joinLink.includes("localhost") || joinLink.includes("127.0.0.1");
 
@@ -72,7 +79,9 @@ export default function TeacherPage() {
       const created = await createClass({ title, subject_id: subjectId });
       setClassSession(created);
     } catch {
-      setClassSession({ id: 1, title, subject_id: subjectId, access_code: "AULA-4821", status: "active" });
+      if (demoMode) {
+        setClassSession({ id: 1, title, subject_id: subjectId, access_code: "AULA-4821", status: "active" });
+      }
     }
   }
 
@@ -108,10 +117,51 @@ export default function TeacherPage() {
     setSummary(result.summary);
   }
 
+  async function sendManualTranscript() {
+    if (!classSession || !manualText.trim()) return;
+    await sendTranscript(classSession.id, manualText.trim()).catch(() => undefined);
+    setTranscript((current) => [manualText.trim(), ...current].slice(0, 16));
+    setManualText("");
+  }
+
+  function activateMicrophone() {
+    const recognition = createBrowserSpeechRecognition();
+    if (!recognition) {
+      setMicrophoneStatus("reconhecimento de fala indisponivel neste navegador");
+      return;
+    }
+    recognition.onstart = () => setMicrophoneStatus("captando audio");
+    recognition.onerror = () => setMicrophoneStatus("erro no microfone");
+    recognition.onend = () => setMicrophoneStatus("microfone aguardando");
+    recognition.onresult = (event) => {
+      setMicrophoneStatus("transcrevendo");
+      const transcriptText = Array.from(event.results)
+        .map((result) => result[0]?.transcript)
+        .filter(Boolean)
+        .join(" ");
+      if (classSession && transcriptText) {
+        sendTranscript(classSession.id, transcriptText).catch(() => undefined);
+        setTranscript((current) => [transcriptText, ...current].slice(0, 16));
+      }
+    };
+    recognition.start();
+  }
+
   async function copyLink() {
     await navigator.clipboard?.writeText(joinLink);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  if (auth.loading) {
+    return (
+      <main className="min-h-screen bg-paper dark:bg-zinc-950">
+        <AppHeader />
+        <div role="status" className="mx-auto max-w-lg px-4 py-10 text-lg font-black text-ink dark:text-white">
+          Verificando permissao...
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -186,7 +236,7 @@ export default function TeacherPage() {
               </div>
               <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-bold ${live ? "bg-ocean text-white" : "bg-amber/20 text-ink dark:text-white"}`}>
                 <Mic className="h-4 w-4" aria-hidden="true" />
-                {live ? "microfone ativo" : "microfone aguardando"}
+                {live ? "aula transmitindo" : microphoneStatus}
               </span>
             </div>
 
@@ -221,6 +271,36 @@ export default function TeacherPage() {
                   </p>
                 )}
               </div>
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-black text-ink dark:text-white">Entrada de fala</h2>
+                <p className="mt-1 text-sm font-semibold text-ink/65 dark:text-white/65">
+                  O app envia apenas texto transcrito. Audio bruto nao e armazenado por padrao.
+                </p>
+              </div>
+              <ActionButton tone="quiet" onClick={activateMicrophone} disabled={!classSession}>
+                <Mic className="h-5 w-5" aria-hidden="true" />
+                Ativar microfone
+              </ActionButton>
+            </div>
+            <label className="mt-4 block text-sm font-bold text-ink/75 dark:text-white/75" htmlFor="manual-transcript">
+              Texto manual para teste ou apoio
+            </label>
+            <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
+              <textarea
+                id="manual-transcript"
+                className="focus-ring min-h-24 rounded-lg border border-ink/15 bg-white px-4 py-3 text-ink dark:border-white/15 dark:bg-zinc-950 dark:text-white"
+                value={manualText}
+                onChange={(event) => setManualText(event.target.value)}
+                placeholder="Digite um trecho da explicacao para enviar aos alunos"
+              />
+              <ActionButton onClick={sendManualTranscript} disabled={!classSession || !manualText.trim()}>
+                Enviar
+              </ActionButton>
             </div>
           </section>
 

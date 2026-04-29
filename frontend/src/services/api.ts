@@ -1,13 +1,40 @@
-import type { AdminStats, ClassReview, ClassSession, SignCategory, SignRecord, Subject } from "@/types/live";
+import type { AdminStats, AuthResponse, AuthUser, ClassReview, ClassSession, SignCategory, SignRecord, Subject } from "@/types/live";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 export const WS_BASE = API_BASE.replace(/^http/, "ws");
 
+export function getStoredAccessToken() {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem("libraslive.access_token");
+}
+
+export function getStoredRefreshToken() {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem("libraslive.refresh_token");
+}
+
+export function storeAuthTokens(response: AuthResponse) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem("libraslive.access_token", response.access_token);
+  window.sessionStorage.setItem("libraslive.refresh_token", response.refresh_token);
+  window.sessionStorage.setItem("libraslive.user", JSON.stringify(response.user));
+}
+
+export function clearAuthTokens() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem("libraslive.access_token");
+  window.sessionStorage.removeItem("libraslive.refresh_token");
+  window.sessionStorage.removeItem("libraslive.user");
+  navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_PRIVATE_CACHE" });
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getStoredAccessToken();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
   });
@@ -28,8 +55,9 @@ export function listCategories(): Promise<SignCategory[]> {
 export function createClass(payload: {
   title: string;
   subject_id?: number | null;
-  teacher_name?: string;
-  teacher_email?: string;
+  max_participants?: number;
+  allow_anonymous_students?: boolean;
+  require_teacher_approval?: boolean;
 }): Promise<ClassSession> {
   return request<ClassSession>("/api/classes", {
     method: "POST",
@@ -41,8 +69,9 @@ export function getClassByAccessCode(accessCode: string): Promise<ClassSession> 
   return request<ClassSession>(`/api/classes/access/${encodeURIComponent(accessCode)}`);
 }
 
-export function joinClass(accessCode: string): Promise<ClassSession> {
-  return request<ClassSession>(`/api/classes/access/${encodeURIComponent(accessCode)}/join`, { method: "POST" });
+export function joinClass(accessCode: string, token?: string | null): Promise<ClassSession> {
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  return request<ClassSession>(`/api/classes/access/${encodeURIComponent(accessCode)}/join${query}`, { method: "POST" });
 }
 
 export function sendDemoTick(classSessionId: number, step: number) {
@@ -50,6 +79,13 @@ export function sendDemoTick(classSessionId: number, step: number) {
     `/api/classes/${classSessionId}/demo-tick?step=${step}`,
     { method: "POST" }
   );
+}
+
+export function sendTranscript(classSessionId: number, text: string, confidence = 0.96) {
+  return request<Array<{ event: string; payload: Record<string, unknown> }>>(`/api/classes/${classSessionId}/transcript`, {
+    method: "POST",
+    body: JSON.stringify({ text, confidence }),
+  });
 }
 
 export function pauseClass(classSessionId: number) {
@@ -98,6 +134,19 @@ export function approveSign(signId: number): Promise<SignRecord> {
   return request<SignRecord>(`/api/signs/${signId}/approve`, { method: "POST" });
 }
 
+export function rejectSign(signId: number, reason: string): Promise<SignRecord> {
+  return request<SignRecord>(`/api/signs/${signId}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function listSignAudit(signId: number) {
+  return request<Array<{ id: number; action: string; created_at: string; old_value?: unknown; new_value?: unknown }>>(
+    `/api/signs/${signId}/audit`
+  );
+}
+
 export function updateSign(signId: number, payload: Partial<SignRecord>): Promise<SignRecord> {
   return request<SignRecord>(`/api/signs/${signId}`, {
     method: "PATCH",
@@ -134,4 +183,56 @@ export function importViaApi(providerName = "vlibras") {
       provider_name: providerName,
     }),
   });
+}
+
+export function login(payload: { email: string; password: string }): Promise<AuthResponse> {
+  return request<AuthResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function register(payload: {
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+  guardian_email?: string;
+  school_name?: string;
+  birth_date?: string;
+  accept_terms?: boolean;
+  accept_privacy?: boolean;
+}): Promise<AuthResponse> {
+  return request<AuthResponse>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getMe(): Promise<AuthUser> {
+  return request<AuthUser>("/api/auth/me");
+}
+
+export function logoutRequest() {
+  return request<{ status: string }>("/api/auth/logout", { method: "POST" });
+}
+
+export function submitConsent(payload: {
+  guardian_name?: string;
+  guardian_email?: string;
+  consent_type?: string;
+  consent_text_version?: string;
+}) {
+  return request("/api/consent", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getPrivacyPolicy() {
+  return request<{ notice: string; retention: unknown[] }>("/api/privacy/policy");
+}
+
+export function deleteMyData() {
+  return request<{ status: string }>("/api/me/data", { method: "DELETE" });
 }

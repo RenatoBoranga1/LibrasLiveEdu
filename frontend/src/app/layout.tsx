@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
+import { AuthProvider } from "@/features/auth/AuthProvider";
 import { ServiceWorker } from "./ServiceWorker";
 import "./globals.css";
 
@@ -19,8 +20,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
       <body className="min-h-screen bg-paper antialiased">
-        <ServiceWorker />
-        {children}
+        <AuthProvider>
+          <ServiceWorker />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

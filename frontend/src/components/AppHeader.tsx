@@ -16,10 +16,12 @@ export function AppHeader() {
             </span>
           </span>
         </Link>
-        <div className="hidden items-center gap-2 text-sm font-semibold text-ink/70 dark:text-white/70 sm:flex">
+        <nav className="hidden items-center gap-3 text-sm font-semibold text-ink/70 dark:text-white/70 sm:flex" aria-label="Navegacao principal">
           <GraduationCap className="h-4 w-4" aria-hidden="true" />
-          Sala inclusiva em tempo real
-        </div>
+          <Link className="focus-ring rounded-md px-2 py-1" href="/aluno">Aluno</Link>
+          <Link className="focus-ring rounded-md px-2 py-1" href="/teacher">Professor</Link>
+          <Link className="focus-ring rounded-md px-2 py-1" href="/login">Login</Link>
+        </nav>
       </div>
     </header>
   );

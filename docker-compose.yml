@@ -36,6 +36,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       DEMO_MODE: "true"
+      SECRET_KEY: ${SECRET_KEY:-change-me-use-a-long-random-value}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      CLASS_JOIN_TOKEN_EXPIRE_HOURS: ${CLASS_JOIN_TOKEN_EXPIRE_HOURS:-8}
+      TRANSCRIPT_RETENTION_DAYS: ${TRANSCRIPT_RETENTION_DAYS:-30}
       VLIBRAS_API_URL: ${VLIBRAS_API_URL:-}
       VLIBRAS_API_KEY: ${VLIBRAS_API_KEY:-}
       TRUSTED_DICTIONARY_SOURCES: ${TRUSTED_DICTIONARY_SOURCES:-VLibras}
@@ -57,6 +62,7 @@ services:
         NEXT_PUBLIC_API_URL: http://localhost:8000
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_DEMO_MODE: "true"
     ports:
       - "3000:3000"
     depends_on:

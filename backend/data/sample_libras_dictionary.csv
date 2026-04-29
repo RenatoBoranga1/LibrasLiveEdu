@@ -1,0 +1,4 @@
+word,category,subject,gloss,description,image_url,video_url,avatar_animation_url,source_name,source_url,license,regionalism,difficulty_level,curator_notes,trusted
+professor,Pessoas,,,"Registro demonstrativo sem midia oficial; deve ser validado por especialista.",,,,Base demonstrativa autorizada local,,CC BY 4.0 - exemplo local,,basico,Exemplo pendente de curadoria; nao e sinal oficial,false
+computador,Tecnologia,Informática,,"Registro demonstrativo sem midia oficial; deve ser validado por especialista.",,,,Base demonstrativa autorizada local,,CC BY 4.0 - exemplo local,,basico,Exemplo pendente de curadoria; nao e sinal oficial,false
+energia,Física,Física,,"Registro demonstrativo sem midia oficial; deve ser validado por especialista.",,,,Base demonstrativa autorizada local,,CC BY 4.0 - exemplo local,,intermediario,Exemplo pendente de curadoria; nao e sinal oficial,false

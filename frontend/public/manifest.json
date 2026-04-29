@@ -1,0 +1,30 @@
+{
+  "name": "LibrasLive Edu",
+  "short_name": "LibrasLive",
+  "description": "Legenda ao vivo, avatar em Libras e cards visuais para apoio educacional inclusivo.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8faf7",
+  "theme_color": "#0f766e",
+  "categories": ["education", "accessibility", "productivity"],
+  "icons": [
+    {"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+    {"src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any"},
+    {"src": "/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any"},
+    {"src": "/icon-maskable.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {
+      "name": "Professor",
+      "short_name": "Professor",
+      "url": "/teacher"
+    },
+    {
+      "name": "Aluno demo",
+      "short_name": "Aluno",
+      "url": "/join/AULA-4821"
+    }
+  ]
+}

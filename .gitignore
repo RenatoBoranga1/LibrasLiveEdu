@@ -1,0 +1,17 @@
+.env
+.idea/
+.venv/
+node_modules/
+.next/
+dist/
+build/
+__pycache__/
+*.py[cod]
+*.log
+backend/data/import_report_*.json
+postgres_data/
+android/.gradle/
+android/.gradle-user/
+android/.android/
+android/local.properties
+android/app/build/

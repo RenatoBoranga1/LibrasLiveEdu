@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f8faf7;
+  color: #10201c;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.high-contrast {
+  background: #000 !important;
+  color: #fff !important;
+}
+
+.high-contrast * {
+  border-color: #fff !important;
+}
+
+.high-contrast button,
+.high-contrast a,
+.high-contrast input,
+.high-contrast select,
+.high-contrast textarea {
+  outline: 2px solid #fff;
+}
+
+.focus-ring {
+  @apply focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-amber;
+}

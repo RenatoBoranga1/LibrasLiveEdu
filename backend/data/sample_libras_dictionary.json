@@ -1,0 +1,44 @@
+{
+  "source_notice": "Arquivo demonstrativo para testar o importador. Nao contem midia oficial e nao deve ser tratado como base oficial de Libras.",
+  "items": [
+    {
+      "word": "biblioteca",
+      "category": "Lugares",
+      "subject": "Português",
+      "description": "Registro demonstrativo sem midia oficial; deve ser validado por especialista.",
+      "source_name": "Base demonstrativa autorizada local",
+      "source_url": "",
+      "license": "CC BY 4.0 - exemplo local",
+      "regionalism": "",
+      "difficulty_level": "basico",
+      "curator_notes": "Exemplo pendente de curadoria; nao e sinal oficial.",
+      "trusted": false
+    },
+    {
+      "word": "experimento",
+      "category": "Ciências",
+      "subject": "Ciências",
+      "description": "Registro demonstrativo sem midia oficial; deve ser validado por especialista.",
+      "source_name": "Base demonstrativa autorizada local",
+      "source_url": "",
+      "license": "CC BY 4.0 - exemplo local",
+      "regionalism": "",
+      "difficulty_level": "intermediario",
+      "curator_notes": "Exemplo pendente de curadoria; nao e sinal oficial.",
+      "trusted": false
+    },
+    {
+      "word": "algoritmo",
+      "category": "Tecnologia",
+      "subject": "Informática",
+      "description": "Registro demonstrativo sem midia oficial; deve ser validado por especialista.",
+      "source_name": "Base demonstrativa autorizada local",
+      "source_url": "",
+      "license": "CC BY 4.0 - exemplo local",
+      "regionalism": "",
+      "difficulty_level": "intermediario",
+      "curator_notes": "Exemplo pendente de curadoria; nao e sinal oficial.",
+      "trusted": false
+    }
+  ]
+}

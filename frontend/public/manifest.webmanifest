@@ -1,0 +1,12 @@
+{
+  "name": "LibrasLive Edu",
+  "short_name": "LibrasLive",
+  "description": "Legenda ao vivo, avatar em Libras e recursos visuais para apoio educacional inclusivo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8faf7",
+  "theme_color": "#0f766e",
+  "icons": [
+    {"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml"}
+  ]
+}

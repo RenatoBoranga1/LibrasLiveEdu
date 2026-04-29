@@ -1,0 +1,15 @@
+[
+  {"name": "Português", "description": "Leitura, escrita, gramatica e interpretacao."},
+  {"name": "Matemática", "description": "Numeros, operacoes, geometria e resolucao de problemas."},
+  {"name": "Ciências", "description": "Investigacao cientifica e fenomenos naturais."},
+  {"name": "Biologia", "description": "Estudo dos seres vivos e sistemas biologicos."},
+  {"name": "Química", "description": "Materia, substancias e transformacoes."},
+  {"name": "Física", "description": "Movimento, energia, forcas e luz."},
+  {"name": "História", "description": "Tempo historico, sociedade e cultura."},
+  {"name": "Geografia", "description": "Espaco, mapas, clima, relevo e sociedade."},
+  {"name": "Informática", "description": "Computadores, internet, dados e sistemas."},
+  {"name": "Inglês", "description": "Lingua inglesa e comunicacao basica."},
+  {"name": "Projeto de Vida", "description": "Planejamento, escolhas, convivencia e futuro."},
+  {"name": "Administração", "description": "Organizacao, processos e gestao."},
+  {"name": "Tecnologia", "description": "Tecnologias digitais, inovacao e cultura maker."}
+]

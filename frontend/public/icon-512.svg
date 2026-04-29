@@ -1,0 +1,7 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LibrasLive Edu">
+  <rect width="512" height="512" rx="92" fill="#0f766e"/>
+  <circle cx="158" cy="164" r="54" fill="#d9f99d"/>
+  <path d="M129 244h58c54 0 98 44 98 98v20H31v-20c0-54 44-98 98-98Z" fill="#f8faf7"/>
+  <path d="M302 145h113c26 0 47 21 47 47v81c0 26-21 47-47 47h-48l-57 51v-51h-8c-26 0-47-21-47-47v-81c0-26 21-47 47-47Z" fill="#f59e0b"/>
+  <path d="M312 208h90M312 250h65" stroke="#10201c" stroke-width="24" stroke-linecap="round"/>
+</svg>

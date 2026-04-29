@@ -27,8 +27,8 @@ export function HelpButton() {
               </button>
             </div>
             <div className="mt-4 grid gap-2 text-sm font-semibold leading-relaxed">
-              <p>A legenda continua aparecendo mesmo quando o avatar nao esta disponivel.</p>
-              <p>Cards pendentes nao sao sinais oficiais. Eles aguardam curadoria de especialista em Libras.</p>
+              <p>A legenda continua aparecendo mesmo quando o avatar não está disponível.</p>
+              <p>Cards pendentes não são sinais oficiais. Eles aguardam curadoria de especialista em Libras.</p>
               <p>Use Fonte grande, Alto contraste ou Modo foco para facilitar a leitura.</p>
             </div>
           </section>

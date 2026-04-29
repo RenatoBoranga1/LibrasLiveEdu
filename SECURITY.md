@@ -1,12 +1,12 @@
 # Security
 
-LibrasLive Edu trata dados educacionais e de acessibilidade. Use HTTPS, segredo forte e contas com menor privilegio possivel antes de qualquer uso real.
+LibrasLive Edu trata dados educacionais e de acessibilidade. Use HTTPS, segredo forte e contas com menor privilégio possível antes de qualquer uso real.
 
 ## Autenticacao
 
-- JWT HS256 com `SECRET_KEY` configuravel.
+- JWT HS256 com `SECRET_KEY` configurável.
 - Access token curto e refresh token separado.
-- Tokens sao guardados no `sessionStorage` do navegador, nao no `localStorage`.
+- Tokens são guardados no `sessionStorage` do navegador, não no `localStorage`.
 - Logout limpa tokens e solicita limpeza de cache da PWA.
 
 ## Perfis
@@ -32,15 +32,15 @@ Rotas administrativas, importacao e aprovacao de sinais exigem token e role adeq
 - `DEMO_MODE=false`
 - `SECRET_KEY` longa, aleatoria e fora do repositorio
 - HTTPS obrigatorio
-- CORS restrito ao dominio oficial
+- CORS restrito ao domínio oficial
 - Banco e Redis com credenciais fortes
-- Logs sem audio bruto e sem tokens
+- Logs sem áudio bruto e sem tokens
 
 ## Conteudo Sensivel
 
-- Nao armazenar audio bruto sem consentimento especifico.
-- Nao enviar dados sensiveis para servicos externos sem aviso, base legal e contrato adequado.
-- Nao cachear transcricoes, tokens, admin ou endpoints privados no service worker.
+- Não armazenar áudio bruto sem consentimento específico.
+- Não enviar dados sensíveis para serviços externos sem aviso, base legal e contrato adequado.
+- Não cachear transcrições, tokens, admin ou endpoints privados no service worker.
 
 ## Vulnerabilidades
 

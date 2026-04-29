@@ -12,12 +12,12 @@ type TranslationState = {
   animationPayloadUrl?: string | null;
 };
 
-const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 const demoSegments: LiveTranscriptSegment[] = [
-  { id: 1, originalText: "Bom dia, turma. Hoje vamos estudar tecnologia, dados e informacao.", confidence: 0.98 },
-  { id: 2, originalText: "Um sistema usa entrada, processamento e saida para resolver problemas.", confidence: 0.97 },
-  { id: 3, originalText: "Na matematica, soma e divisao ajudam a comparar numeros.", confidence: 0.96 },
+  { id: 1, originalText: "Bom dia, turma. Hoje vamos estudar tecnologia, dados e informação.", confidence: 0.98 },
+  { id: 2, originalText: "Um sistema usa entrada, processamento e saída para resolver problemas.", confidence: 0.97 },
+  { id: 3, originalText: "Na matemática, soma e divisão ajudam a comparar números.", confidence: 0.96 },
 ];
 
 const demoCards: SignCard[] = [
@@ -62,7 +62,7 @@ export function useLiveClass(accessCode: string | null, token?: string | null, r
       };
       socket.onerror = () => {
         setConnected(false);
-        setConnectionError("Nao foi possivel conectar ao tempo real agora.");
+        setConnectionError("Não foi possível conectar ao tempo real agora.");
       };
       socket.onmessage = (message) => {
         let liveEvent: { event: string; payload: Record<string, unknown> };

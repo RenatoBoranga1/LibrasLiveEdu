@@ -7,9 +7,9 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const tones = {
   primary: "bg-ocean text-white hover:bg-teal-800",
-  secondary: "bg-amber text-ink hover:bg-yellow-500",
+  secondary: "bg-yellow-400 text-ink hover:bg-yellow-300",
   quiet: "bg-white text-ink border border-ink/10 hover:border-ocean/40 dark:bg-zinc-900 dark:text-white dark:border-white/10",
-  danger: "bg-coral text-white hover:bg-orange-700"
+  danger: "bg-red-700 text-white hover:bg-red-800"
 };
 
 export function ActionButton({ children, tone = "primary", className = "", ...props }: Props) {

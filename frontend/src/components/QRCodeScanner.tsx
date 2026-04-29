@@ -22,7 +22,7 @@ export function QRCodeScanner({
     if (!file) return;
     const browserWindow = window as typeof window & { BarcodeDetector?: BarcodeDetectorLike };
     if (!browserWindow.BarcodeDetector) {
-      setMessage("Leitor automatico indisponivel neste navegador. Digite o codigo mostrado pelo professor.");
+      setMessage("Leitor automático indisponível neste navegador. Digite o código mostrado pelo professor.");
       onManualFocus?.();
       return;
     }
@@ -33,12 +33,12 @@ export function QRCodeScanner({
       const rawValue = codes[0]?.rawValue;
       if (rawValue) {
         onDetected?.(rawValue);
-        setMessage("QR Code lido com sucesso.");
+      setMessage("QR Code lido com sucesso.");
       } else {
-        setMessage("Nao encontrei um QR Code nessa imagem.");
+      setMessage("Não encontrei um QR Code nessa imagem.");
       }
     } catch {
-      setMessage("Nao foi possivel ler o QR Code. Digite o codigo manualmente.");
+      setMessage("Não foi possível ler o QR Code. Digite o código manualmente.");
       onManualFocus?.();
     } finally {
       event.target.value = "";

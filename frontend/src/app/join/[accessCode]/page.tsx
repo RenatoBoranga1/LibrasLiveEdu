@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookmarkPlus, CaptionsOff, History, RotateCcw } from "lucide-react";
+import { BookmarkPlus, CaptionsOff, History, Maximize2, Minimize2, RotateCcw, Trash2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { AccessibleModeToggle } from "@/components/AccessibleModeToggle";
 import { AvatarPanel } from "@/components/AvatarPanel";
@@ -15,11 +15,11 @@ import { getClassByAccessCode, joinClass, saveWord } from "@/services/api";
 import type { ClassSession, SignCard } from "@/types/live";
 import { useLiveClass } from "@/hooks/useLiveClass";
 
-const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 export default function JoinClassPage() {
   const params = useParams<{ accessCode: string }>();
-  const accessCode = decodeURIComponent(params.accessCode ?? "AULA-4821").toUpperCase();
+  const accessCode = decodeURIComponent(params.accessCode ?? (demoMode ? "AULA-4821" : "")).toUpperCase();
   const [joinToken, setJoinToken] = useState<string | null>(null);
   const live = useLiveClass(accessCode, joinToken, "student");
   const [classSession, setClassSession] = useState<ClassSession | null>(null);
@@ -30,6 +30,7 @@ export default function JoinClassPage() {
   const [displayCaption, setDisplayCaption] = useState("");
   const [savedWords, setSavedWords] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  const [classEnded, setClassEnded] = useState(false);
   const [viewMode, setViewMode] = useState<LiveViewMode>("full");
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function JoinClassPage() {
       .catch((error) => {
         if (String(error).includes("410")) {
           setNotice("Esta aula foi encerrada.");
+          setClassEnded(true);
           return;
         }
         return getClassByAccessCode(accessCode)
@@ -55,7 +57,7 @@ export default function JoinClassPage() {
             if (demoMode) {
               setClassSession({ id: 1, title: "Aula demo", subject_id: null, access_code: accessCode, status: "active" });
             } else {
-              setNotice("Nao foi possivel entrar nesta aula. Confira o codigo com o professor.");
+              setNotice("Não encontramos essa aula. Confira o código com o professor e tente novamente.");
             }
           });
       })
@@ -69,6 +71,12 @@ export default function JoinClassPage() {
   }, [captionPaused, live.currentCaption]);
 
   useEffect(() => {
+    if (live.connectionError?.toLowerCase().includes("encerrada")) {
+      setClassEnded(true);
+    }
+  }, [live.connectionError]);
+
+  useEffect(() => {
     const saved = window.localStorage.getItem(`libraslive.saved.${accessCode}`);
     if (saved) setSavedWords(JSON.parse(saved));
   }, [accessCode]);
@@ -77,6 +85,13 @@ export default function JoinClassPage() {
   const showAvatar = viewMode === "full" || viewMode === "focus";
   const showCaption = viewMode === "full" || viewMode === "focus" || viewMode === "caption";
   const showCards = viewMode === "full" || viewMode === "cards";
+  const connectionLabel = classEnded
+    ? "Aula encerrada"
+    : live.connected
+      ? "Conectado"
+      : live.reconnecting
+        ? "Tentando reconectar"
+        : "Aguardando professor";
 
   async function handleSaveWord(card?: SignCard) {
     const target = card ?? cards[0];
@@ -89,6 +104,13 @@ export default function JoinClassPage() {
     window.setTimeout(() => setNotice(null), 1800);
   }
 
+  function clearSavedWords() {
+    setSavedWords([]);
+    window.localStorage.removeItem(`libraslive.saved.${accessCode}`);
+    setNotice("Palavras salvas neste celular foram limpas.");
+    window.setTimeout(() => setNotice(null), 1800);
+  }
+
   return (
     <main className={`min-h-screen bg-paper pb-28 text-ink dark:bg-zinc-950 dark:text-white ${highContrast ? "high-contrast" : ""}`}>
       <section className="sticky top-0 z-20 border-b border-ink/10 bg-paper/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95">
@@ -96,17 +118,23 @@ export default function JoinClassPage() {
           <div>
             <p className="text-xs font-bold uppercase tracking-normal text-ocean dark:text-mint">LibrasLive Edu</p>
             <h1 className="text-base font-black leading-tight">{loading ? "Entrando na aula..." : classSession?.title ?? "Aula"}</h1>
+            <p className="mt-1 text-xs font-bold text-ink/65 dark:text-white/65">{connectionLabel}</p>
           </div>
           <HelpButton />
         </div>
       </section>
 
       <div className="mx-auto grid max-w-5xl gap-4 px-4 py-4">
-        <ConnectionStatusBanner connected={live.connected} reconnecting={live.reconnecting} error={live.connectionError} />
+        <ConnectionStatusBanner connected={live.connected} reconnecting={live.reconnecting} error={live.connectionError} label={connectionLabel} />
         {notice && (
           <div role="status" className="rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white">
             {notice}
           </div>
+        )}
+        {(classEnded || !classSession) && !loading && (
+          <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/aluno">
+            Voltar para digitar outro código
+          </Link>
         )}
         <LiveModeSelector value={viewMode} onChange={setViewMode} />
         <AccessibleModeToggle
@@ -150,7 +178,7 @@ export default function JoinClassPage() {
                   <article key={`${card.word}-${card.id ?? card.status}`} className="w-64 shrink-0 rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
                     <h3 className="text-xl font-black">{card.word}</h3>
                     <p className="mt-2 text-sm font-semibold text-ink/65 dark:text-white/65">
-                      {card.status === "approved" ? "Sinal aprovado" : "Este sinal ainda esta pendente de curadoria por especialista em Libras."}
+                      {card.status === "approved" ? "Sinal aprovado" : "Este sinal ainda está pendente de curadoria por especialista em Libras."}
                     </p>
                     <button className="focus-ring mt-4 min-h-11 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm font-bold text-ocean dark:border-white/10 dark:bg-zinc-950 dark:text-mint" onClick={() => handleSaveWord(card)}>
                       Salvar palavra
@@ -163,9 +191,9 @@ export default function JoinClassPage() {
         )}
 
         <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-          <h2 className="text-lg font-black">Historico dos ultimos trechos</h2>
+          <h2 className="text-lg font-black">Histórico dos últimos trechos</h2>
           <div className="mt-3 space-y-2">
-            {(live.segments.length ? live.segments : [{ originalText: "Os trechos aparecerao aqui durante a aula." }]).map((segment, index) => (
+            {(live.segments.length ? live.segments : [{ originalText: "Os trechos aparecerão aqui durante a aula." }]).map((segment, index) => (
               <p key={`${segment.id ?? index}-${segment.originalText}`} className="rounded-lg bg-teal-50 p-3 text-base font-semibold leading-relaxed dark:bg-zinc-800">
                 {segment.originalText ?? segment.text}
               </p>
@@ -174,7 +202,17 @@ export default function JoinClassPage() {
         </section>
 
         <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-          <h2 className="text-lg font-black">Palavras salvas neste celular</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-black">Palavras salvas neste celular</h2>
+            <button
+              className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-bold text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint"
+              onClick={clearSavedWords}
+              aria-label="Limpar palavras salvas neste celular"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Limpar
+            </button>
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {(savedWords.length ? savedWords : ["Nenhuma palavra salva ainda"]).map((word) => (
               <span key={word} className="rounded-full bg-amber/20 px-3 py-2 text-sm font-bold">
@@ -187,18 +225,26 @@ export default function JoinClassPage() {
         <InstallPWAButton />
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-white/95 px-3 py-2 shadow-soft backdrop-blur dark:border-white/10 dark:bg-zinc-950/95" aria-label="Acoes da aula">
-        <div className="mx-auto grid max-w-5xl grid-cols-4 gap-2">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-white/95 px-3 py-2 shadow-soft backdrop-blur dark:border-white/10 dark:bg-zinc-950/95" aria-label="Ações da aula">
+        <div className="mx-auto grid max-w-5xl grid-cols-6 gap-1">
           <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={() => setCaptionPaused((value) => !value)} aria-label="Pausar legenda">
             <CaptionsOff className="mx-auto h-5 w-5" aria-hidden="true" />
             {captionPaused ? "Voltar" : "Pausar"}
+          </button>
+          <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={() => setEnlargedText(true)} aria-label="Aumentar legenda">
+            <Maximize2 className="mx-auto h-5 w-5" aria-hidden="true" />
+            Aumentar
+          </button>
+          <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={() => setEnlargedText(false)} aria-label="Reduzir legenda">
+            <Minimize2 className="mx-auto h-5 w-5" aria-hidden="true" />
+            Reduzir
           </button>
           <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={() => handleSaveWord()} aria-label="Salvar palavra">
             <BookmarkPlus className="mx-auto h-5 w-5" aria-hidden="true" />
             Salvar
           </button>
           {demoMode ? (
-            <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={live.injectDemo} aria-label="Simular proximo trecho">
+            <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={live.injectDemo} aria-label="Simular próximo trecho">
               <RotateCcw className="mx-auto h-5 w-5" aria-hidden="true" />
               Demo
             </button>

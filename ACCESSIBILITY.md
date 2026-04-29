@@ -11,22 +11,22 @@ LibrasLive Edu busca WCAG AA com foco em uso por alunos surdos, pessoas com defi
 - Modo alto contraste.
 - Fonte grande.
 - Modo foco: legenda + avatar.
-- Feedback de conexao com `role="status"` e erros com `role="alert"`.
-- Navegacao por teclado e foco visivel.
+- Feedback de conexão com `role="status"` e erros com `role="alert"`.
+- Navegação por teclado e foco visível.
 - Textos simples e curtos.
 - Aviso claro quando sinal esta pendente de curadoria.
 
 ## Limitacoes
 
-- A traducao automatica pode conter limitacoes.
-- Glosa tecnica nao deve ser tratada como traducao perfeita.
-- O app nao substitui interprete humano de Libras.
+- A tradução automática pode conter limitações.
+- Glosa técnica não deve ser tratada como tradução perfeita.
+- O app não substitui intérprete humano de Libras.
 - QR Scanner e renderer de avatar real estao preparados para integracao futura.
 
 ## Checklist WCAG
 
 - Contraste testado.
-- Navegacao por teclado testada.
+- Navegação por teclado testada.
 - Leitor de tela testado.
 - Celular Android testado.
 - iPhone testado.
@@ -34,7 +34,7 @@ LibrasLive Edu busca WCAG AA com foco em uso por alunos surdos, pessoas com defi
 - Modo alto contraste testado.
 - Fonte grande testada.
 - Animacoes respeitam `prefers-reduced-motion`.
-- Mensagens nao dependem apenas de cor.
+- Mensagens não dependem apenas de cor.
 
 ## Atalhos Visuais
 

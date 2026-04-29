@@ -18,7 +18,7 @@ export default function LogoutPage() {
       <AppHeader />
       <div className="mx-auto max-w-lg px-4 py-10">
         <div role="status" className="rounded-lg bg-white p-6 text-lg font-black text-ink shadow-soft dark:bg-zinc-900 dark:text-white">
-          Saindo com seguranca...
+          Saindo com segurança...
         </div>
       </div>
     </main>

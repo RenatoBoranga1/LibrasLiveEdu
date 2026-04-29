@@ -1,4 +1,4 @@
-const CACHE_NAME = "libraslive-edu-public-v3";
+const CACHE_NAME = "libraslive-edu-public-v4";
 const CORE_ASSETS = [
   "/",
   "/aluno",
@@ -19,6 +19,12 @@ const PRIVATE_PATTERNS = [
   "/join/",
   "/teacher",
   "/admin",
+  "/login",
+  "/register",
+  "/logout",
+  "/profile",
+  "/consent",
+  "/data-rights",
   "token=",
 ];
 

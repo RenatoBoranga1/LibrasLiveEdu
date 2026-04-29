@@ -97,12 +97,12 @@ export default function AdminPage() {
     if (!selected) return;
     const updated = await rejectSign(selected.id, selected.curator_notes || "Reprovado durante curadoria.").catch(() => null);
     if (!updated) {
-      setMessage("Nao foi possivel reprovar agora. Verifique login de admin/curador.");
+      setMessage("Não foi possível reprovar agora. Verifique login de admin/curador.");
       return;
     }
     setSelected(updated);
     setSigns((current) => current.map((sign) => (sign.id === updated.id ? updated : sign)));
-    setMessage("Sinal rejeitado com justificativa registrada no historico.");
+    setMessage("Sinal rejeitado com justificativa registrada no histórico.");
   }
 
   async function saveSelected() {
@@ -137,7 +137,7 @@ export default function AdminPage() {
       <main className="min-h-screen bg-paper dark:bg-zinc-950">
         <AppHeader />
         <div role="status" className="mx-auto max-w-lg px-4 py-10 text-lg font-black text-ink dark:text-white">
-          Verificando permissao...
+          Verificando permissão...
         </div>
       </main>
     );
@@ -338,7 +338,7 @@ export default function AdminPage() {
             <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
               <h2 className="text-xl font-black text-ink dark:text-white">Historico de alteracoes</h2>
               <div className="mt-3 space-y-2 text-sm font-semibold text-ink/70 dark:text-white/70">
-                {(auditLog.length ? auditLog : [{ id: 0, action: "Sem historico carregado", created_at: "" }]).map((item) => (
+                {(auditLog.length ? auditLog : [{ id: 0, action: "Sem histórico carregado", created_at: "" }]).map((item) => (
                   <p key={item.id} className="rounded-lg bg-teal-50 p-3 dark:bg-zinc-800">
                     {item.action} {item.created_at ? `- ${new Date(item.created_at).toLocaleString("pt-BR")}` : ""}
                   </p>

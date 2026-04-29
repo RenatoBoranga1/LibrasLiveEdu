@@ -12,7 +12,7 @@ export default function DataRightsPage() {
         </p>
         <div className="mt-6 grid gap-3">
           <p className="rounded-lg bg-white p-4 font-semibold shadow-soft dark:bg-zinc-900">Alunos anonimos mantem palavras salvas no proprio dispositivo.</p>
-          <p className="rounded-lg bg-white p-4 font-semibold shadow-soft dark:bg-zinc-900">Professores podem apagar ou anonimizar aulas e transcricoes.</p>
+          <p className="rounded-lg bg-white p-4 font-semibold shadow-soft dark:bg-zinc-900">Professores podem apagar ou anonimizar aulas e transcrições.</p>
           <p className="rounded-lg bg-white p-4 font-semibold shadow-soft dark:bg-zinc-900">Responsaveis podem solicitar revisao do consentimento quando aplicavel.</p>
         </div>
         <Link className="focus-ring mt-6 inline-flex rounded-lg bg-ocean px-4 py-3 font-bold text-white" href="/profile">

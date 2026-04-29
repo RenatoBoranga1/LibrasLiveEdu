@@ -33,7 +33,7 @@ export default function RegisterPage() {
       });
       router.replace(response.user.role === "admin" || response.user.role === "curator" ? "/admin" : "/profile");
     } catch {
-      setError("Nao foi possivel criar a conta. Use uma senha com 8 ou mais caracteres e confira o e-mail.");
+      setError("Não foi possível criar a conta. Use uma senha com 8 ou mais caracteres e confira o e-mail.");
     }
   }
 
@@ -44,7 +44,7 @@ export default function RegisterPage() {
         <div className="rounded-lg border border-ink/10 bg-white p-6 shadow-soft dark:border-white/10 dark:bg-zinc-900">
           <h1 className="text-3xl font-black text-ink dark:text-white">Criar conta</h1>
           <p className="mt-2 text-sm font-semibold text-ink/70 dark:text-white/70">
-            O aluno pode entrar por codigo sem conta. Use cadastro para professor, curador, responsavel ou administracao.
+            O aluno pode entrar por código sem conta. Use cadastro para professor, curador, responsável ou administração.
           </p>
           {error && (
             <div role="alert" className="mt-4 rounded-lg bg-red-100 p-3 text-sm font-bold text-red-900">

@@ -1,15 +1,15 @@
 # Privacy
 
-Este aplicativo pode processar transcricoes de aulas, palavras salvas e dados de uso para fins educacionais e de acessibilidade. Para criancas e adolescentes, o uso deve ocorrer com autorizacao da escola e/ou responsavel legal, conforme a politica da instituicao.
+Este aplicativo pode processar transcrições de aulas, palavras salvas e dados de uso para fins educacionais e de acessibilidade. Para crianças e adolescentes, o uso deve ocorrer com autorização da escola e/ou responsável legal, conforme a política da instituição.
 
 ## Dados Coletados
 
 - Conta: nome, e-mail, perfil, escola e campos opcionais de responsavel.
-- Aula: titulo, disciplina, codigo de acesso, status e transcricao textual.
+- Aula: título, disciplina, código de acesso, status e transcrição textual.
 - Acessibilidade: palavras-chave, palavras salvas e resumo da aula.
 - Consentimento: tipo, versao do texto, data, IP e user-agent.
 
-Aluno anonimo nao precisa informar nome ou e-mail para assistir aula.
+Aluno anônimo não precisa informar nome ou e-mail para assistir aula.
 
 ## Finalidade
 
@@ -20,24 +20,24 @@ Aluno anonimo nao precisa informar nome ou e-mail para assistir aula.
 
 ## Retencao
 
-- Transcricoes: padrao de 30 dias em producao, configuravel por escola.
-- Resumos: configuravel conforme politica pedagogica.
-- Logs tecnicos: apenas pelo tempo necessario para seguranca.
+- Transcrições: padrão de 30 dias em produção, configurável por escola.
+- Resumos: configurável conforme política pedagógica.
+- Logs técnicos: apenas pelo tempo necessário para segurança.
 - Palavras salvas anonimamente: ficam no dispositivo do aluno.
 
 ## Exclusao e Anonimizacao
 
 - Usuarios logados podem solicitar exportacao ou exclusao de dados pessoais.
-- Professores podem apagar ou anonimizar transcricoes de suas aulas.
+- Professores podem apagar ou anonimizar transcrições de suas aulas.
 - Dados institucionais podem exigir processo formal da escola.
 
 ## Criancas e Adolescentes
 
-O uso deve ser acompanhado pela escola e/ou responsavel legal. O sistema coleta o minimo necessario e nao exige conta para o aluno assistir uma aula por codigo/QR Code.
+O uso deve ser acompanhado pela escola e/ou responsável legal. O sistema coleta o mínimo necessário e não exige conta para o aluno assistir uma aula por código/QR Code.
 
 ## Audio
 
-Audio bruto nao e armazenado por padrao. Se uma versao futura armazenar audio, sera necessario consentimento especifico, politica de retencao propria e aviso claro.
+Áudio bruto não é armazenado por padrão. Se uma versão futura armazenar áudio, será necessário consentimento específico, política de retenção própria e aviso claro.
 
 ## Servicos Externos
 

@@ -35,8 +35,8 @@ export function AddToHomeScreen() {
   if (!promptEvent) {
     return (
       <div className="rounded-lg border border-ocean/20 bg-white p-3 text-sm font-semibold leading-relaxed text-ink shadow-soft dark:border-white/10 dark:bg-zinc-900 dark:text-white">
-        Android/Chrome: toque nos tres pontos e depois em Adicionar a tela inicial. iPhone/Safari: toque em
-        Compartilhar e depois em Adicionar a Tela de Inicio.
+        Android/Chrome: toque nos três pontos e depois em Adicionar à tela inicial. iPhone/Safari: toque em
+        Compartilhar e depois em Adicionar à Tela de Início.
       </div>
     );
   }
@@ -49,10 +49,10 @@ export function AddToHomeScreen() {
         await promptEvent.userChoice;
         setPromptEvent(null);
       }}
-      aria-label="Adicionar LibrasLive Edu a tela inicial"
+      aria-label="Adicionar LibrasLive Edu à tela inicial"
     >
       <Download className="h-5 w-5" aria-hidden="true" />
-      Adicionar a tela inicial
+      Adicionar à tela inicial
     </ActionButton>
   );
 }

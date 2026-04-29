@@ -7,7 +7,12 @@ import { AccessibleModeToggle } from "@/components/AccessibleModeToggle";
 import { ChildModeToggle } from "@/components/ChildModeToggle";
 import { QRCodeScanner } from "@/components/QRCodeScanner";
 
-export function StudentJoinForm() {
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+const secureCodePattern = /^AULA-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+const legacyDemoCodePattern = /^AULA-[0-9]{4}$/;
+
+export function StudentJoinForm({ demoModeOverride }: { demoModeOverride?: boolean } = {}) {
+  const isDemoMode = demoModeOverride ?? demoMode;
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [code, setCode] = useState("");
@@ -19,8 +24,12 @@ export function StudentJoinForm() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalized = code.trim().toUpperCase();
-    if (!/^AULA-[A-Z0-9]{4}-[A-Z0-9]{4}$|^AULA-[0-9]{4}$/.test(normalized)) {
-      setError("Digite o codigo da aula no formato AULA-8F4K-29QX.");
+    if (!isAcceptedCode(normalized, isDemoMode)) {
+      setError(
+        isDemoMode
+          ? "Digite o código da aula no formato AULA-8F4K-29QX ou use AULA-4821 para demonstração."
+          : "Digite o código da aula no formato AULA-8F4K-29QX."
+      );
       return;
     }
     router.push(`/join/${encodeURIComponent(normalized)}`);
@@ -42,7 +51,7 @@ export function StudentJoinForm() {
     }
     const normalized = value.trim().toUpperCase();
     setCode(normalized);
-    if (/^AULA-[A-Z0-9]{4}-[A-Z0-9]{4}$|^AULA-[0-9]{4}$/.test(normalized)) {
+    if (isAcceptedCode(normalized, isDemoMode)) {
       router.push(`/join/${encodeURIComponent(normalized)}`);
     }
   }
@@ -54,7 +63,7 @@ export function StudentJoinForm() {
           Entrar na aula
         </h1>
         <p className="mt-3 text-base font-semibold leading-relaxed text-ink/75 dark:text-white/75">
-          {mode === "child" ? "Digite o codigo que o professor mostrou." : "Informe o codigo curto da sala ou use o QR Code fornecido pelo professor."}
+          {mode === "child" ? "Digite o código que o professor mostrou." : "Informe o código curto da sala ou use o QR Code fornecido pelo professor."}
         </p>
         {error && (
           <div role="alert" className="mt-4 rounded-lg bg-red-100 p-3 text-sm font-bold text-red-900">
@@ -63,7 +72,7 @@ export function StudentJoinForm() {
         )}
         <form className="mt-5 grid gap-3" onSubmit={submit}>
           <label className="block text-sm font-bold text-ink/75 dark:text-white/75" htmlFor="class-code">
-            Codigo da aula
+            Código da aula
             <input
               ref={inputRef}
               id="class-code"
@@ -95,4 +104,8 @@ export function StudentJoinForm() {
       <ChildModeToggle value={mode} onChange={setMode} />
     </section>
   );
+}
+
+function isAcceptedCode(value: string, isDemoMode: boolean) {
+  return secureCodePattern.test(value) || (isDemoMode && legacyDemoCodePattern.test(value));
 }

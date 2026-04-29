@@ -16,7 +16,7 @@ export function AppHeader() {
             </span>
           </span>
         </Link>
-        <nav className="hidden items-center gap-3 text-sm font-semibold text-ink/70 dark:text-white/70 sm:flex" aria-label="Navegacao principal">
+        <nav className="hidden items-center gap-3 text-sm font-semibold text-ink/70 dark:text-white/70 sm:flex" aria-label="Navegação principal">
           <GraduationCap className="h-4 w-4" aria-hidden="true" />
           <Link className="focus-ring rounded-md px-2 py-1" href="/aluno">Aluno</Link>
           <Link className="focus-ring rounded-md px-2 py-1" href="/teacher">Professor</Link>

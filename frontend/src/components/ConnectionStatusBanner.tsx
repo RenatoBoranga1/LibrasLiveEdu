@@ -4,12 +4,14 @@ export function ConnectionStatusBanner({
   connected,
   reconnecting,
   error,
+  label,
 }: {
   connected: boolean;
   reconnecting?: boolean;
   error?: string | null;
+  label?: string;
 }) {
-  const label = connected ? "Conectado ao vivo" : reconnecting ? "Reconectando" : "Sem conexao ao vivo";
+  const defaultLabel = connected ? "Conectado" : reconnecting ? "Tentando reconectar" : "Aguardando professor";
   return (
     <div
       role={error ? "alert" : "status"}
@@ -18,7 +20,7 @@ export function ConnectionStatusBanner({
       }`}
     >
       {connected ? <Wifi className="h-5 w-5" aria-hidden="true" /> : <WifiOff className="h-5 w-5" aria-hidden="true" />}
-      <span>{error ?? label}</span>
+      <span>{error ?? label ?? defaultLabel}</span>
     </div>
   );
 }

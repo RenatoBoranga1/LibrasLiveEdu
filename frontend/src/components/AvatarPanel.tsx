@@ -22,7 +22,7 @@ export function AvatarPanel({
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-lg font-black text-ink dark:text-white">Avatar Libras</h2>
         <span className="rounded-full bg-ocean/10 px-3 py-1 text-xs font-bold uppercase tracking-normal text-ocean dark:bg-mint/10 dark:text-mint">
-          {avatarVideoUrl ? "video" : status === "success" ? "glosa tecnica" : "fallback visual"}
+          {avatarVideoUrl ? "vídeo" : status === "success" ? "glosa técnica" : "fallback visual"}
         </span>
       </div>
       <div className="grid min-h-44 place-items-center rounded-lg bg-teal-50 p-4 dark:bg-zinc-800">
@@ -37,14 +37,14 @@ export function AvatarPanel({
               {animationPayloadUrl
                 ? "Payload de animacao recebido. Renderer de avatar real deve ser conectado aqui."
                 : glossText
-                  ? `Glosa tecnica recebida: ${glossText}`
+                  ? `Glosa técnica recebida: ${glossText}`
                   : "Nenhum avatar oficial configurado para este trecho. A legenda continua ativa."}
             </p>
           </div>
         )}
       </div>
       <p className="mt-3 rounded-lg bg-amber/15 p-3 text-xs font-bold leading-relaxed text-ink/75 dark:text-white/75">
-        Traducao automatica pode conter limitacoes. Consulte interprete ou educador quando necessario.
+        Tradução automática pode conter limitações. Consulte intérprete ou educador quando necessário.
       </p>
     </section>
   );

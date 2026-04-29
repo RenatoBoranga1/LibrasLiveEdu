@@ -4,7 +4,7 @@ import { InstallPWAButton } from "@/components/InstallPWAButton";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { StudentJoinForm } from "@/components/StudentJoinForm";
 
-const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 export default function StudentEntryPage() {
   return (
@@ -16,11 +16,11 @@ export default function StudentEntryPage() {
           <div className="rounded-lg bg-white p-5 shadow-soft dark:bg-zinc-900">
             <h2 className="text-2xl font-black text-ink dark:text-white">Acesso pelo celular</h2>
             <p className="mt-3 font-semibold leading-relaxed text-ink/75 dark:text-white/75">
-              Use o codigo mostrado pelo professor ou leia o QR Code. Nao e necessario criar conta para assistir a aula.
+              Use o código mostrado pelo professor ou leia o QR Code. Não é necessário criar conta para assistir à aula.
             </p>
             {demoMode && (
               <Link className="focus-ring mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-amber px-4 py-3 font-black text-ink" href="/join/AULA-4821">
-                Abrir demonstracao
+                Abrir demonstração
               </Link>
             )}
           </div>

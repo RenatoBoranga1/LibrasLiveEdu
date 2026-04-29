@@ -17,14 +17,36 @@ describe("student mobile entry", () => {
   it("renders the aluno entry form with a large code field", () => {
     render(<StudentJoinForm />);
     expect(screen.getByRole("heading", { name: /entrar na aula/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/codigo da aula/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/código da aula/i)).toBeInTheDocument();
   });
 
   it("routes to the join page when a secure code is entered", () => {
     render(<StudentJoinForm />);
-    fireEvent.change(screen.getByLabelText(/codigo da aula/i), { target: { value: "AULA-8F4K-29QX" } });
+    fireEvent.change(screen.getByLabelText(/código da aula/i), { target: { value: "AULA-8F4K-29QX" } });
     fireEvent.click(screen.getByRole("button", { name: /entrar na aula/i }));
     expect(push).toHaveBeenCalledWith("/join/AULA-8F4K-29QX");
+  });
+
+  it("rejects invalid class codes", () => {
+    render(<StudentJoinForm />);
+    fireEvent.change(screen.getByLabelText(/código da aula/i), { target: { value: "123" } });
+    fireEvent.click(screen.getByRole("button", { name: /entrar na aula/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("AULA-8F4K-29QX");
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("accepts AULA-4821 only in demo mode", () => {
+    render(<StudentJoinForm />);
+    fireEvent.change(screen.getByLabelText(/código da aula/i), { target: { value: "AULA-4821" } });
+    fireEvent.click(screen.getByRole("button", { name: /entrar na aula/i }));
+    expect(push).not.toHaveBeenCalled();
+
+    push.mockClear();
+    render(<StudentJoinForm demoModeOverride />);
+    const inputs = screen.getAllByLabelText(/código da aula/i);
+    fireEvent.change(inputs[1], { target: { value: "AULA-4821" } });
+    fireEvent.click(screen.getAllByRole("button", { name: /entrar na aula/i })[1]);
+    expect(push).toHaveBeenCalledWith("/join/AULA-4821");
   });
 });
 

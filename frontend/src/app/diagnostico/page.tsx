@@ -53,6 +53,10 @@ export default function DiagnosticPage() {
       SpeechRecognition?: unknown;
       webkitSpeechRecognition?: unknown;
     };
+    const supportsSpeechRecognition =
+      typeof speechWindow.SpeechRecognition === "function" ||
+      typeof speechWindow.webkitSpeechRecognition === "function";
+    const supportsMicrophoneRequest = typeof navigator.mediaDevices?.getUserMedia === "function";
     const standalone =
       (typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches) ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -69,9 +73,9 @@ export default function DiagnosticPage() {
       },
       {
         label: "SpeechRecognition",
-        status: speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition ? "ok" : "warning",
+        status: supportsSpeechRecognition ? "ok" : "warning",
         message:
-          speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
+          supportsSpeechRecognition
             ? "Reconhecimento de fala do navegador disponível."
             : "Reconhecimento de fala do navegador indisponível. Use texto manual ou provider externo.",
       },
@@ -82,8 +86,8 @@ export default function DiagnosticPage() {
       },
       {
         label: "MediaDevices",
-        status: navigator.mediaDevices?.getUserMedia ? "ok" : "failed",
-        message: navigator.mediaDevices?.getUserMedia
+        status: supportsMicrophoneRequest ? "ok" : "failed",
+        message: supportsMicrophoneRequest
           ? "O navegador permite solicitar microfone."
           : "Este navegador não permite solicitar microfone.",
       },
@@ -91,7 +95,7 @@ export default function DiagnosticPage() {
   }, []);
 
   async function testMicrophone() {
-    if (!navigator.mediaDevices?.getUserMedia) {
+    if (typeof navigator.mediaDevices?.getUserMedia !== "function") {
       setMicrophone({
         label: "Microfone",
         status: "failed",

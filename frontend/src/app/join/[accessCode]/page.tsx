@@ -235,12 +235,10 @@ export default function JoinClassPage() {
                           <span className={`rounded-full px-2 py-1 text-xs font-black ${approved ? "bg-ocean text-white" : unavailable ? "bg-zinc-200 text-ink" : "bg-amber/20 text-ink dark:text-white"}`}>
                             {statusLabel}
                           </span>
-                          {mediaUrl && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">
-                              <Video className="h-3.5 w-3.5" aria-hidden="true" />
-                              Com vídeo
-                            </span>
-                          )}
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-black ${mediaUrl ? "bg-mint text-ink" : "bg-zinc-200 text-ink"}`}>
+                            {mediaUrl && <Video className="h-3.5 w-3.5" aria-hidden="true" />}
+                            {mediaUrl ? "Com vídeo" : "Sem vídeo"}
+                          </span>
                         </div>
                       </div>
                       <div className="mt-3 space-y-1 text-xs font-bold leading-relaxed text-ink/65 dark:text-white/65">

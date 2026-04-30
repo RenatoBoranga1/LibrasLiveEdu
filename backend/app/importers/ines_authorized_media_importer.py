@@ -1,5 +1,6 @@
 import csv
 import hashlib
+import io
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,6 +51,45 @@ class InesAuthorizedMediaImporter:
         except Exception as exc:  # noqa: BLE001
             return self._fail_job(job, f"Falha ao importar mídia autorizada INES: {exc}")
 
+    def import_content(
+        self,
+        content: str,
+        *,
+        source_name: str = "inline-admin-import",
+        source_type: str = "json",
+        download_media: bool = False,
+        overwrite_files: bool = False,
+        authorized: bool = False,
+        authorization_reference: str | None = None,
+        user: User | None = None,
+    ) -> ImportJob:
+        job = self._create_job(source_type, f"INES authorized media: {source_name}")
+        try:
+            self._ensure_authorized(authorized, authorization_reference)
+            records = self._records_from_content(content, source_type)
+            return self._process_records(job, records, download_media, overwrite_files, authorization_reference, user)
+        except Exception as exc:  # noqa: BLE001
+            return self._fail_job(job, f"Falha ao importar conteúdo de mídia INES: {exc}")
+
+    def import_records(
+        self,
+        records: list[dict[str, Any]],
+        *,
+        source_name: str = "inline-admin-import",
+        source_type: str = "json",
+        download_media: bool = False,
+        overwrite_files: bool = False,
+        authorized: bool = False,
+        authorization_reference: str | None = None,
+        user: User | None = None,
+    ) -> ImportJob:
+        job = self._create_job(source_type, f"INES authorized media: {source_name}")
+        try:
+            self._ensure_authorized(authorized, authorization_reference)
+            return self._process_records(job, records, download_media, overwrite_files, authorization_reference, user)
+        except Exception as exc:  # noqa: BLE001
+            return self._fail_job(job, f"Falha ao importar registros de mídia INES: {exc}")
+
     def _ensure_authorized(self, authorized: bool, authorization_reference: str | None) -> None:
         if not (authorized or self.settings.ines_media_import_authorized):
             raise PermissionError("Importação bloqueada. Defina INES_MEDIA_IMPORT_AUTHORIZED=true ou use --authorized.")
@@ -69,6 +109,15 @@ class InesAuthorizedMediaImporter:
             raise ValueError("Manifesto deve conter uma lista ou um objeto com a chave 'items'.")
         return records
 
+    def _records_from_content(self, content: str, source_type: str) -> list[dict[str, Any]]:
+        if source_type == "csv":
+            return list(csv.DictReader(io.StringIO(content)))
+        payload = json.loads(content)
+        records = payload["items"] if isinstance(payload, dict) and "items" in payload else payload
+        if not isinstance(records, list):
+            raise ValueError("Conteúdo deve conter uma lista ou um objeto com a chave 'items'.")
+        return records
+
     def _process_records(
         self,
         job: ImportJob,
@@ -82,11 +131,32 @@ class InesAuthorizedMediaImporter:
         job.total_records = len(records)
         self.db.commit()
 
+        seen: set[tuple[str, str]] = set()
+        no_video_records = 0
+        duplicated_records = 0
         for index, record in enumerate(records, start=1):
             try:
-                sign = self._create_or_update_pending_sign(record, download_media, overwrite_files, authorization_reference, user)
+                word = self._clean(record.get("word") or record.get("palavra"))
+                normalized_word = self.normalizer.normalize_word(word) if word else ""
+                gloss = self._clean(record.get("gloss") or record.get("glosa")) or ""
+                duplicate_key = (normalized_word, gloss)
+                if normalized_word and duplicate_key in seen:
+                    duplicated_records += 1
+                    self._log(job, "warning", index, f"registro duplicado ignorado: {word}")
+                    continue
+                if normalized_word:
+                    seen.add(duplicate_key)
+
+                sign, created, has_video = self._create_or_update_pending_sign(
+                    record, download_media, overwrite_files, authorization_reference, user
+                )
                 if sign:
-                    job.imported_records += 1
+                    if created:
+                        job.imported_records += 1
+                    else:
+                        job.updated_records += 1
+                    if not has_video:
+                        no_video_records += 1
                     self._log(job, "success", index, f"mídia INES registrada como pending: {sign.word}")
                 else:
                     job.failed_records += 1
@@ -98,6 +168,12 @@ class InesAuthorizedMediaImporter:
 
         job.status = ImportStatus.completed.value if job.failed_records == 0 else ImportStatus.failed.value
         job.finished_at = datetime.now(timezone.utc)
+        self._log(
+            job,
+            "summary",
+            None,
+            f"criados={job.imported_records}; atualizados={job.updated_records}; erros={job.failed_records}; sem_video={no_video_records}; duplicados={duplicated_records}",
+        )
         self.db.commit()
         self.db.refresh(job)
         return job
@@ -109,10 +185,10 @@ class InesAuthorizedMediaImporter:
         overwrite_files: bool,
         authorization_reference: str | None,
         user: User | None,
-    ) -> Sign | None:
+    ) -> tuple[Sign | None, bool, bool]:
         word = self._clean(record.get("word") or record.get("palavra"))
         if not word:
-            return None
+            return None, False, False
 
         normalized_word = self.normalizer.normalize_word(word)
         gloss = self._clean(record.get("gloss") or record.get("glosa"))
@@ -120,6 +196,7 @@ class InesAuthorizedMediaImporter:
         if gloss:
             statement = statement.where(Sign.gloss == gloss)
         sign = self.db.scalar(statement.order_by(Sign.updated_at.desc()).limit(1))
+        created = sign is None
         old_value = self._snapshot(sign)
         if not sign:
             sign = Sign(word=word, normalized_word=normalized_word)
@@ -128,6 +205,10 @@ class InesAuthorizedMediaImporter:
         image_url = self._clean(record.get("image_url") or record.get("imagem") or record.get("image"))
         video_url = self._clean(record.get("video_url") or record.get("video") or record.get("avatar_video_url"))
         animation_url = self._clean(record.get("animation_payload_url") or record.get("avatar_animation_url"))
+        if not download_media:
+            for media_url in [image_url, video_url, animation_url]:
+                if media_url and not self._is_http_url(media_url):
+                    raise ValueError(f"URL de mídia inválida para importação sem download: {media_url}")
 
         if download_media:
             image_url = self._download_media(image_url, normalized_word, "image", overwrite_files) if image_url else None
@@ -166,7 +247,7 @@ class InesAuthorizedMediaImporter:
                 },
             )
         )
-        return sign
+        return sign, created, bool(sign.video_url)
 
     def _download_media(self, media_url: str, normalized_word: str, media_kind: str, overwrite_files: bool) -> str:
         absolute_url = urljoin(self.settings.ines_media_base_url, media_url)
@@ -197,6 +278,9 @@ class InesAuthorizedMediaImporter:
         if suffix in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".mov", ".json"}:
             return suffix
         return None
+
+    def _is_http_url(self, value: str) -> bool:
+        return value.startswith("http://") or value.startswith("https://")
 
     def _description(self, record: dict[str, Any]) -> str | None:
         pieces = []

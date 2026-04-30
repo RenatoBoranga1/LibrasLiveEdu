@@ -77,9 +77,46 @@ class TranscriptService:
 
             keyword_payloads = []
             card_payloads = []
+            seen_card_keys: set[str] = set()
+            expression_terms: set[str] = set()
+            expression_sign = self.dictionary.find_expression_in_text(block)
+            if expression_sign:
+                expression_terms = {
+                    self.normalizer.normalize_word(part)
+                    for part in expression_sign.word.split()
+                    if part.strip()
+                }
+                expression_keyword = KeywordDetected(
+                    class_session_id=class_session.id,
+                    transcript_segment_id=segment.id,
+                    word=expression_sign.word,
+                    normalized_word=expression_sign.normalized_word,
+                    sign_id=expression_sign.id,
+                    confidence=0.99,
+                )
+                self.db.add(expression_keyword)
+                self.db.flush()
+                seen_card_keys.add(expression_sign.normalized_word)
+                keyword_payloads.append(
+                    {
+                        "id": expression_keyword.id,
+                        "word": expression_keyword.word,
+                        "normalizedWord": expression_keyword.normalized_word,
+                        "signId": expression_keyword.sign_id,
+                        "confidence": expression_keyword.confidence,
+                    }
+                )
+                card_payloads.append(self.dictionary.build_card_payload_from_sign(expression_sign))
+
             for item in self.keyword_extractor.extract(block):
                 normalized_word = str(item["word"])
+                if normalized_word in expression_terms:
+                    continue
                 sign = self.dictionary.find_for_word(normalized_word)
+                card_key = sign.normalized_word if sign else normalized_word
+                if card_key in seen_card_keys:
+                    continue
+                seen_card_keys.add(card_key)
                 keyword = KeywordDetected(
                     class_session_id=class_session.id,
                     transcript_segment_id=segment.id,

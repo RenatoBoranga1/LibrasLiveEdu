@@ -20,10 +20,21 @@ export type AvatarRenderState = {
 };
 
 export function resolveAvatarState(input: AvatarInput): AvatarRenderState {
+  const statusPending = input.status === "pending";
   const pendingCuration =
-    input.status === "pending" ||
+    statusPending ||
     input.cards?.some((card) => card.status === "pending" || card.curation === "pending") ||
     false;
+
+  if (statusPending) {
+    return {
+      type: input.glossText ? "gloss" : "fallback",
+      label: "Sinal pendente de curadoria",
+      message: "Este sinal ainda está pendente de curadoria por especialista em Libras.",
+      canRenderAvatar: false,
+      pendingCuration: true,
+    };
+  }
 
   if (input.avatarVideoUrl || input.videoUrl) {
     return {

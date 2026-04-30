@@ -140,12 +140,14 @@ class ImportRequest(BaseModel):
 
 
 class InesMediaImportRequest(BaseModel):
-    source: str
+    source: str = "inline-admin-import"
     source_type: str = Field(default="json", pattern="^(csv|json)$")
     download_media: bool = True
     overwrite_files: bool = False
     authorized: bool = False
     authorization_reference: str | None = None
+    content: str | None = None
+    records: list[dict[str, Any]] | None = None
 
 
 class ImportJobRead(BaseModel):
@@ -292,4 +294,17 @@ class ManualSignCreate(BaseModel):
 
 class SignCurationRequest(BaseModel):
     status: str = Field(pattern="^(approved|pending|review|rejected|needs_specialist_review)$")
+    curator_notes: str | None = None
+
+
+class SignMediaUpdate(BaseModel):
+    gloss: str | None = None
+    source_name: str | None = None
+    source_url: str | None = None
+    source_reference_url: str | None = None
+    license: str | None = None
+    license_notes: str | None = None
+    video_url: str | None = None
+    avatar_video_url: str | None = None
+    image_url: str | None = None
     curator_notes: str | None = None

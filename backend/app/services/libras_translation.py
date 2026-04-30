@@ -74,13 +74,33 @@ class LibrasTranslationService:
 
     def _build_gloss_from_curated_terms(self, text: str) -> str | None:
         glosses: list[str] = []
+        expression_terms: set[str] = set()
+        expression_sign = self.dictionary.find_expression_in_text(text)
+        if expression_sign and expression_sign.status == "approved" and expression_sign.gloss:
+            glosses.append(expression_sign.gloss)
+            expression_terms = {
+                self.dictionary.normalizer.normalize_word(part)
+                for part in expression_sign.word.split()
+                if part.strip()
+            }
         for item in self.keyword_extractor.extract(text, limit=6):
+            if str(item["word"]) in expression_terms:
+                continue
             sign = self.dictionary.find_for_word(str(item["word"]))
-            if sign and sign.status == "approved" and sign.gloss:
+            if sign and sign.status == "approved" and sign.gloss and sign.gloss not in glosses:
                 glosses.append(sign.gloss)
         return " ".join(glosses) if glosses else None
 
     def _first_curated_media(self, text: str) -> dict | None:
+        expression_sign = self.dictionary.find_expression_in_text(text)
+        if expression_sign and expression_sign.status == "approved":
+            if expression_sign.video_url or expression_sign.avatar_animation_url or expression_sign.gloss:
+                return {
+                    "word": expression_sign.word,
+                    "gloss_text": expression_sign.gloss,
+                    "avatar_video_url": expression_sign.video_url,
+                    "animation_payload_url": expression_sign.avatar_animation_url,
+                }
         for item in self.keyword_extractor.extract(text, limit=6):
             sign = self.dictionary.find_for_word(str(item["word"]))
             if not sign or sign.status != "approved":

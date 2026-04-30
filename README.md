@@ -147,7 +147,7 @@ Regras de segurança e curadoria:
 - use somente mídia coberta pela autorização registrada para o projeto;
 - todo sinal cadastrado manualmente entra como `pending`;
 - apenas admin ou curador pode aprovar/reprovar sinais;
-- a aprovação exige fonte, URL, licença e glosa, mídia autorizada ou descrição adequada;
+- a aprovação exige fonte, URL, licença e glosa, vídeo autorizado ou animação autorizada;
 - apenas sinais `approved` aparecem como oficiais nos cards do aluno;
 - sinais `pending` mostram aviso de curadoria e podem exibir fonte/licença, mas não mídia oficial.
 
@@ -163,7 +163,7 @@ GET /api/signs/lookup?word=professor
 
 O projeto possui suporte para uso autorizado de vídeos do Dicionário da Língua Brasileira de Sinais - INES. Cada sinal deve registrar fonte, URL de referência, licença/autorização e observação de autorização antes de ser aprovado.
 
-Use o importador autorizado apenas com manifesto revisado e referência da autorização. Ele baixa imagens/vídeos de hosts permitidos, salva os arquivos em `MEDIA_STORAGE_DIR`, registra os sinais como `pending` e nunca aprova automaticamente.
+Use o importador autorizado apenas com manifesto revisado e referência da autorização. Pelo painel admin, ele registra URLs autorizadas no banco. Pelo script/backend, quando `download_media=true`, ele pode baixar imagens/vídeos de hosts permitidos, salvar os arquivos em `MEDIA_STORAGE_DIR`, registrar os sinais como `pending` e nunca aprovar automaticamente.
 
 Variáveis:
 
@@ -218,6 +218,25 @@ Fluxo com vídeo aprovado:
 5. O `AvatarPanel` e os cards visuais exibem o vídeo com fonte, licença/autorização e link de referência.
 
 O app continua sendo um recurso de apoio à acessibilidade e não substitui intérprete humano de Libras.
+
+### Como cadastrar vídeos autorizados do INES
+
+1. Acesse o Dicionário INES e localize a palavra ou expressão, por exemplo `bom dia`.
+2. Copie a URL de referência da página específica do sinal.
+3. No painel `/admin`, clique em `Adicionar vídeo` na palavra desejada ou acesse `/admin/signs/new` para criar uma expressão nova.
+4. Informe glosa, fonte, URL da fonte, URL específica do sinal, licença/autorização, observações de licença e a URL real do vídeo autorizado.
+5. Salve como `pending`. O sistema registra auditoria e não aprova automaticamente.
+6. Revise o sinal com admin/curador e aprove apenas após validação por especialista em Libras.
+7. Teste em aula: quando o professor enviar a palavra/expressão, o aluno verá vídeo no Avatar Libras somente se o sinal estiver `approved` e tiver `video_url` ou `avatar_video_url`.
+
+Também existe a tela `/admin/import/ines-media` para importar lote JSON/CSV de URLs autorizadas. Use o exemplo `backend/data/ines_media_import_example.json` como modelo e substitua os placeholders por URLs reais autorizadas antes de importar.
+
+Importante:
+
+- Aprovar sem vídeo não faz o avatar aparecer.
+- Para o avatar aparecer, o sinal precisa estar `approved` e ter `video_url`, `avatar_video_url` ou `animation_payload_url`.
+- Sinais aprovados sem vídeo podem aparecer como glosa/card, mas o Avatar Libras mantém fallback visual.
+- Não use URLs falsas, placeholders, vídeos sem autorização registrada ou mídia sem fonte/licença.
 
 ## Speech-to-Text e Avatar
 

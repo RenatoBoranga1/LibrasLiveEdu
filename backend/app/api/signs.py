@@ -19,6 +19,7 @@ from app.schemas.api import (
     RejectSignRequest,
     SavedWordCreate,
     SignCurationRequest,
+    SignMediaUpdate,
     SignRead,
     SignUpdate,
 )
@@ -119,6 +120,72 @@ def create_manual_sign(
     return sign
 
 
+@router.patch("/signs/{sign_id}/media", response_model=SignRead)
+def update_sign_media(
+    sign_id: int,
+    payload: SignMediaUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin", "curator"])),
+):
+    sign = db.get(Sign, sign_id)
+    if not sign:
+        raise HTTPException(status_code=404, detail="Sinal nao encontrado.")
+
+    fields = payload.model_fields_set
+    media_values = [
+        payload.video_url if "video_url" in fields else None,
+        payload.avatar_video_url if "avatar_video_url" in fields else None,
+        payload.image_url if "image_url" in fields else None,
+    ]
+    for media_url in media_values:
+        if media_url and not _is_http_url(media_url):
+            raise HTTPException(status_code=422, detail="URLs de midia devem comecar com http:// ou https://.")
+
+    effective_video = (
+        payload.avatar_video_url
+        if "avatar_video_url" in fields and payload.avatar_video_url
+        else payload.video_url
+        if "video_url" in fields and payload.video_url
+        else sign.video_url
+    )
+    effective_source_name = payload.source_name if "source_name" in fields and payload.source_name else sign.source_name
+    effective_source_url = payload.source_url if "source_url" in fields and payload.source_url else sign.source_url
+    effective_license = payload.license if "license" in fields and payload.license else sign.license
+    if effective_video and not (effective_source_name and effective_source_url and effective_license):
+        raise HTTPException(status_code=422, detail="Video autorizado exige fonte, URL da fonte e licenca.")
+
+    old_value = _sign_snapshot(sign)
+    _set_if_provided(sign, "gloss", payload.gloss, "gloss" in fields)
+    _set_if_provided(sign, "source_name", payload.source_name, "source_name" in fields)
+    _set_if_provided(sign, "source_url", payload.source_url, "source_url" in fields)
+    _set_if_provided(sign, "license", payload.license, "license" in fields)
+    _set_if_provided(sign, "image_url", payload.image_url, "image_url" in fields)
+    if "video_url" in fields:
+        _set_if_provided(sign, "video_url", payload.video_url, True)
+    if "avatar_video_url" in fields and payload.avatar_video_url:
+        sign.video_url = payload.avatar_video_url
+    _set_if_provided(sign, "curator_notes", payload.curator_notes, "curator_notes" in fields)
+    sign.educational_notes = _merge_educational_metadata(
+        sign.educational_notes,
+        source_reference_url=payload.source_reference_url if "source_reference_url" in fields else None,
+        license_notes=payload.license_notes if "license_notes" in fields else None,
+    )
+    sign.version = (sign.version or 1) + 1
+    db.flush()
+    db.add(
+        SignAuditLog(
+            sign_id=sign.id,
+            user_id=user.id,
+            action="media_update",
+            old_value=old_value,
+            new_value=_sign_snapshot(sign),
+        )
+    )
+    db.commit()
+    db.refresh(sign)
+    return sign
+
+
 @router.patch("/signs/{sign_id}/curation", response_model=SignRead)
 def curate_sign(
     sign_id: int,
@@ -134,8 +201,8 @@ def curate_sign(
             raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem fonte, URL e licenca.")
         if sign.video_url and not _license_notes(sign):
             raise HTTPException(status_code=422, detail="Nao e permitido aprovar video sem observacao de autorizacao/licenca.")
-        if not sign.gloss and not sign.video_url and not sign.avatar_animation_url and not sign.description:
-            raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem glosa, midia ou descricao adequada.")
+        if not sign.gloss and not sign.video_url and not sign.avatar_animation_url:
+            raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem video, animacao ou glosa.")
     old_value = _sign_snapshot(sign)
     sign.status = payload.status
     sign.curator_notes = payload.curator_notes or sign.curator_notes
@@ -194,8 +261,8 @@ def approve_sign(
         raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem fonte, URL e licenca validas.")
     if sign.video_url and not _license_notes(sign):
         raise HTTPException(status_code=422, detail="Nao e permitido aprovar video sem observacao de autorizacao/licenca.")
-    if not sign.gloss and not sign.video_url and not sign.avatar_animation_url and not sign.description:
-        raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem glosa, midia ou descricao adequada.")
+    if not sign.gloss and not sign.video_url and not sign.avatar_animation_url:
+        raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem video, animacao ou glosa.")
     old_value = {"status": sign.status}
     sign.status = "approved"
     sign.curator_notes = sign.curator_notes or "Aprovado por administrador/curador."
@@ -290,6 +357,28 @@ def import_ines_authorized_media(
     user: User = Depends(require_role(["admin"])),
 ):
     importer = InesAuthorizedMediaImporter(db)
+    if payload.records is not None:
+        return importer.import_records(
+            payload.records,
+            source_name=payload.source,
+            source_type=payload.source_type,
+            download_media=payload.download_media,
+            overwrite_files=payload.overwrite_files,
+            authorized=payload.authorized,
+            authorization_reference=payload.authorization_reference,
+            user=user,
+        )
+    if payload.content:
+        return importer.import_content(
+            payload.content,
+            source_name=payload.source,
+            source_type=payload.source_type,
+            download_media=payload.download_media,
+            overwrite_files=payload.overwrite_files,
+            authorized=payload.authorized,
+            authorization_reference=payload.authorization_reference,
+            user=user,
+        )
     return importer.import_manifest(
         payload.source,
         payload.source_type,
@@ -353,6 +442,15 @@ def _set_if_present(sign: Sign, field: str, value: str | None) -> None:
         setattr(sign, field, value)
 
 
+def _set_if_provided(sign: Sign, field: str, value: str | None, provided: bool) -> None:
+    if provided and value is not None and str(value).strip():
+        setattr(sign, field, value.strip() if isinstance(value, str) else value)
+
+
+def _is_http_url(value: str) -> bool:
+    return value.startswith("http://") or value.startswith("https://")
+
+
 def _manual_description(payload: ManualSignCreate) -> str:
     lines = []
     if payload.meaning:
@@ -414,6 +512,43 @@ def _source_reference_url(sign: Sign) -> str | None:
 
 def _license_notes(sign: Sign) -> str | None:
     return _metadata_value(sign, "Observações de licença")
+
+
+def _merge_educational_metadata(
+    notes: str | None,
+    *,
+    source_reference_url: str | None = None,
+    license_notes: str | None = None,
+) -> str:
+    existing = []
+    for line in (notes or "").splitlines():
+        if not line.startswith("URL consultada:") and not line.startswith("Observações de licença:"):
+            existing.append(line)
+    if not existing:
+        existing.extend(
+            [
+                "Mídia cadastrada manualmente por curadoria autorizada.",
+                "Sinal permanece no status atual até revisão por admin/curador.",
+            ]
+        )
+    if license_notes:
+        existing.append(f"Observações de licença: {license_notes}")
+    elif notes and _metadata_value_from_notes(notes, "Observações de licença"):
+        existing.append(f"Observações de licença: {_metadata_value_from_notes(notes, 'Observações de licença')}")
+    if source_reference_url:
+        existing.append(f"URL consultada: {source_reference_url}")
+    elif notes and _metadata_value_from_notes(notes, "URL consultada"):
+        existing.append(f"URL consultada: {_metadata_value_from_notes(notes, 'URL consultada')}")
+    return "\n".join(existing)
+
+
+def _metadata_value_from_notes(notes: str, label: str) -> str | None:
+    prefix = f"{label}:"
+    for line in notes.splitlines():
+        if line.strip().startswith(prefix):
+            value = line.split(":", 1)[1].strip()
+            return value or None
+    return None
 
 
 def _approved_sign_payload(sign: Sign) -> dict:

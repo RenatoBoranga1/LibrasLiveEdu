@@ -211,6 +211,26 @@ export function updateSign(signId: number, payload: Partial<SignRecord>): Promis
   });
 }
 
+export type SignMediaPayload = {
+  gloss?: string | null;
+  source_name?: string | null;
+  source_url?: string | null;
+  source_reference_url?: string | null;
+  license?: string | null;
+  license_notes?: string | null;
+  video_url?: string | null;
+  avatar_video_url?: string | null;
+  image_url?: string | null;
+  curator_notes?: string | null;
+};
+
+export function updateSignMedia(signId: number, payload: SignMediaPayload): Promise<SignRecord> {
+  return request<SignRecord>(`/api/signs/${signId}/media`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export type ManualSignPayload = {
   word: string;
   gloss?: string;
@@ -284,8 +304,10 @@ export function importViaApi(providerName = "vlibras") {
 }
 
 export function importInesAuthorizedMedia(payload: {
-  source: string;
+  source?: string;
   source_type?: "csv" | "json";
+  content?: string;
+  records?: Array<Record<string, string>>;
   download_media?: boolean;
   overwrite_files?: boolean;
   authorized?: boolean;
@@ -295,7 +317,7 @@ export function importInesAuthorizedMedia(payload: {
     method: "POST",
     body: JSON.stringify({
       source_type: "json",
-      download_media: true,
+      download_media: false,
       overwrite_files: false,
       authorized: false,
       ...payload,

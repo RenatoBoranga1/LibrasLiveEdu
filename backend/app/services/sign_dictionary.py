@@ -19,20 +19,25 @@ class SignDictionaryService:
         if not sign:
             return {
                 "word": word,
-                "status": "missing",
+                "status": "unavailable",
                 "title": "Sinal ainda não cadastrado",
                 "curation": "pending",
             }
 
+        approved = sign.status == "approved"
+        pending_review = sign.status in {"pending", "review", "needs_specialist_review"}
+        card_status = sign.status if approved else "pending" if pending_review else "unavailable"
         return {
             "id": sign.id,
             "word": sign.word,
-            "status": sign.status,
-            "gloss": sign.gloss,
-            "imageUrl": sign.image_url,
-            "videoUrl": sign.video_url,
-            "avatarAnimationUrl": sign.avatar_animation_url,
-            "sourceName": sign.source_name,
-            "license": sign.license,
-            "curation": "approved" if sign.status == "approved" else "pending",
+            "status": card_status,
+            "title": "Sinal aprovado" if approved else "Aguardando curadoria" if pending_review else "Sinal ainda não cadastrado",
+            "gloss": sign.gloss if approved else None,
+            "imageUrl": sign.image_url if approved else None,
+            "videoUrl": sign.video_url if approved else None,
+            "avatarVideoUrl": sign.video_url if approved else None,
+            "avatarAnimationUrl": sign.avatar_animation_url if approved else None,
+            "sourceName": sign.source_name if approved or pending_review else None,
+            "license": sign.license if approved or pending_review else None,
+            "curation": "approved" if approved else "pending",
         }

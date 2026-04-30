@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "word": "professor",
+      "gloss": "PROFESSOR",
+      "example_sentence": "O professor explicou a atividade.",
+      "grammatical_class": "substantivo",
+      "meaning": "Pessoa que ensina.",
+      "source_name": "Dicionário da Língua Brasileira de Sinais - INES",
+      "source_url": "https://dicionario.ines.gov.br/",
+      "source_reference_url": "https://dicionario.ines.gov.br/",
+      "license": "Uso de mídia autorizado conforme documento informado na importação.",
+      "license_notes": "Não redistribuir fora dos termos da autorização.",
+      "image_url": "",
+      "video_url": "",
+      "avatar_video_url": "",
+      "animation_payload_url": "",
+      "curator_notes": "Mídia INES importada com autorização. Aguardando curadoria por especialista em Libras."
+    }
+  ]
+}

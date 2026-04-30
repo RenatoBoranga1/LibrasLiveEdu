@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Check, Database, FileJson, Filter, Pencil, RefreshCcw, Upload } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
@@ -12,6 +13,7 @@ import {
   getAdminStats,
   importSampleCsv,
   importSampleJson,
+  importInesAuthorizedMedia,
   importViaApi,
   listSignAudit,
   listCategories,
@@ -50,6 +52,8 @@ export default function AdminPage() {
   const [selected, setSelected] = useState<SignRecord | null>(fallbackSigns[0]);
   const [auditLog, setAuditLog] = useState<Array<{ id: number; action: string; created_at: string }>>([]);
   const [message, setMessage] = useState("Modo demo ativo: dados locais aparecem se a API estiver offline.");
+  const [inesManifest, setInesManifest] = useState("data/ines_authorized_media_manifest.json");
+  const [inesAuthorization, setInesAuthorization] = useState("");
 
   const params = useMemo(() => {
     const search = new URLSearchParams();
@@ -132,6 +136,21 @@ export default function AdminPage() {
     setMessage(result ? "Importação via API solicitada." : "VLibras/API não configurada ou backend offline.");
   }
 
+  async function runInesMediaImport() {
+    const result = await importInesAuthorizedMedia({
+      source: inesManifest,
+      source_type: inesManifest.toLowerCase().endsWith(".csv") ? "csv" : "json",
+      download_media: true,
+      authorized: true,
+      authorization_reference: inesAuthorization,
+    }).catch(() => null);
+    setMessage(
+      result
+        ? "Importação autorizada de mídia INES enviada. Os sinais entram como pendentes de curadoria."
+        : "Não foi possível importar mídias INES. Verifique autorização, manifesto e login admin."
+    );
+  }
+
   if (auth.loading) {
     return (
       <main className="min-h-screen bg-paper dark:bg-zinc-950">
@@ -157,6 +176,9 @@ export default function AdminPage() {
               <RefreshCcw className="h-5 w-5" aria-hidden="true" />
               Atualizar
             </ActionButton>
+            <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-ocean px-4 py-3 text-base font-bold text-white" href="/admin/signs/new">
+              Novo sinal INES
+            </Link>
             <ActionButton tone="secondary" onClick={runSampleImport}>
               <FileJson className="h-5 w-5" aria-hidden="true" />
               Importar JSON
@@ -189,6 +211,34 @@ export default function AdminPage() {
 
         <div className="grid gap-5 lg:grid-cols-[1fr_390px]">
           <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+            <div className="mb-4 rounded-lg border border-ocean/15 bg-teal-50 p-4 dark:border-white/10 dark:bg-zinc-800">
+              <h2 className="text-lg font-black text-ink dark:text-white">Importar mídias INES autorizadas</h2>
+              <p className="mt-1 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
+                Use apenas manifesto autorizado. A mídia é salva localmente e os sinais ficam como pendentes até curadoria.
+              </p>
+              <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
+                <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
+                  Manifesto CSV/JSON
+                  <input
+                    className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
+                    value={inesManifest}
+                    onChange={(event) => setInesManifest(event.target.value)}
+                  />
+                </label>
+                <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
+                  Referência da autorização
+                  <input
+                    className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
+                    value={inesAuthorization}
+                    onChange={(event) => setInesAuthorization(event.target.value)}
+                    placeholder="Ofício, processo, contrato ou URL"
+                  />
+                </label>
+                <ActionButton className="self-end" tone="quiet" onClick={runInesMediaImport} disabled={!inesManifest || !inesAuthorization}>
+                  Importar mídia INES
+                </ActionButton>
+              </div>
+            </div>
             <div className="flex flex-wrap items-end gap-3 border-b border-ink/10 pb-4 dark:border-white/10">
               <div className="min-w-52 flex-1">
                 <label className="block text-sm font-bold text-ink/70 dark:text-white/70" htmlFor="word-filter">

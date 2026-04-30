@@ -25,6 +25,7 @@ class ClassStatus(str, Enum):
 class TranslationStatus(str, Enum):
     success = "success"
     pending = "pending"
+    fallback = "fallback"
     failed = "failed"
     unavailable = "unavailable"
 

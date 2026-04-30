@@ -6,10 +6,22 @@ from app.api.deps import get_optional_user, require_role
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import hash_password, utc_now
+from app.importers.ines_authorized_media_importer import InesAuthorizedMediaImporter
 from app.importers.libras_dictionary_importer import LibrasDictionaryImporter
 from app.models import ClassSession, ImportJob, SavedWord, Sign, SignAuditLog, User, UserRole
 from app.repositories.sign_repository import SignRepository
-from app.schemas.api import AdminStats, ImportJobRead, ImportRequest, RejectSignRequest, SavedWordCreate, SignRead, SignUpdate
+from app.schemas.api import (
+    AdminStats,
+    InesMediaImportRequest,
+    ImportJobRead,
+    ImportRequest,
+    ManualSignCreate,
+    RejectSignRequest,
+    SavedWordCreate,
+    SignCurationRequest,
+    SignRead,
+    SignUpdate,
+)
 from app.services.text_normalizer import TextNormalizerService
 
 router = APIRouter(tags=["signs"])
@@ -25,6 +37,122 @@ def list_signs(
 ):
     normalized_word = TextNormalizerService().normalize_word(word) if word else None
     return SignRepository(db).search(normalized_word, category_id, subject_id, status)
+
+
+@router.get("/signs/lookup")
+def lookup_sign(word: str, db: Session = Depends(get_db)):
+    normalized_word = TextNormalizerService().normalize_word(word)
+    sign = SignRepository(db).find_best_by_normalized_word(normalized_word)
+    if not sign:
+        return {"status": "unavailable", "word": word, "message": "Sinal ainda não cadastrado."}
+    if sign.status in {"pending", "review", "needs_specialist_review"}:
+        return {
+            "status": "pending",
+            "word": sign.word,
+            "message": "Sinal aguardando curadoria por especialista em Libras.",
+            "sourceName": sign.source_name,
+            "license": sign.license,
+        }
+    if sign.status != "approved":
+        return {"status": "unavailable", "word": word, "message": "Sinal ainda não cadastrado."}
+    return {
+        "status": "approved",
+        "sign": _approved_sign_payload(sign),
+    }
+
+
+@router.post("/signs/manual", response_model=SignRead)
+def create_manual_sign(
+    payload: ManualSignCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin", "curator"])),
+):
+    normalizer = TextNormalizerService()
+    normalized_word = normalizer.normalize_word(payload.word)
+    statement = select(Sign).where(Sign.normalized_word == normalized_word)
+    if payload.gloss:
+        statement = statement.where(Sign.gloss == payload.gloss)
+    sign = db.scalar(statement.order_by(Sign.updated_at.desc()).limit(1))
+    is_new_sign = sign is None
+    old_value = _sign_snapshot(sign) if sign else None
+
+    if not sign:
+        sign = Sign(word=payload.word, normalized_word=normalized_word, status="pending")
+        db.add(sign)
+
+    sign.word = payload.word or sign.word
+    sign.normalized_word = normalized_word
+    sign.status = "pending"
+    _set_if_present(sign, "gloss", payload.gloss)
+    _set_if_present(sign, "example_sentence", payload.example_sentence)
+    _set_if_present(sign, "hand_configuration", payload.handshape)
+    _set_if_present(sign, "movement_description", payload.movement)
+    _set_if_present(sign, "facial_expression", payload.facial_expression)
+    _set_if_present(sign, "source_name", payload.source_name)
+    _set_if_present(sign, "source_url", payload.source_reference_url or payload.source_url)
+    _set_if_present(sign, "license", payload.license)
+    _set_if_present(sign, "image_url", payload.image_url)
+    _set_if_present(sign, "video_url", payload.avatar_video_url or payload.video_url)
+    _set_if_present(sign, "avatar_animation_url", payload.animation_payload_url)
+    description = _manual_description(payload)
+    if description:
+        sign.description = description
+    sign.educational_notes = _manual_educational_notes(payload)
+    sign.curator_notes = payload.curator_notes or sign.curator_notes
+    sign.version = 1 if is_new_sign else (sign.version or 1) + 1
+    db.flush()
+    db.add(
+        SignAuditLog(
+            sign_id=sign.id,
+            user_id=user.id,
+            action="manual_ines_register",
+            old_value=old_value,
+            new_value={"status": sign.status, "word": sign.word, "source_name": sign.source_name},
+        )
+    )
+    db.commit()
+    db.refresh(sign)
+    return sign
+
+
+@router.patch("/signs/{sign_id}/curation", response_model=SignRead)
+def curate_sign(
+    sign_id: int,
+    payload: SignCurationRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin", "curator"])),
+):
+    sign = db.get(Sign, sign_id)
+    if not sign:
+        raise HTTPException(status_code=404, detail="Sinal nao encontrado.")
+    if payload.status == "approved":
+        if not sign.source_name or not sign.source_url or not sign.license:
+            raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem fonte, URL e licenca.")
+        if not sign.gloss and not sign.video_url and not sign.avatar_animation_url and not sign.description:
+            raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem glosa, midia ou descricao adequada.")
+    old_value = _sign_snapshot(sign)
+    sign.status = payload.status
+    sign.curator_notes = payload.curator_notes or sign.curator_notes
+    sign.last_reviewed_at = utc_now()
+    if payload.status == "approved":
+        sign.approved_by_user_id = user.id
+        sign.approved_at = utc_now()
+    if payload.status == "rejected":
+        sign.rejected_by_user_id = user.id
+        sign.rejected_at = utc_now()
+    sign.version += 1
+    db.add(
+        SignAuditLog(
+            sign_id=sign.id,
+            user_id=user.id,
+            action="curation",
+            old_value=old_value,
+            new_value={"status": sign.status, "curator_notes": sign.curator_notes},
+        )
+    )
+    db.commit()
+    db.refresh(sign)
+    return sign
 
 
 @router.patch("/signs/{sign_id}", response_model=SignRead)
@@ -147,6 +275,24 @@ def import_dictionary(
     return importer.import_from_api(payload.provider_name or payload.source)
 
 
+@router.post("/admin/import/ines-media", response_model=ImportJobRead)
+def import_ines_authorized_media(
+    payload: InesMediaImportRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    importer = InesAuthorizedMediaImporter(db)
+    return importer.import_manifest(
+        payload.source,
+        payload.source_type,
+        download_media=payload.download_media,
+        overwrite_files=payload.overwrite_files,
+        authorized=payload.authorized,
+        authorization_reference=payload.authorization_reference,
+        user=user,
+    )
+
+
 @router.get("/admin/import-jobs", response_model=list[ImportJobRead])
 def list_import_jobs(db: Session = Depends(get_db), _: User = Depends(require_role(["admin"]))):
     return list(db.scalars(select(ImportJob).order_by(ImportJob.created_at.desc()).limit(50)))
@@ -192,3 +338,70 @@ def save_word(
     db.add(saved)
     db.commit()
     return {"id": saved.id, "word": sign.word, "status": "saved"}
+
+
+def _set_if_present(sign: Sign, field: str, value: str | None) -> None:
+    if value is not None and str(value).strip():
+        setattr(sign, field, value)
+
+
+def _manual_description(payload: ManualSignCreate) -> str:
+    lines = []
+    if payload.meaning:
+        lines.append(f"Acepção/significado: {payload.meaning}")
+    if payload.grammatical_class:
+        lines.append(f"Classe gramatical: {payload.grammatical_class}")
+    if payload.location:
+        lines.append(f"Localização: {payload.location}")
+    if payload.orientation:
+        lines.append(f"Orientação: {payload.orientation}")
+    return "\n".join(lines)
+
+
+def _manual_educational_notes(payload: ManualSignCreate) -> str:
+    lines = [
+        "Cadastro manual baseado em consulta ao Dicionário INES.",
+        "Não copiar mídia do INES sem autorização/licença de uso.",
+    ]
+    if payload.license_notes:
+        lines.append(f"Observações de licença: {payload.license_notes}")
+    if payload.source_reference_url:
+        lines.append(f"URL consultada: {payload.source_reference_url}")
+    if payload.avatar_video_url:
+        lines.append("URL de avatar/vídeo próprio informada manualmente.")
+    if payload.animation_payload_url:
+        lines.append("Payload de animação informado manualmente.")
+    return "\n".join(lines)
+
+
+def _sign_snapshot(sign: Sign | None) -> dict | None:
+    if not sign:
+        return None
+    return {
+        "word": sign.word,
+        "gloss": sign.gloss,
+        "status": sign.status,
+        "source_name": sign.source_name,
+        "source_url": sign.source_url,
+        "license": sign.license,
+        "video_url": sign.video_url,
+    }
+
+
+def _approved_sign_payload(sign: Sign) -> dict:
+    return {
+        "id": sign.id,
+        "word": sign.word,
+        "normalizedWord": sign.normalized_word,
+        "gloss": sign.gloss,
+        "description": sign.description,
+        "exampleSentence": sign.example_sentence,
+        "imageUrl": sign.image_url,
+        "videoUrl": sign.video_url,
+        "avatarVideoUrl": sign.video_url,
+        "animationPayloadUrl": sign.avatar_animation_url,
+        "sourceName": sign.source_name,
+        "sourceUrl": sign.source_url,
+        "license": sign.license,
+        "status": sign.status,
+    }

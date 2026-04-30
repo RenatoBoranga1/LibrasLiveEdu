@@ -11,8 +11,9 @@ import { HelpButton } from "@/components/HelpButton";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 import { LiveCaption } from "@/components/LiveCaption";
 import { LiveModeSelector, type LiveViewMode } from "@/components/LiveModeSelector";
-import { getClassByAccessCode, joinClass, saveWord } from "@/services/api";
-import type { ClassSession, SignCard } from "@/types/live";
+import { LiveSummaryPanel } from "@/components/LiveSummaryPanel";
+import { getClassByAccessCode, getLiveSummaryByAccessCode, joinClass, saveWord } from "@/services/api";
+import type { ClassSession, LiveSummary, SignCard } from "@/types/live";
 import { useLiveClass } from "@/hooks/useLiveClass";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
@@ -29,6 +30,7 @@ export default function JoinClassPage() {
   const [captionPaused, setCaptionPaused] = useState(false);
   const [displayCaption, setDisplayCaption] = useState("");
   const [savedWords, setSavedWords] = useState<string[]>([]);
+  const [initialSummary, setInitialSummary] = useState<LiveSummary | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [classEnded, setClassEnded] = useState(false);
   const [viewMode, setViewMode] = useState<LiveViewMode>("full");
@@ -81,10 +83,20 @@ export default function JoinClassPage() {
     if (saved) setSavedWords(JSON.parse(saved));
   }, [accessCode]);
 
+  useEffect(() => {
+    if (!classSession) return;
+    getLiveSummaryByAccessCode(accessCode).then(setInitialSummary).catch(() => null);
+  }, [accessCode, classSession]);
+
   const cards = useMemo(() => live.cards.slice(0, 10), [live.cards]);
+  const approvedMediaCard = useMemo(
+    () => cards.find((card) => card.status === "approved" && (card.avatarVideoUrl || card.videoUrl || card.avatarAnimationUrl || card.gloss)),
+    [cards]
+  );
   const showAvatar = viewMode === "full" || viewMode === "focus";
   const showCaption = viewMode === "full" || viewMode === "focus" || viewMode === "caption";
   const showCards = viewMode === "full" || viewMode === "cards";
+  const visibleSummary = live.liveSummary ?? initialSummary;
   const connectionLabel = classEnded
     ? "Aula encerrada"
     : live.connected
@@ -133,7 +145,7 @@ export default function JoinClassPage() {
         )}
         {(classEnded || !classSession) && !loading && (
           <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/aluno">
-            Voltar para digitar outro código
+            Voltar para entrar com outro código
           </Link>
         )}
         <LiveModeSelector value={viewMode} onChange={setViewMode} />
@@ -143,21 +155,50 @@ export default function JoinClassPage() {
           onHighContrast={() => setHighContrast((value) => !value)}
           onLargeText={() => setEnlargedText((value) => !value)}
         />
+        {demoMode && (
+          <button
+            className="focus-ring inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-amber px-4 py-3 text-sm font-black text-ink shadow-soft hover:bg-yellow-400"
+            onClick={live.injectDemo}
+            aria-label="Testar acessibilidade com trecho local de demonstração"
+          >
+            <RotateCcw className="h-5 w-5" aria-hidden="true" />
+            Testar acessibilidade
+          </button>
+        )}
 
         {showAvatar && (
           <div className="sticky top-[73px] z-10">
             <AvatarPanel
               large
               status={live.translation.status}
-              glossText={live.translation.glossText}
-              avatarVideoUrl={live.translation.avatarVideoUrl}
-              animationPayloadUrl={live.translation.animationPayloadUrl}
+              glossText={live.translation.glossText || approvedMediaCard?.gloss}
+              avatarVideoUrl={live.translation.avatarVideoUrl || approvedMediaCard?.avatarVideoUrl}
+              videoUrl={approvedMediaCard?.videoUrl}
+              animationPayloadUrl={live.translation.animationPayloadUrl || approvedMediaCard?.avatarAnimationUrl}
+              sourceName={approvedMediaCard?.sourceName}
+              license={approvedMediaCard?.license}
+              providerConfigured={live.translation.providerConfigured}
+              warningMessage={live.translation.warningMessage}
+              cards={cards}
             />
           </div>
         )}
 
         {showCaption && (
           <LiveCaption text={displayCaption || "Aguardando a fala do professor..."} enlarged={enlargedText} />
+        )}
+
+        {showCaption && (
+          <LiveSummaryPanel
+            summaryText={visibleSummary?.summaryText}
+            bulletPoints={visibleSummary?.bulletPoints}
+            keywords={visibleSummary?.keywords}
+            updatedAt={visibleSummary?.updatedAt}
+            generatedBy={visibleSummary?.generatedBy}
+            isAutoGenerated={visibleSummary?.isAutoGenerated}
+            collapsible
+            defaultOpen={false}
+          />
         )}
 
         {showCards && (
@@ -174,17 +215,42 @@ export default function JoinClassPage() {
             </div>
             <div className="-mx-4 overflow-x-auto px-4 pb-2">
               <div className="flex min-w-full gap-3">
-                {(cards.length ? cards : [{ word: "tecnologia", status: "pending", sourceName: "Seed educacional inicial" }]).map((card) => (
-                  <article key={`${card.word}-${card.id ?? card.status}`} className="w-64 shrink-0 rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-                    <h3 className="text-xl font-black">{card.word}</h3>
-                    <p className="mt-2 text-sm font-semibold text-ink/65 dark:text-white/65">
-                      {card.status === "approved" ? "Sinal aprovado" : "Este sinal ainda está pendente de curadoria por especialista em Libras."}
-                    </p>
-                    <button className="focus-ring mt-4 min-h-11 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm font-bold text-ocean dark:border-white/10 dark:bg-zinc-950 dark:text-mint" onClick={() => handleSaveWord(card)}>
-                      Salvar palavra
-                    </button>
-                  </article>
-                ))}
+                {(cards.length ? cards : [{ word: "tecnologia", status: "pending", sourceName: "Seed educacional inicial" }]).map((card) => {
+                  const approved = card.status === "approved";
+                  const unavailable = card.status === "unavailable" || card.status === "missing";
+                  const statusLabel = approved ? "Sinal aprovado" : unavailable ? "Sinal ainda não cadastrado" : "Aguardando curadoria";
+                  const mediaUrl = approved ? card.avatarVideoUrl ?? card.videoUrl : null;
+                  return (
+                    <article key={`${card.word}-${card.id ?? card.status}`} className="w-72 shrink-0 rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-xl font-black">{card.word}</h3>
+                        <span className={`rounded-full px-2 py-1 text-xs font-black ${approved ? "bg-ocean text-white" : unavailable ? "bg-zinc-200 text-ink" : "bg-amber/20 text-ink dark:text-white"}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                      <div className="mt-3 space-y-1 text-xs font-bold leading-relaxed text-ink/65 dark:text-white/65">
+                        {card.sourceName && <p>Fonte: {card.sourceName}</p>}
+                        {card.license && <p>Licença: {card.license}</p>}
+                        {!approved && !unavailable && <p>Este sinal ainda está pendente de curadoria por especialista em Libras.</p>}
+                      </div>
+                      <div className="mt-4 grid gap-2">
+                        {mediaUrl && (
+                          <a
+                            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-ocean px-3 py-2 text-sm font-bold text-white"
+                            href={mediaUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Ver sinal
+                          </a>
+                        )}
+                        <button className="focus-ring min-h-11 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm font-bold text-ocean dark:border-white/10 dark:bg-zinc-950 dark:text-mint" onClick={() => handleSaveWord(card)}>
+                          Salvar palavra
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -207,10 +273,10 @@ export default function JoinClassPage() {
             <button
               className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-bold text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint"
               onClick={clearSavedWords}
-              aria-label="Limpar palavras salvas neste celular"
+              aria-label="Limpar palavras salvas"
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
-              Limpar
+              Limpar palavras salvas
             </button>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -244,9 +310,9 @@ export default function JoinClassPage() {
             Salvar
           </button>
           {demoMode ? (
-            <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={live.injectDemo} aria-label="Simular próximo trecho">
+            <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={live.injectDemo} aria-label="Testar acessibilidade">
               <RotateCcw className="mx-auto h-5 w-5" aria-hidden="true" />
-              Demo
+              Testar
             </button>
           ) : (
             <span className="rounded-lg px-2 py-2 text-center text-xs font-bold text-ink/50 dark:text-white/50">Ao vivo</span>

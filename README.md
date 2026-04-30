@@ -136,12 +136,133 @@ python scripts/import_vlibras_dictionary.py
 
 Não faça scraping não autorizado e não use imagens, vídeos ou animações sem licença.
 
+## Cadastro Manual pelo Dicionário INES
+
+O painel `/admin/signs/new` permite que admin ou curador registrem manualmente informações consultadas no Dicionário da Língua Brasileira de Sinais - INES ou em outra fonte autorizada.
+
+Regras de segurança e curadoria:
+
+- não há scraping automático do INES;
+- o sistema não baixa imagens ou vídeos automaticamente;
+- não copie mídia do INES sem autorização/licença de uso;
+- todo sinal cadastrado manualmente entra como `pending`;
+- apenas admin ou curador pode aprovar/reprovar sinais;
+- a aprovação exige fonte, URL, licença e glosa, mídia autorizada ou descrição adequada;
+- apenas sinais `approved` aparecem como oficiais nos cards do aluno;
+- sinais `pending` mostram aviso de curadoria e podem exibir fonte/licença, mas não mídia oficial.
+
+Endpoints relacionados:
+
+```bash
+POST /api/signs/manual
+PATCH /api/signs/{id}/curation
+GET /api/signs/lookup?word=professor
+```
+
+## Importação Autorizada de Mídias INES
+
+Quando houver autorização formal do INES/governo para baixar e usar as mídias, use o importador autorizado. Ele exige uma referência da autorização, baixa imagens/vídeos de hosts permitidos, salva os arquivos em `MEDIA_STORAGE_DIR` e registra os sinais como `pending`.
+
+Variáveis:
+
+```env
+INES_MEDIA_IMPORT_AUTHORIZED=true
+INES_MEDIA_AUTHORIZATION_REFERENCE=Oficio-ou-processo-da-autorizacao
+INES_MEDIA_BASE_URL=https://dicionario.ines.gov.br/
+INES_MEDIA_ALLOWED_HOSTS=dicionario.ines.gov.br
+MEDIA_STORAGE_DIR=storage/media
+PUBLIC_MEDIA_BASE_URL=/media
+```
+
+Comando:
+
+```bash
+cd backend
+python scripts/import_ines_authorized_media.py --manifest data/ines_authorized_media_manifest.json --authorized --authorization-reference "Oficio/Processo XYZ"
+```
+
+Também há endpoint protegido para admin:
+
+```bash
+POST /api/admin/import/ines-media
+```
+
+Formato esperado do manifesto:
+
+```json
+{
+  "items": [
+    {
+      "word": "professor",
+      "gloss": "PROFESSOR",
+      "image_url": "https://dicionario.ines.gov.br/...",
+      "video_url": "https://dicionario.ines.gov.br/...",
+      "source_reference_url": "https://dicionario.ines.gov.br/",
+      "license": "Uso autorizado conforme documento informado"
+    }
+  ]
+}
+```
+
+Mesmo com autorização, o sistema não aprova automaticamente. Admin/curador deve revisar e aprovar antes que a mídia apareça como sinal oficial na tela do aluno.
+
 ## Speech-to-Text e Avatar
 
 - Backend: `DemoSpeechToTextProvider`, `GoogleSpeechToTextProvider`, `AzureSpeechProvider` e `WhisperProvider`.
 - Frontend: reconhecimento de fala do navegador quando disponível.
 - O app envia texto transcrito por padrão e não armazena áudio bruto.
 - O `AvatarPanel` renderiza vídeo quando `avatar_video_url` existir e mostra fallback visual quando não houver avatar.
+
+## Resumo Automático da Aula
+
+O aluno vê um painel “Resumo da aula até agora” abaixo da legenda ao vivo. Esse resumo é um apoio pedagógico gerado automaticamente a partir da transcrição, não um documento oficial da escola.
+
+O backend emite `summary.updated` pelo WebSocket quando há trechos suficientes e o intervalo mínimo foi atingido. O professor também pode clicar em “Gerar resumo agora” na tela `/teacher`.
+
+Por padrão, o resumo usa fallback local seguro:
+
+- remove trechos duplicados;
+- considera os últimos 10 a 20 segmentos;
+- extrai palavras-chave;
+- cria bullets curtos;
+- nunca trava a aula se uma integração de IA falhar.
+
+Variáveis disponíveis:
+
+```env
+AI_SUMMARY_ENABLED=false
+AI_PROVIDER=local
+AI_MODEL=
+AI_API_KEY=
+AI_API_URL=https://api.openai.com/v1/chat/completions
+SUMMARY_INTERVAL_SECONDS=45
+SUMMARY_MIN_SEGMENTS=3
+SUMMARY_MAX_SEGMENTS=20
+```
+
+Antes de ativar um provedor externo, valide LGPD, finalidade educacional, consentimento e contrato de processamento de dados. Não envie dados sensíveis para serviços externos sem aviso e autorização adequados.
+
+Para um provedor compatível com chat completions, configure `AI_SUMMARY_ENABLED=true`, `AI_PROVIDER=openai` ou `AI_PROVIDER=openai_compatible`, `AI_MODEL`, `AI_API_KEY` e `AI_API_URL`. Se a chamada falhar, o app volta ao resumo local sem interromper a aula.
+
+## Status real do avatar Libras
+
+- O sistema já possui painel de avatar na tela do aluno.
+- Avatar real depende de provedor externo autorizado ou de vídeos/animações com licença e curadoria.
+- Quando não há provedor configurado, o app mostra legenda, glosa técnica quando disponível e cards visuais de palavras-chave.
+- O backend retorna `avatar_provider_configured` em `/api/health` e metadados de tradução nos eventos `translation.created`.
+- O app não inventa sinais de Libras e nunca deve apresentar seed local como sinal oficial.
+- O recurso é apoio à acessibilidade e não substitui intérprete humano.
+
+## Como testar uma aula
+
+1. Acesse `/login`.
+2. Entre como professor com uma conta válida do ambiente.
+3. Abra `/teacher` e crie uma aula.
+4. Copie o link ou escaneie o QR Code.
+5. Abra o link do aluno em outra aba ou no celular.
+6. Use “Teste rápido da aula” ou envie uma frase manual.
+7. Verifique legenda ao vivo, cards visuais, histórico e o painel Avatar Libras/fallback.
+8. Abra `/diagnostico` para validar API, WebSocket, SpeechRecognition, PWA e microfone antes da demonstração.
 
 ## PWA e Segurança Frontend
 
@@ -183,6 +304,13 @@ Backend no Render:
   - `CORS_ORIGINS=https://libras-live-edu-zkpy.vercel.app`
   - `DEMO_MODE=false`
   - `PYTHON_VERSION=3.11.8`
+  - `AI_SUMMARY_ENABLED=false`
+  - `AI_PROVIDER=local`
+  - `AI_API_URL=https://api.openai.com/v1/chat/completions`
+  - `SUMMARY_INTERVAL_SECONDS=45`
+  - `INES_MEDIA_IMPORT_AUTHORIZED=false`
+  - `MEDIA_STORAGE_DIR=storage/media`
+  - `PUBLIC_MEDIA_BASE_URL=/media`
 
 Banco:
 

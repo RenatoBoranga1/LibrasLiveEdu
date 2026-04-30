@@ -20,6 +20,7 @@ export function AppHeader() {
           <GraduationCap className="h-4 w-4" aria-hidden="true" />
           <Link className="focus-ring rounded-md px-2 py-1" href="/aluno">Aluno</Link>
           <Link className="focus-ring rounded-md px-2 py-1" href="/teacher">Professor</Link>
+          <Link className="focus-ring rounded-md px-2 py-1" href="/diagnostico">Diagnóstico</Link>
           <Link className="focus-ring rounded-md px-2 py-1" href="/login">Login</Link>
         </nav>
       </div>

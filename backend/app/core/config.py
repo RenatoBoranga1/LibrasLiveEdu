@@ -21,6 +21,20 @@ class Settings(BaseSettings):
     vlibras_api_url: str | None = None
     vlibras_api_key: str | None = None
     trusted_dictionary_sources: str = "VLibras"
+    ai_summary_enabled: bool = False
+    ai_provider: str = "local"
+    ai_model: str | None = None
+    ai_api_key: str | None = None
+    ai_api_url: str = "https://api.openai.com/v1/chat/completions"
+    summary_interval_seconds: int = 45
+    summary_min_segments: int = 3
+    summary_max_segments: int = 20
+    ines_media_import_authorized: bool = False
+    ines_media_authorization_reference: str | None = None
+    ines_media_base_url: str = "https://dicionario.ines.gov.br/"
+    ines_media_allowed_hosts: str = "dicionario.ines.gov.br"
+    media_storage_dir: str = "storage/media"
+    public_media_base_url: str = "/media"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
@@ -31,6 +45,10 @@ class Settings(BaseSettings):
     @property
     def trusted_sources(self) -> set[str]:
         return {source.strip().lower() for source in self.trusted_dictionary_sources.split(",") if source.strip()}
+
+    @property
+    def ines_allowed_host_list(self) -> set[str]:
+        return {host.strip().lower() for host in self.ines_media_allowed_hosts.split(",") if host.strip()}
 
 
 @lru_cache

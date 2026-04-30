@@ -196,6 +196,18 @@ class Sign(TimestampMixin, Base):
     saved_words: Mapped[list["SavedWord"]] = relationship(back_populates="sign")
     audit_logs: Mapped[list["SignAuditLog"]] = relationship(back_populates="sign")
 
+    @property
+    def avatar_video_url(self) -> str | None:
+        return self.video_url
+
+    @property
+    def source_reference_url(self) -> str | None:
+        return _sign_note_value(self.educational_notes, "URL consultada") or self.source_url
+
+    @property
+    def license_notes(self) -> str | None:
+        return _sign_note_value(self.educational_notes, "Observações de licença")
+
 
 class KeywordDetected(Base):
     __tablename__ = "keywords_detected"
@@ -308,3 +320,14 @@ class AccessLog(Base):
     ip_address: Mapped[str | None] = mapped_column(String(80))
     user_agent: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+def _sign_note_value(notes: str | None, label: str) -> str | None:
+    if not notes:
+        return None
+    prefix = f"{label}:"
+    for line in notes.splitlines():
+        if line.strip().startswith(prefix):
+            value = line.split(":", 1)[1].strip()
+            return value or None
+    return None

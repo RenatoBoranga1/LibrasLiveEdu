@@ -3,25 +3,33 @@ import { resolveAvatarState } from "@/services/avatarProvider";
 import type { SignCard } from "@/types/live";
 
 export function AvatarPanel({
+  word,
   status,
   glossText,
   avatarVideoUrl,
   videoUrl,
   animationPayloadUrl,
   sourceName,
+  sourceUrl,
+  sourceReferenceUrl,
   license,
+  licenseNotes,
   providerConfigured,
   warningMessage,
   cards = [],
   large = false,
 }: {
+  word?: string | null;
   status: string;
   glossText?: string | null;
   avatarVideoUrl?: string | null;
   videoUrl?: string | null;
   animationPayloadUrl?: string | null;
   sourceName?: string | null;
+  sourceUrl?: string | null;
+  sourceReferenceUrl?: string | null;
   license?: string | null;
+  licenseNotes?: string | null;
   providerConfigured?: boolean | null;
   warningMessage?: string | null;
   cards?: SignCard[];
@@ -39,6 +47,7 @@ export function AvatarPanel({
   });
   const StatusIcon = avatarState.canRenderAvatar ? BadgeCheck : avatarState.type === "animation" ? Box : VideoOff;
   const playableVideoUrl = avatarVideoUrl || videoUrl;
+  const referenceUrl = sourceReferenceUrl || sourceUrl;
 
   return (
     <section
@@ -70,9 +79,10 @@ export function AvatarPanel({
               className="h-full max-h-80 w-full rounded-lg object-contain"
               src={playableVideoUrl}
               controls
+              controlsList="nodownload"
               playsInline
               preload="metadata"
-              aria-label={avatarVideoUrl ? "Vídeo de avatar em Libras" : "Vídeo de apoio do sinal"}
+              aria-label="Vídeo do sinal em Libras"
             />
           ) : (
             <div className="flex max-w-md flex-col items-center gap-4 px-5 py-10 text-center">
@@ -107,10 +117,22 @@ export function AvatarPanel({
             </div>
           )}
 
-          {(sourceName || license) && (
+          {(word || sourceName || license || licenseNotes || referenceUrl) && (
             <div className="rounded-lg bg-white p-3 text-xs font-bold leading-relaxed text-ink/75 shadow-soft dark:bg-zinc-950 dark:text-white/75">
+              {word && <p>Palavra: {word}</p>}
               {sourceName && <p>Fonte: {sourceName}</p>}
-              {license && <p className="mt-1">Licença: {license}</p>}
+              {license && <p className="mt-1">Licença/autorização: {license}</p>}
+              {licenseNotes && <p className="mt-1">Observação: {licenseNotes}</p>}
+              {referenceUrl && (
+                <a
+                  className="focus-ring mt-2 inline-flex min-h-9 items-center rounded-lg bg-teal-50 px-3 py-2 text-ocean dark:bg-zinc-800 dark:text-mint"
+                  href={referenceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Abrir fonte
+                </a>
+              )}
             </div>
           )}
 

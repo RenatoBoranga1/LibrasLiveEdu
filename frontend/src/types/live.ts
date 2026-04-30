@@ -48,7 +48,10 @@ export type SignCard = {
   avatarVideoUrl?: string | null;
   avatarAnimationUrl?: string | null;
   sourceName?: string | null;
+  sourceUrl?: string | null;
+  sourceReferenceUrl?: string | null;
   license?: string | null;
+  licenseNotes?: string | null;
   curation?: "approved" | "pending" | string;
 };
 
@@ -101,8 +104,16 @@ export type SignRecord = {
   gloss?: string | null;
   category_id?: number | null;
   subject_id?: number | null;
+  image_url?: string | null;
+  video_url?: string | null;
+  avatar_video_url?: string | null;
+  avatar_animation_url?: string | null;
   status: string;
   source_name?: string | null;
+  source_url?: string | null;
+  source_reference_url?: string | null;
   license?: string | null;
+  license_notes?: string | null;
   curator_notes?: string | null;
+  educational_notes?: string | null;
 };

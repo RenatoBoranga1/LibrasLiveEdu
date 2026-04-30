@@ -23,8 +23,8 @@ class InesAuthorizedMediaImporter:
     """
 
     default_source_name = "Dicionário da Língua Brasileira de Sinais - INES"
-    default_license = "Fonte pública para consulta; uso de mídia autorizado conforme referência registrada."
-    default_license_notes = "Mídia baixada apenas quando houver autorização formal do INES/governo registrada no ambiente."
+    default_license = "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu"
+    default_license_notes = "Vídeo autorizado para uso educacional no aplicativo LibrasLive Edu."
 
     def __init__(self, db: Session):
         self.db = db
@@ -143,7 +143,7 @@ class InesAuthorizedMediaImporter:
         sign.video_url = video_url or sign.video_url
         sign.avatar_animation_url = animation_url or sign.avatar_animation_url
         sign.source_name = self._clean(record.get("source_name")) or self.default_source_name
-        sign.source_url = self._clean(record.get("source_url") or record.get("source_reference_url")) or self.settings.ines_media_base_url
+        sign.source_url = self._clean(record.get("source_url")) or self.settings.ines_media_base_url
         sign.license = self._clean(record.get("license")) or self.default_license
         sign.status = SignStatus.pending.value
         sign.curator_notes = self._clean(record.get("curator_notes")) or "Mídia INES importada com autorização; aguardando curadoria por especialista em Libras."
@@ -161,6 +161,7 @@ class InesAuthorizedMediaImporter:
                     "image_url": sign.image_url,
                     "video_url": sign.video_url,
                     "source_name": sign.source_name,
+                    "source_reference_url": self._clean(record.get("source_reference_url")) or sign.source_url,
                     "authorization_reference": authorization_reference or self.settings.ines_media_authorization_reference,
                 },
             )

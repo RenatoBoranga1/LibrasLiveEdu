@@ -33,10 +33,11 @@ def list_signs(
     category_id: int | None = None,
     subject_id: int | None = None,
     status: str | None = None,
+    source_name: str | None = None,
     db: Session = Depends(get_db),
 ):
     normalized_word = TextNormalizerService().normalize_word(word) if word else None
-    return SignRepository(db).search(normalized_word, category_id, subject_id, status)
+    return SignRepository(db).search(normalized_word, category_id, subject_id, status, source_name=source_name)
 
 
 @router.get("/signs/lookup")
@@ -49,16 +50,14 @@ def lookup_sign(word: str, db: Session = Depends(get_db)):
         return {
             "status": "pending",
             "word": sign.word,
-            "message": "Sinal aguardando curadoria por especialista em Libras.",
+            "message": "Sinal cadastrado, mas ainda aguardando curadoria.",
             "sourceName": sign.source_name,
             "license": sign.license,
         }
     if sign.status != "approved":
         return {"status": "unavailable", "word": word, "message": "Sinal ainda não cadastrado."}
-    return {
-        "status": "approved",
-        "sign": _approved_sign_payload(sign),
-    }
+    payload = _approved_sign_payload(sign)
+    return {"status": "approved", **payload, "sign": payload}
 
 
 @router.post("/signs/manual", response_model=SignRead)
@@ -89,7 +88,7 @@ def create_manual_sign(
     _set_if_present(sign, "movement_description", payload.movement)
     _set_if_present(sign, "facial_expression", payload.facial_expression)
     _set_if_present(sign, "source_name", payload.source_name)
-    _set_if_present(sign, "source_url", payload.source_reference_url or payload.source_url)
+    _set_if_present(sign, "source_url", payload.source_url)
     _set_if_present(sign, "license", payload.license)
     _set_if_present(sign, "image_url", payload.image_url)
     _set_if_present(sign, "video_url", payload.avatar_video_url or payload.video_url)
@@ -105,9 +104,14 @@ def create_manual_sign(
         SignAuditLog(
             sign_id=sign.id,
             user_id=user.id,
-            action="manual_ines_register",
+            action="manual_create" if is_new_sign else "manual_update",
             old_value=old_value,
-            new_value={"status": sign.status, "word": sign.word, "source_name": sign.source_name},
+            new_value={
+                "status": sign.status,
+                "word": sign.word,
+                "source_name": sign.source_name,
+                "source_reference_url": _source_reference_url(sign),
+            },
         )
     )
     db.commit()
@@ -128,6 +132,8 @@ def curate_sign(
     if payload.status == "approved":
         if not sign.source_name or not sign.source_url or not sign.license:
             raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem fonte, URL e licenca.")
+        if sign.video_url and not _license_notes(sign):
+            raise HTTPException(status_code=422, detail="Nao e permitido aprovar video sem observacao de autorizacao/licenca.")
         if not sign.gloss and not sign.video_url and not sign.avatar_animation_url and not sign.description:
             raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem glosa, midia ou descricao adequada.")
     old_value = _sign_snapshot(sign)
@@ -184,8 +190,10 @@ def approve_sign(
     sign = db.get(Sign, sign_id)
     if not sign:
         raise HTTPException(status_code=404, detail="Sinal nao encontrado.")
-    if not sign.source_name or not sign.license or sign.license.strip().lower() == "aguardando curadoria":
-        raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem fonte e licenca validas.")
+    if not sign.source_name or not sign.source_url or not sign.license or sign.license.strip().lower() == "aguardando curadoria":
+        raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem fonte, URL e licenca validas.")
+    if sign.video_url and not _license_notes(sign):
+        raise HTTPException(status_code=422, detail="Nao e permitido aprovar video sem observacao de autorizacao/licenca.")
     if not sign.gloss and not sign.video_url and not sign.avatar_animation_url and not sign.description:
         raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem glosa, midia ou descricao adequada.")
     old_value = {"status": sign.status}
@@ -361,7 +369,7 @@ def _manual_description(payload: ManualSignCreate) -> str:
 def _manual_educational_notes(payload: ManualSignCreate) -> str:
     lines = [
         "Cadastro manual baseado em consulta ao Dicionário INES.",
-        "Não copiar mídia do INES sem autorização/licença de uso.",
+        "Uso de vídeo autorizado para o projeto LibrasLive Edu quando URL de mídia for informada.",
     ]
     if payload.license_notes:
         lines.append(f"Observações de licença: {payload.license_notes}")
@@ -383,9 +391,29 @@ def _sign_snapshot(sign: Sign | None) -> dict | None:
         "status": sign.status,
         "source_name": sign.source_name,
         "source_url": sign.source_url,
+        "source_reference_url": _source_reference_url(sign),
         "license": sign.license,
+        "license_notes": _license_notes(sign),
         "video_url": sign.video_url,
     }
+
+
+def _metadata_value(sign: Sign, label: str) -> str | None:
+    notes = sign.educational_notes or ""
+    prefix = f"{label}:"
+    for line in notes.splitlines():
+        if line.strip().startswith(prefix):
+            value = line.split(":", 1)[1].strip()
+            return value or None
+    return None
+
+
+def _source_reference_url(sign: Sign) -> str | None:
+    return _metadata_value(sign, "URL consultada") or sign.source_url
+
+
+def _license_notes(sign: Sign) -> str | None:
+    return _metadata_value(sign, "Observações de licença")
 
 
 def _approved_sign_payload(sign: Sign) -> dict:
@@ -402,6 +430,8 @@ def _approved_sign_payload(sign: Sign) -> dict:
         "animationPayloadUrl": sign.avatar_animation_url,
         "sourceName": sign.source_name,
         "sourceUrl": sign.source_url,
+        "sourceReferenceUrl": _source_reference_url(sign),
         "license": sign.license,
+        "licenseNotes": _license_notes(sign),
         "status": sign.status,
     }

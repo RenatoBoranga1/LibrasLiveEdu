@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { Save } from "lucide-react";
+import { ExternalLink, Save } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
@@ -23,13 +23,13 @@ const initialForm: ManualSignPayload = {
   source_name: "Dicionário da Língua Brasileira de Sinais - INES",
   source_url: "https://dicionario.ines.gov.br/",
   source_reference_url: "https://dicionario.ines.gov.br/",
-  license: "Fonte pública para consulta; verificar autorização antes de usar imagem ou vídeo.",
-  license_notes: "Não copiar mídia do INES sem autorização/licença de uso.",
+  license: "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu",
+  license_notes: "Vídeo autorizado para uso educacional no aplicativo LibrasLive Edu.",
   image_url: "",
   video_url: "",
   avatar_video_url: "",
   animation_payload_url: "",
-  curator_notes: "Sinal consultado manualmente no Dicionário INES. Aguardando validação por especialista em Libras.",
+  curator_notes: "Sinal cadastrado com base no Dicionário INES e autorização de uso registrada.",
 };
 
 const fields: Array<{ name: keyof ManualSignPayload; label: string; multiline?: boolean; required?: boolean }> = [
@@ -98,12 +98,23 @@ export default function NewManualSignPage() {
             <p className="text-sm font-bold uppercase tracking-normal text-ocean dark:text-mint">Curadoria manual</p>
             <h1 className="mt-1 text-3xl font-black text-ink dark:text-white">Cadastrar sinal consultado no INES</h1>
             <p className="mt-2 max-w-2xl font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-              Registre apenas informações consultadas manualmente e URLs autorizadas. Não copie mídia do INES sem licença.
+              Use apenas vídeos autorizados para o projeto. Registre a URL da fonte, a URL específica do sinal e a observação de autorização/licença. Todo sinal cadastrado entra como pendente de curadoria.
             </p>
           </div>
-          <Link className="focus-ring rounded-lg bg-white px-4 py-3 text-sm font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin">
-            Voltar ao admin
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <a
+              className="focus-ring inline-flex min-h-12 items-center gap-2 rounded-lg bg-mint px-4 py-3 text-sm font-bold text-ink shadow-soft"
+              href="https://dicionario.ines.gov.br/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              Abrir Dicionário INES
+            </a>
+            <Link className="focus-ring inline-flex min-h-12 items-center rounded-lg bg-white px-4 py-3 text-sm font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin">
+              Voltar para curadoria
+            </Link>
+          </div>
         </div>
 
         {message && <div role="status" className="mb-4 rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white">{message}</div>}

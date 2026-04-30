@@ -9,7 +9,7 @@ import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { ModeBadge } from "@/components/ModeBadge";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
-  approveSign,
+  curateSign,
   getAdminStats,
   importSampleCsv,
   importSampleJson,
@@ -47,6 +47,7 @@ export default function AdminPage() {
   const [status, setStatus] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subjectId, setSubjectId] = useState("");
+  const [inesOnly, setInesOnly] = useState(false);
   const [categories, setCategories] = useState<SignCategory[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selected, setSelected] = useState<SignRecord | null>(fallbackSigns[0]);
@@ -61,8 +62,9 @@ export default function AdminPage() {
     if (status) search.set("status", status);
     if (categoryId) search.set("category_id", categoryId);
     if (subjectId) search.set("subject_id", subjectId);
+    if (inesOnly) search.set("source_name", "Dicionário da Língua Brasileira de Sinais - INES");
     return search;
-  }, [word, status, categoryId, subjectId]);
+  }, [word, status, categoryId, subjectId, inesOnly]);
 
   function refresh() {
     getAdminStats().then(setStats).catch(() => setStats(fallbackStats));
@@ -83,9 +85,16 @@ export default function AdminPage() {
 
   async function approveSelected() {
     if (!selected) return;
-    const updated = await approveSign(selected.id).catch(() => null);
+    const confirmed = window.confirm(
+      "Confirme que o sinal foi validado por especialista em Libras e que o vídeo possui autorização de uso registrada."
+    );
+    if (!confirmed) return;
+    const updated = await curateSign(selected.id, {
+      status: "approved",
+      curator_notes: selected.curator_notes || "Sinal validado. Vídeo autorizado para uso no projeto LibrasLive Edu.",
+    }).catch(() => null);
     if (!updated) {
-      setMessage("Aprovacao bloqueada. Confirme fonte, licenca e evidencias antes de aprovar.");
+      setMessage("Aprovação bloqueada. Confirme fonte, licença, observação de autorização e evidências antes de aprovar.");
       return;
     }
     setSelected(updated);
@@ -305,6 +314,15 @@ export default function AdminPage() {
                   ))}
                 </select>
               </div>
+              <label className="focus-within:ring-2 focus-within:ring-ocean/60 inline-flex min-h-12 items-center gap-2 rounded-lg bg-white px-4 text-sm font-bold text-ink shadow-soft dark:bg-zinc-950 dark:text-white">
+                <input
+                  className="h-5 w-5 accent-ocean"
+                  type="checkbox"
+                  checked={inesOnly}
+                  onChange={(event) => setInesOnly(event.target.checked)}
+                />
+                Somente fonte INES
+              </label>
               <span className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-teal-50 px-4 text-sm font-bold text-ocean dark:bg-zinc-800 dark:text-mint">
                 <Filter className="h-4 w-4" aria-hidden="true" />
                 filtros ativos
@@ -312,11 +330,12 @@ export default function AdminPage() {
             </div>
 
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-left">
+              <table className="w-full min-w-[960px] border-separate border-spacing-y-2 text-left">
                 <thead className="text-sm uppercase tracking-normal text-ink/60 dark:text-white/60">
                   <tr>
                     <th className="px-3 py-2">Palavra</th>
                     <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2">Mídia</th>
                     <th className="px-3 py-2">Fonte</th>
                     <th className="px-3 py-2">Licença</th>
                     <th className="px-3 py-2">Ação</th>
@@ -327,12 +346,33 @@ export default function AdminPage() {
                     <tr key={sign.id} className="bg-teal-50 text-sm font-semibold text-ink dark:bg-zinc-800 dark:text-white">
                       <td className="rounded-l-lg px-3 py-3 text-base font-black">{sign.word}</td>
                       <td className="px-3 py-3">{sign.status}</td>
-                      <td className="px-3 py-3">{sign.source_name}</td>
+                      <td className="px-3 py-3">
+                        {sign.video_url || sign.avatar_video_url ? (
+                          <span className="rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">Com vídeo</span>
+                        ) : (
+                          <span className="rounded-full bg-zinc-200 px-2 py-1 text-xs font-black text-ink">Sem vídeo</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div>{sign.source_name}</div>
+                        {(sign.source_reference_url || sign.source_url) && (
+                          <a className="text-ocean underline-offset-4 hover:underline dark:text-mint" href={sign.source_reference_url || sign.source_url || "#"} target="_blank" rel="noreferrer">
+                            Abrir fonte
+                          </a>
+                        )}
+                      </td>
                       <td className="px-3 py-3">{sign.license}</td>
                       <td className="rounded-r-lg px-3 py-3">
-                        <button className="focus-ring rounded-lg bg-white px-3 py-2 font-bold text-ocean dark:bg-zinc-950 dark:text-mint" onClick={() => selectSign(sign)}>
-                          Revisar
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button className="focus-ring rounded-lg bg-white px-3 py-2 font-bold text-ocean dark:bg-zinc-950 dark:text-mint" onClick={() => selectSign(sign)}>
+                            Revisar
+                          </button>
+                          {(sign.video_url || sign.avatar_video_url) && (
+                            <a className="focus-ring rounded-lg bg-ocean px-3 py-2 font-bold text-white" href={sign.avatar_video_url || sign.video_url || "#"} target="_blank" rel="noreferrer">
+                              Ver vídeo
+                            </a>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

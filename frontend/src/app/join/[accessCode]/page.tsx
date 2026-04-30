@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookmarkPlus, CaptionsOff, History, Maximize2, Minimize2, RotateCcw, Trash2 } from "lucide-react";
+import { BookmarkPlus, CaptionsOff, History, Maximize2, Minimize2, RotateCcw, Trash2, Video, X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { AccessibleModeToggle } from "@/components/AccessibleModeToggle";
 import { AvatarPanel } from "@/components/AvatarPanel";
@@ -34,6 +34,7 @@ export default function JoinClassPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [classEnded, setClassEnded] = useState(false);
   const [viewMode, setViewMode] = useState<LiveViewMode>("full");
+  const [videoCard, setVideoCard] = useState<SignCard | null>(null);
 
   useEffect(() => {
     const queryToken = new URLSearchParams(window.location.search).get("token");
@@ -104,6 +105,7 @@ export default function JoinClassPage() {
       : live.reconnecting
         ? "Tentando reconectar"
         : "Aguardando professor";
+  const modalVideoUrl = videoCard?.avatarVideoUrl ?? videoCard?.videoUrl ?? null;
 
   async function handleSaveWord(card?: SignCard) {
     const target = card ?? cards[0];
@@ -171,12 +173,16 @@ export default function JoinClassPage() {
             <AvatarPanel
               large
               status={live.translation.status}
+              word={approvedMediaCard?.word}
               glossText={live.translation.glossText || approvedMediaCard?.gloss}
               avatarVideoUrl={live.translation.avatarVideoUrl || approvedMediaCard?.avatarVideoUrl}
               videoUrl={approvedMediaCard?.videoUrl}
               animationPayloadUrl={live.translation.animationPayloadUrl || approvedMediaCard?.avatarAnimationUrl}
               sourceName={approvedMediaCard?.sourceName}
+              sourceUrl={approvedMediaCard?.sourceUrl}
+              sourceReferenceUrl={approvedMediaCard?.sourceReferenceUrl}
               license={approvedMediaCard?.license}
+              licenseNotes={approvedMediaCard?.licenseNotes}
               providerConfigured={live.translation.providerConfigured}
               warningMessage={live.translation.warningMessage}
               cards={cards}
@@ -224,25 +230,34 @@ export default function JoinClassPage() {
                     <article key={`${card.word}-${card.id ?? card.status}`} className="w-72 shrink-0 rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="text-xl font-black">{card.word}</h3>
-                        <span className={`rounded-full px-2 py-1 text-xs font-black ${approved ? "bg-ocean text-white" : unavailable ? "bg-zinc-200 text-ink" : "bg-amber/20 text-ink dark:text-white"}`}>
-                          {statusLabel}
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`rounded-full px-2 py-1 text-xs font-black ${approved ? "bg-ocean text-white" : unavailable ? "bg-zinc-200 text-ink" : "bg-amber/20 text-ink dark:text-white"}`}>
+                            {statusLabel}
+                          </span>
+                          {mediaUrl && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">
+                              <Video className="h-3.5 w-3.5" aria-hidden="true" />
+                              Com vídeo
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="mt-3 space-y-1 text-xs font-bold leading-relaxed text-ink/65 dark:text-white/65">
+                        {approved && card.gloss && <p>Glosa: {card.gloss}</p>}
                         {card.sourceName && <p>Fonte: {card.sourceName}</p>}
                         {card.license && <p>Licença: {card.license}</p>}
+                        {card.licenseNotes && <p>Autorização: {card.licenseNotes}</p>}
+                        {card.sourceReferenceUrl && <p>Referência cadastrada.</p>}
                         {!approved && !unavailable && <p>Este sinal ainda está pendente de curadoria por especialista em Libras.</p>}
                       </div>
                       <div className="mt-4 grid gap-2">
                         {mediaUrl && (
-                          <a
+                          <button
                             className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-ocean px-3 py-2 text-sm font-bold text-white"
-                            href={mediaUrl}
-                            target="_blank"
-                            rel="noreferrer"
+                            onClick={() => setVideoCard(card)}
                           >
                             Ver sinal
-                          </a>
+                          </button>
                         )}
                         <button className="focus-ring min-h-11 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm font-bold text-ocean dark:border-white/10 dark:bg-zinc-950 dark:text-mint" onClick={() => handleSaveWord(card)}>
                           Salvar palavra
@@ -290,6 +305,53 @@ export default function JoinClassPage() {
 
         <InstallPWAButton />
       </div>
+
+      {videoCard && modalVideoUrl && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="sign-video-title">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-soft dark:bg-zinc-900">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-normal text-ocean dark:text-mint">Sinal em Libras</p>
+                <h2 id="sign-video-title" className="text-2xl font-black text-ink dark:text-white">
+                  {videoCard.word}
+                </h2>
+              </div>
+              <button
+                className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-zinc-100 px-3 text-ink dark:bg-zinc-800 dark:text-white"
+                onClick={() => setVideoCard(null)}
+                aria-label="Fechar vídeo do sinal"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+            <video
+              className="max-h-[52vh] w-full rounded-lg bg-ink object-contain"
+              src={modalVideoUrl}
+              controls
+              controlsList="nodownload"
+              playsInline
+              preload="metadata"
+              aria-label="Vídeo do sinal em Libras"
+            />
+            <div className="mt-4 space-y-2 rounded-lg bg-teal-50 p-3 text-sm font-bold leading-relaxed text-ink/75 dark:bg-zinc-800 dark:text-white/75">
+              {videoCard.gloss && <p>Glosa: {videoCard.gloss}</p>}
+              {videoCard.sourceName && <p>Fonte: {videoCard.sourceName}</p>}
+              {videoCard.license && <p>Licença/autorização: {videoCard.license}</p>}
+              {videoCard.licenseNotes && <p>Observação: {videoCard.licenseNotes}</p>}
+              {(videoCard.sourceReferenceUrl || videoCard.sourceUrl) && (
+                <a
+                  className="focus-ring inline-flex min-h-10 items-center rounded-lg bg-white px-3 py-2 text-ocean dark:bg-zinc-950 dark:text-mint"
+                  href={videoCard.sourceReferenceUrl || videoCard.sourceUrl || "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Abrir fonte cadastrada
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-white/95 px-3 py-2 shadow-soft backdrop-blur dark:border-white/10 dark:bg-zinc-950/95" aria-label="Ações da aula">
         <div className="mx-auto grid max-w-5xl grid-cols-6 gap-1">

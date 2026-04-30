@@ -30,11 +30,14 @@ class SignRead(BaseModel):
     subject_id: int | None = None
     image_url: str | None = None
     video_url: str | None = None
+    avatar_video_url: str | None = None
     avatar_animation_url: str | None = None
     example_sentence: str | None = None
     source_name: str | None = None
     source_url: str | None = None
+    source_reference_url: str | None = None
     license: str | None = None
+    license_notes: str | None = None
     regionalism: str | None = None
     status: str
     difficulty_level: str | None = None
@@ -278,13 +281,13 @@ class ManualSignCreate(BaseModel):
     source_name: str = "Dicionário da Língua Brasileira de Sinais - INES"
     source_url: str = "https://dicionario.ines.gov.br/"
     source_reference_url: str | None = "https://dicionario.ines.gov.br/"
-    license: str = "Fonte pública para consulta; verificar autorização antes de usar imagem ou vídeo."
-    license_notes: str | None = "Não copiar mídia do INES sem autorização/licença de uso."
+    license: str = "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu"
+    license_notes: str | None = "Vídeo autorizado para uso educacional no aplicativo LibrasLive Edu."
     image_url: str | None = None
     video_url: str | None = None
     avatar_video_url: str | None = None
     animation_payload_url: str | None = None
-    curator_notes: str | None = "Sinal consultado manualmente no Dicionário INES. Aguardando validação por especialista em Libras."
+    curator_notes: str | None = "Sinal cadastrado com base no Dicionário INES e autorização de uso registrada."
 
 
 class SignCurationRequest(BaseModel):

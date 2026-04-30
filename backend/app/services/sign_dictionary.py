@@ -38,6 +38,27 @@ class SignDictionaryService:
             "avatarVideoUrl": sign.video_url if approved else None,
             "avatarAnimationUrl": sign.avatar_animation_url if approved else None,
             "sourceName": sign.source_name if approved or pending_review else None,
+            "sourceUrl": sign.source_url if approved or pending_review else None,
+            "sourceReferenceUrl": _source_reference_url(sign) if approved or pending_review else None,
             "license": sign.license if approved or pending_review else None,
+            "licenseNotes": _license_notes(sign) if approved or pending_review else None,
             "curation": "approved" if approved else "pending",
         }
+
+
+def _metadata_value(sign: Sign, label: str) -> str | None:
+    notes = sign.educational_notes or ""
+    prefix = f"{label}:"
+    for line in notes.splitlines():
+        if line.strip().startswith(prefix):
+            value = line.split(":", 1)[1].strip()
+            return value or None
+    return None
+
+
+def _source_reference_url(sign: Sign) -> str | None:
+    return _metadata_value(sign, "URL consultada") or sign.source_url
+
+
+def _license_notes(sign: Sign) -> str | None:
+    return _metadata_value(sign, "Observações de licença")

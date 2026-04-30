@@ -26,6 +26,22 @@ class LibrasTranslationService:
                 "animation_payload_url": None,
                 "warning_message": "Provedor de avatar Libras indisponível. Exibindo legenda e glosa de apoio.",
             }
+
+        curated_media = self._first_curated_media(text)
+        if curated_media:
+            if not provider_result.get("avatar_video_url") and curated_media.get("avatar_video_url"):
+                provider_result["avatar_video_url"] = curated_media["avatar_video_url"]
+            if not provider_result.get("animation_payload_url") and curated_media.get("animation_payload_url"):
+                provider_result["animation_payload_url"] = curated_media["animation_payload_url"]
+            if not provider_result.get("gloss_text") and curated_media.get("gloss_text"):
+                provider_result["gloss_text"] = curated_media["gloss_text"]
+            if curated_media.get("avatar_video_url") or curated_media.get("animation_payload_url"):
+                provider_result["status"] = TranslationStatus.success.value
+                provider_result["provider_name"] = "Banco de sinais aprovados"
+                provider_result["warning_message"] = (
+                    "Vídeo autorizado de sinal aprovado exibido como apoio visual. "
+                    "A legenda permanece como referência principal."
+                )
         status = provider_result.get("status") or TranslationStatus.fallback.value
 
         gloss_text = provider_result.get("gloss_text")
@@ -63,3 +79,17 @@ class LibrasTranslationService:
             if sign and sign.status == "approved" and sign.gloss:
                 glosses.append(sign.gloss)
         return " ".join(glosses) if glosses else None
+
+    def _first_curated_media(self, text: str) -> dict | None:
+        for item in self.keyword_extractor.extract(text, limit=6):
+            sign = self.dictionary.find_for_word(str(item["word"]))
+            if not sign or sign.status != "approved":
+                continue
+            if sign.video_url or sign.avatar_animation_url or sign.gloss:
+                return {
+                    "word": sign.word,
+                    "gloss_text": sign.gloss,
+                    "avatar_video_url": sign.video_url,
+                    "animation_payload_url": sign.avatar_animation_url,
+                }
+        return None

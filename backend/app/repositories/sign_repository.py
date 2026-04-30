@@ -29,6 +29,7 @@ class SignRepository:
         category_id: int | None = None,
         subject_id: int | None = None,
         status: str | None = None,
+        source_name: str | None = None,
         limit: int = 100,
     ) -> list[Sign]:
         statement = select(Sign).order_by(Sign.word.asc()).limit(limit)
@@ -40,6 +41,8 @@ class SignRepository:
             statement = statement.where(Sign.subject_id == subject_id)
         if status:
             statement = statement.where(Sign.status == status)
+        if source_name:
+            statement = statement.where(Sign.source_name.contains(source_name))
         return list(self.db.scalars(statement))
 
     def stats_by_status(self) -> dict[str, int]:

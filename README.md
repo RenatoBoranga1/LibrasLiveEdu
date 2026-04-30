@@ -143,8 +143,8 @@ O painel `/admin/signs/new` permite que admin ou curador registrem manualmente i
 Regras de segurança e curadoria:
 
 - não há scraping automático do INES;
-- o sistema não baixa imagens ou vídeos automaticamente;
-- não copie mídia do INES sem autorização/licença de uso;
+- o cadastro manual não baixa imagens ou vídeos automaticamente;
+- use somente mídia coberta pela autorização registrada para o projeto;
 - todo sinal cadastrado manualmente entra como `pending`;
 - apenas admin ou curador pode aprovar/reprovar sinais;
 - a aprovação exige fonte, URL, licença e glosa, mídia autorizada ou descrição adequada;
@@ -161,7 +161,9 @@ GET /api/signs/lookup?word=professor
 
 ## Importação Autorizada de Mídias INES
 
-Quando houver autorização formal do INES/governo para baixar e usar as mídias, use o importador autorizado. Ele exige uma referência da autorização, baixa imagens/vídeos de hosts permitidos, salva os arquivos em `MEDIA_STORAGE_DIR` e registra os sinais como `pending`.
+O projeto possui suporte para uso autorizado de vídeos do Dicionário da Língua Brasileira de Sinais - INES. Cada sinal deve registrar fonte, URL de referência, licença/autorização e observação de autorização antes de ser aprovado.
+
+Use o importador autorizado apenas com manifesto revisado e referência da autorização. Ele baixa imagens/vídeos de hosts permitidos, salva os arquivos em `MEDIA_STORAGE_DIR`, registra os sinais como `pending` e nunca aprova automaticamente.
 
 Variáveis:
 
@@ -198,13 +200,24 @@ Formato esperado do manifesto:
       "image_url": "https://dicionario.ines.gov.br/...",
       "video_url": "https://dicionario.ines.gov.br/...",
       "source_reference_url": "https://dicionario.ines.gov.br/",
-      "license": "Uso autorizado conforme documento informado"
+      "license": "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu",
+      "license_notes": "Vídeo autorizado para uso educacional no aplicativo LibrasLive Edu."
     }
   ]
 }
 ```
 
 Mesmo com autorização, o sistema não aprova automaticamente. Admin/curador deve revisar e aprovar antes que a mídia apareça como sinal oficial na tela do aluno.
+
+Fluxo com vídeo aprovado:
+
+1. Professor envia fala/transcrição.
+2. Backend extrai palavras-chave.
+3. O banco busca sinais por palavra normalizada.
+4. Se houver sinal `approved` com `video_url`/`avatar_video_url`, o WebSocket envia `sign.card.created` e `translation.created` com a mídia autorizada.
+5. O `AvatarPanel` e os cards visuais exibem o vídeo com fonte, licença/autorização e link de referência.
+
+O app continua sendo um recurso de apoio à acessibilidade e não substitui intérprete humano de Libras.
 
 ## Speech-to-Text e Avatar
 

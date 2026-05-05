@@ -90,7 +90,7 @@ describe("INES media import admin page", () => {
     const { default: Page } = await import("@/app/admin/import/ines-media/page");
     render(<Page />);
 
-    expect(screen.getByRole("heading", { name: /importar vídeos autorizados do ines/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /importar mídias autorizadas/i })).toBeInTheDocument();
     expect(screen.getByText(/não roda no build\/deploy/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /automação ines/i })).toBeInTheDocument();
   });

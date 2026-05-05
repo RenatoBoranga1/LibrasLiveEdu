@@ -1,4 +1,4 @@
-import { BadgeCheck, Box, Hand, Info, Sparkles, VideoOff } from "lucide-react";
+import { BadgeCheck, Box, Hand, Image as ImageIcon, Info, Sparkles, VideoOff } from "lucide-react";
 import { resolveAvatarState } from "@/services/avatarProvider";
 import type { SignCard } from "@/types/live";
 
@@ -8,6 +8,8 @@ export function AvatarPanel({
   glossText,
   avatarVideoUrl,
   videoUrl,
+  avatarGifUrl,
+  imageUrl,
   animationPayloadUrl,
   sourceName,
   sourceUrl,
@@ -24,6 +26,8 @@ export function AvatarPanel({
   glossText?: string | null;
   avatarVideoUrl?: string | null;
   videoUrl?: string | null;
+  avatarGifUrl?: string | null;
+  imageUrl?: string | null;
   animationPayloadUrl?: string | null;
   sourceName?: string | null;
   sourceUrl?: string | null;
@@ -40,6 +44,8 @@ export function AvatarPanel({
     glossText,
     avatarVideoUrl,
     videoUrl,
+    avatarGifUrl,
+    imageUrl,
     animationPayloadUrl,
     providerConfigured,
     warningMessage,
@@ -47,6 +53,7 @@ export function AvatarPanel({
   });
   const StatusIcon = avatarState.canRenderAvatar ? BadgeCheck : avatarState.type === "animation" ? Box : VideoOff;
   const playableVideoUrl = avatarVideoUrl || videoUrl;
+  const mediaLabel = playableVideoUrl ? "VIDEO" : avatarGifUrl ? "GIF" : imageUrl ? "IMAGEM" : null;
   const referenceUrl = sourceReferenceUrl || sourceUrl;
 
   return (
@@ -73,6 +80,11 @@ export function AvatarPanel({
             <span>{avatarState.canRenderAvatar ? "player do avatar" : "área do avatar"}</span>
             <span>{status || "aguardando"}</span>
           </div>
+          {mediaLabel && (
+            <span className="absolute right-3 top-10 rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">
+              {mediaLabel}
+            </span>
+          )}
 
           {playableVideoUrl ? (
             <video
@@ -84,11 +96,34 @@ export function AvatarPanel({
               preload="metadata"
               aria-label="Vídeo do sinal em Libras"
             />
+          ) : avatarGifUrl ? (
+            <img
+              className="h-full max-h-80 w-full rounded-lg object-contain"
+              src={avatarGifUrl}
+              alt={`Sinal em Libras para ${word ?? "o termo atual"}`}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : imageUrl ? (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-4 text-center">
+              <img
+                className="max-h-72 w-full rounded-lg object-contain"
+                src={imageUrl}
+                alt={`Imagem de apoio visual para ${word ?? "o termo atual"}`}
+                loading="lazy"
+                decoding="async"
+              />
+              <p className="max-w-md text-xs font-bold text-white/75">
+                Imagem de apoio visual. Ela nÃ£o representa traduÃ§Ã£o completa em Libras.
+              </p>
+            </div>
           ) : (
             <div className="flex max-w-md flex-col items-center gap-4 px-5 py-10 text-center">
               <div className="grid h-24 w-24 place-items-center rounded-full bg-mint text-ink shadow-soft">
                 {avatarState.type === "animation" ? (
                   <Box className="h-12 w-12" aria-hidden="true" />
+                ) : avatarState.type === "image" ? (
+                  <ImageIcon className="h-12 w-12" aria-hidden="true" />
                 ) : avatarState.type === "gloss" ? (
                   <Hand className="h-12 w-12" aria-hidden="true" />
                 ) : (

@@ -28,6 +28,7 @@ const initialForm: ManualSignPayload = {
   image_url: "",
   video_url: "",
   avatar_video_url: "",
+  avatar_gif_url: "",
   animation_payload_url: "",
   curator_notes: "Sinal cadastrado com base no Dicionário INES e autorização de uso registrada.",
 };
@@ -51,6 +52,7 @@ const fields: Array<{ name: keyof ManualSignPayload; label: string; multiline?: 
   { name: "image_url", label: "URL de imagem autorizada" },
   { name: "video_url", label: "URL de vídeo autorizado" },
   { name: "avatar_video_url", label: "URL de avatar/vídeo próprio" },
+  { name: "avatar_gif_url", label: "URL de GIF autorizado" },
   { name: "animation_payload_url", label: "URL de payload de animação" },
   { name: "curator_notes", label: "Observações do curador", multiline: true },
 ];

@@ -92,14 +92,14 @@ export default function AdminPage() {
 
   async function approveSelected() {
     if (!selected) return;
-    const hasVideo = Boolean(selected.avatar_video_url || selected.video_url || selected.avatar_animation_url);
-    if (!hasVideo && !selected.gloss) {
-      setMessage("Preencha glosa ou vídeo autorizado antes de aprovar o sinal.");
+    const hasMedia = Boolean(selected.avatar_video_url || selected.video_url || selected.avatar_gif_url || selected.avatar_animation_url);
+    if (!hasMedia && !selected.gloss) {
+      setMessage("Preencha glosa ou mídia autorizada antes de aprovar o sinal.");
       return;
     }
-    const warning = hasVideo
-      ? "Confirme que o sinal foi validado por especialista em Libras e que o vídeo possui autorização de uso registrada."
-      : "Sinal aprovado sem vídeo. Ele aparecerá como glosa/card, mas não no Avatar Libras. Confirma a aprovação?";
+    const warning = hasMedia
+      ? "Confirme que o sinal foi validado por especialista em Libras e que a mídia possui autorização de uso registrada."
+      : "Sinal aprovado sem mídia. Ele aparecerá como glosa/card, mas não no Avatar Libras. Confirma a aprovação?";
     const confirmed = window.confirm(warning);
     if (!confirmed) return;
     const updated = await curateSign(selected.id, {
@@ -155,6 +155,7 @@ export default function AdminPage() {
       license_notes: selected.license_notes,
       video_url: selected.video_url,
       avatar_video_url: selected.avatar_video_url,
+      avatar_gif_url: selected.avatar_gif_url,
       image_url: selected.image_url,
       curator_notes: selected.curator_notes,
     }).catch(() => null);
@@ -231,9 +232,9 @@ export default function AdminPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           {[
             ["Total de sinais", stats.total_signs],
-            ["Sem vídeo", stats.no_video_signs ?? 0],
-            ["Com vídeo pendente", stats.pending_with_video_signs ?? 0],
-            ["Aprovados com vídeo", stats.approved_with_video_signs ?? 0],
+            ["Sem mídia", stats.no_video_signs ?? 0],
+            ["Mídia pendente", stats.pending_with_video_signs ?? 0],
+            ["Aprovados com mídia", stats.approved_with_video_signs ?? 0],
             ["Prontos para Avatar", stats.ready_for_avatar_signs ?? 0],
             ["Precisam de curadoria", stats.needs_curation_signs ?? 0]
           ].map(([label, value]) => (
@@ -350,7 +351,9 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {signs.map((sign) => {
-                    const hasVideo = Boolean(sign.video_url || sign.avatar_video_url);
+                    const hasVideo = Boolean(sign.video_url || sign.avatar_video_url || sign.avatar_gif_url || sign.image_url);
+                    const mediaHref = sign.avatar_video_url || sign.video_url || sign.avatar_gif_url || sign.image_url || "#";
+                    const mediaLabel = sign.avatar_video_url || sign.video_url ? "Com vídeo" : sign.avatar_gif_url ? "Com GIF" : sign.image_url ? "Com imagem" : "Sem mídia";
                     const isInes = sign.source_name?.toLowerCase().includes("ines");
                     return (
                     <tr key={sign.id} className="bg-teal-50 text-sm font-semibold text-ink dark:bg-zinc-800 dark:text-white">
@@ -359,7 +362,7 @@ export default function AdminPage() {
                         <div>{sign.status}</div>
                         {sign.status === "pending" && hasVideo && (
                           <span className="mt-1 inline-flex rounded-full bg-amber/25 px-2 py-1 text-xs font-black text-ink dark:text-white">
-                            Vídeo encontrado — revisar
+                            Mídia encontrada — revisar
                           </span>
                         )}
                         {sign.status === "approved" && hasVideo && (
@@ -370,9 +373,9 @@ export default function AdminPage() {
                       </td>
                       <td className="px-3 py-3">
                         {hasVideo ? (
-                          <span className="rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">Com vídeo</span>
+                          <span className="rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">{mediaLabel}</span>
                         ) : (
-                          <span className="rounded-full bg-zinc-200 px-2 py-1 text-xs font-black text-ink">Sem vídeo</span>
+                          <span className="rounded-full bg-zinc-200 px-2 py-1 text-xs font-black text-ink">{mediaLabel}</span>
                         )}
                       </td>
                       <td className="px-3 py-3">
@@ -390,12 +393,12 @@ export default function AdminPage() {
                             Revisar
                           </button>
                           {hasVideo ? (
-                            <a className="focus-ring rounded-lg bg-ocean px-3 py-2 font-bold text-white" href={sign.avatar_video_url || sign.video_url || "#"} target="_blank" rel="noreferrer">
-                              Ver vídeo
+                            <a className="focus-ring rounded-lg bg-ocean px-3 py-2 font-bold text-white" href={mediaHref} target="_blank" rel="noreferrer">
+                              Ver mídia
                             </a>
                           ) : (
                             <button className="focus-ring rounded-lg bg-mint px-3 py-2 font-bold text-ink" onClick={() => prepareInesMedia(sign)}>
-                              Adicionar vídeo
+                              Adicionar mídia
                             </button>
                           )}
                         </div>
@@ -432,8 +435,8 @@ export default function AdminPage() {
                     <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-ink dark:bg-zinc-800 dark:text-white">
                       Status: {selected.status}
                     </span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-black ${selected.video_url || selected.avatar_video_url ? "bg-mint text-ink" : "bg-zinc-200 text-ink"}`}>
-                      {selected.video_url || selected.avatar_video_url ? "Com vídeo" : "Sem vídeo"}
+                    <span className={`rounded-full px-3 py-1 text-xs font-black ${selected.video_url || selected.avatar_video_url || selected.avatar_gif_url || selected.image_url ? "bg-mint text-ink" : "bg-zinc-200 text-ink"}`}>
+                      {selected.video_url || selected.avatar_video_url ? "Com vídeo" : selected.avatar_gif_url ? "Com GIF" : selected.image_url ? "Com imagem" : "Sem mídia"}
                     </span>
                   </div>
                   <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
@@ -500,6 +503,15 @@ export default function AdminPage() {
                     />
                   </label>
                   <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
+                    URL do GIF autorizado
+                    <input
+                      className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
+                      value={selected.avatar_gif_url ?? ""}
+                      onChange={(event) => setSelected({ ...selected, avatar_gif_url: event.target.value })}
+                      placeholder="https://..."
+                    />
+                  </label>
+                  <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
                     URL da imagem autorizada
                     <input
                       className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
@@ -520,9 +532,24 @@ export default function AdminPage() {
                       />
                     </div>
                   )}
-                  {!selected.avatar_video_url && !selected.video_url && (
+                  {selected.avatar_gif_url && (
+                    <div className="rounded-lg border border-ocean/20 bg-teal-50 p-3 dark:border-white/10 dark:bg-zinc-800">
+                      <p className="mb-2 text-sm font-black text-ink dark:text-white">Prévia do GIF</p>
+                      <img
+                        className="max-h-64 w-full rounded-lg bg-black object-contain"
+                        src={selected.avatar_gif_url}
+                        alt={`Prévia do GIF autorizado para ${selected.word}`}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <p className="mt-2 text-xs font-bold leading-relaxed text-ink/70 dark:text-white/70">
+                        GIF é mídia complementar e deve ter fonte/licença registrada. Aprove somente após validação por especialista em Libras.
+                      </p>
+                    </div>
+                  )}
+                  {!selected.avatar_video_url && !selected.video_url && !selected.avatar_gif_url && (
                     <div className="rounded-lg bg-amber/20 p-3 text-sm font-bold leading-relaxed text-ink dark:text-white">
-                      Sem vídeo cadastrado. Aprovar este sinal não fará o Avatar Libras exibir vídeo.
+                      Sem vídeo/GIF cadastrado. Aprovar este sinal sem mídia fará o Avatar Libras manter fallback visual.
                     </div>
                   )}
                   <label className="block text-sm font-bold text-ink/70 dark:text-white/70">

@@ -12,6 +12,7 @@ type TranslationState = {
   providerConfigured?: boolean | null;
   warningMessage?: string | null;
   avatarVideoUrl?: string | null;
+  avatarGifUrl?: string | null;
   animationPayloadUrl?: string | null;
 };
 
@@ -94,6 +95,7 @@ export function useLiveClass(accessCode: string | null, token?: string | null, r
             providerConfigured: liveEvent.payload.providerConfigured as boolean | null,
             warningMessage: liveEvent.payload.warningMessage as string | null,
             avatarVideoUrl: liveEvent.payload.avatarVideoUrl as string | null,
+            avatarGifUrl: liveEvent.payload.avatarGifUrl as string | null,
             animationPayloadUrl: liveEvent.payload.animationPayloadUrl as string | null,
           });
         }

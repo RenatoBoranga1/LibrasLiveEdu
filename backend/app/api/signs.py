@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_optional_user, require_role
@@ -22,6 +22,7 @@ from app.schemas.api import (
     InesMediaImportStartRequest,
     ImportJobRead,
     ImportRequest,
+    LibrasGifMediaImportRequest,
     ManualSignCreate,
     RejectSignRequest,
     SavedWordCreate,
@@ -100,6 +101,7 @@ def create_manual_sign(
     _set_if_present(sign, "license", payload.license)
     _set_if_present(sign, "image_url", payload.image_url)
     _set_if_present(sign, "video_url", payload.avatar_video_url or payload.video_url)
+    _set_if_present(sign, "avatar_gif_url", payload.avatar_gif_url)
     _set_if_present(sign, "avatar_animation_url", payload.animation_payload_url)
     description = _manual_description(payload)
     if description:
@@ -142,6 +144,7 @@ def update_sign_media(
     media_values = [
         payload.video_url if "video_url" in fields else None,
         payload.avatar_video_url if "avatar_video_url" in fields else None,
+        payload.avatar_gif_url if "avatar_gif_url" in fields else None,
         payload.image_url if "image_url" in fields else None,
     ]
     for media_url in media_values:
@@ -155,11 +158,19 @@ def update_sign_media(
         if "video_url" in fields and payload.video_url
         else sign.video_url
     )
+    effective_gif = (
+        payload.avatar_gif_url
+        if "avatar_gif_url" in fields and payload.avatar_gif_url
+        else sign.avatar_gif_url
+    )
     effective_source_name = payload.source_name if "source_name" in fields and payload.source_name else sign.source_name
     effective_source_url = payload.source_url if "source_url" in fields and payload.source_url else sign.source_url
     effective_license = payload.license if "license" in fields and payload.license else sign.license
-    if effective_video and not (effective_source_name and effective_source_url and effective_license):
-        raise HTTPException(status_code=422, detail="Video autorizado exige fonte, URL da fonte e licenca.")
+    effective_license_notes = payload.license_notes if "license_notes" in fields and payload.license_notes else _license_notes(sign)
+    if (effective_video or effective_gif) and not (effective_source_name and effective_source_url and effective_license):
+        raise HTTPException(status_code=422, detail="Midia autorizada exige fonte, URL da fonte e licenca.")
+    if effective_gif and not effective_license_notes:
+        raise HTTPException(status_code=422, detail="GIF autorizado exige observacao de autorizacao/licenca.")
 
     old_value = _sign_snapshot(sign)
     _set_if_provided(sign, "gloss", payload.gloss, "gloss" in fields)
@@ -171,6 +182,7 @@ def update_sign_media(
         _set_if_provided(sign, "video_url", payload.video_url, True)
     if "avatar_video_url" in fields and payload.avatar_video_url:
         sign.video_url = payload.avatar_video_url
+    _set_if_provided(sign, "avatar_gif_url", payload.avatar_gif_url, "avatar_gif_url" in fields)
     _set_if_provided(sign, "curator_notes", payload.curator_notes, "curator_notes" in fields)
     sign.educational_notes = _merge_educational_metadata(
         sign.educational_notes,
@@ -206,10 +218,10 @@ def curate_sign(
     if payload.status == "approved":
         if not sign.source_name or not sign.source_url or not sign.license:
             raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem fonte, URL e licenca.")
-        if sign.video_url and not _license_notes(sign):
-            raise HTTPException(status_code=422, detail="Nao e permitido aprovar video sem observacao de autorizacao/licenca.")
-        if not sign.gloss and not sign.video_url and not sign.avatar_animation_url:
-            raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem video, animacao ou glosa.")
+        if (sign.video_url or sign.avatar_gif_url) and not _license_notes(sign):
+            raise HTTPException(status_code=422, detail="Nao e permitido aprovar midia sem observacao de autorizacao/licenca.")
+        if not sign.gloss and not sign.video_url and not sign.avatar_gif_url and not sign.avatar_animation_url:
+            raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem video, GIF, animacao ou glosa.")
     old_value = _sign_snapshot(sign)
     sign.status = payload.status
     sign.curator_notes = payload.curator_notes or sign.curator_notes
@@ -266,10 +278,10 @@ def approve_sign(
         raise HTTPException(status_code=404, detail="Sinal nao encontrado.")
     if not sign.source_name or not sign.source_url or not sign.license or sign.license.strip().lower() == "aguardando curadoria":
         raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem fonte, URL e licenca validas.")
-    if sign.video_url and not _license_notes(sign):
-        raise HTTPException(status_code=422, detail="Nao e permitido aprovar video sem observacao de autorizacao/licenca.")
-    if not sign.gloss and not sign.video_url and not sign.avatar_animation_url:
-        raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem video, animacao ou glosa.")
+    if (sign.video_url or sign.avatar_gif_url) and not _license_notes(sign):
+        raise HTTPException(status_code=422, detail="Nao e permitido aprovar midia sem observacao de autorizacao/licenca.")
+    if not sign.gloss and not sign.video_url and not sign.avatar_gif_url and not sign.avatar_animation_url:
+        raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem video, GIF, animacao ou glosa.")
     old_value = {"status": sign.status}
     sign.status = "approved"
     sign.curator_notes = sign.curator_notes or "Aprovado por administrador/curador."
@@ -333,9 +345,11 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_role(["
     stats = SignRepository(db).stats_by_status()
     total_signs = db.scalar(select(func.count(Sign.id))) or 0
     import_jobs = db.scalar(select(func.count(ImportJob.id))) or 0
-    no_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.video_url.is_(None))) or 0
-    pending_with_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status == "pending", Sign.video_url.is_not(None))) or 0
-    approved_with_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status == "approved", Sign.video_url.is_not(None))) or 0
+    avatar_media_filter = or_(Sign.video_url.is_not(None), Sign.avatar_gif_url.is_not(None))
+    any_media_filter = or_(Sign.video_url.is_not(None), Sign.avatar_gif_url.is_not(None), Sign.image_url.is_not(None))
+    no_video_signs = db.scalar(select(func.count(Sign.id)).where(~any_media_filter)) or 0
+    pending_with_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status == "pending", avatar_media_filter)) or 0
+    approved_with_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status == "approved", avatar_media_filter)) or 0
     needs_curation_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status.in_(["pending", "review", "needs_specialist_review"]))) or 0
     return AdminStats(
         total_signs=total_signs,
@@ -502,6 +516,168 @@ def import_ines_authorized_media(
     )
 
 
+@router.post("/admin/import/libras-gif-media", response_model=InesMediaImportJobResponse)
+def import_libras_gif_media(
+    payload: LibrasGifMediaImportRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    limit = min(len(payload.items), max(1, settings.ines_import_max_items))
+    report = _empty_media_import_report(total_items=limit)
+    if len(payload.items) > limit:
+        report["warnings"].append(
+            {
+                "word": None,
+                "message": f"Total enviado ({len(payload.items)}) excede o limite desta execucao ({limit}). O excedente foi ignorado.",
+            }
+        )
+    if payload.approve_authorized:
+        report["warnings"].append(
+            {
+                "word": None,
+                "message": "GIFs importados por manifesto permanecem pending; aprove manualmente apos validacao por especialista.",
+            }
+        )
+
+    job = ImportJob(
+        source_type="json",
+        source_name=f"Libras GIF media import: {payload.source_name}",
+        status="running",
+        total_records=limit,
+        logs=[
+            {
+                "level": "settings",
+                "row": None,
+                "message": "Importacao administrativa de GIFs iniciada sob demanda por admin.",
+                "settings": {
+                    "source_name": payload.source_name,
+                    "source_url": payload.source_url,
+                    "max_items": limit,
+                    "approve_authorized": payload.approve_authorized,
+                    "overwrite": payload.overwrite,
+                    "store_remote_url": True,
+                    "download_media": False,
+                },
+            }
+        ],
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    normalizer = TextNormalizerService()
+    seen: set[str] = set()
+    for index, item in enumerate(payload.items[:limit], start=1):
+        word = _clean_value(item.word)
+        normalized_word = normalizer.normalize_word(word or "")
+        if not word:
+            _record_import_error(db, job, report, index, None, "Item sem palavra.")
+            continue
+        if normalized_word in seen:
+            report["skipped_count"] += 1
+            _append_import_log(job, "warning", index, f"{word}: duplicado no lote.")
+            continue
+        seen.add(normalized_word)
+
+        try:
+            gif_url = _clean_value(item.avatar_gif_url or item.gif_url)
+            image_url = _clean_value(item.image_url)
+            source_name = _clean_value(item.source_name) or payload.source_name
+            source_url = _clean_value(item.source_url) or payload.source_url
+            source_reference_url = _clean_value(item.source_reference_url) or source_url
+            license_text = _clean_value(item.license)
+            license_notes = _clean_value(item.license_notes)
+
+            if not gif_url:
+                _record_import_error(db, job, report, index, word, "Item sem avatar_gif_url/gif_url.")
+                continue
+            for key, value in {"avatar_gif_url": gif_url, "image_url": image_url, "source_url": source_url, "source_reference_url": source_reference_url}.items():
+                if value and not _is_http_url(value):
+                    raise ValueError(f"{key} deve comecar com http:// ou https://.")
+            if not (source_name and source_url and license_text and license_notes):
+                raise ValueError("GIF autorizado exige fonte, URL da fonte, licenca e observacoes de licenca.")
+
+            sign = db.scalar(select(Sign).where(Sign.normalized_word == normalized_word).order_by(Sign.updated_at.desc()).limit(1))
+            if sign and sign.status == "approved" and not payload.overwrite:
+                report["skipped_count"] += 1
+                report["warnings"].append({"word": word, "message": "Sinal aprovado existente nao foi sobrescrito."})
+                _append_import_log(job, "warning", index, f"{word}: sinal aprovado nao sobrescrito.")
+                db.commit()
+                continue
+
+            created = sign is None
+            old_value = _sign_snapshot(sign)
+            if not sign:
+                sign = Sign(word=word, normalized_word=normalized_word, status="pending")
+                db.add(sign)
+                db.flush()
+
+            sign.word = word
+            sign.normalized_word = normalized_word
+            sign.gloss = _clean_value(item.gloss) or sign.gloss
+            sign.avatar_gif_url = gif_url
+            if image_url:
+                sign.image_url = image_url
+            sign.source_name = source_name
+            sign.source_url = source_url
+            sign.license = license_text
+            sign.curator_notes = _clean_value(item.curator_notes) or "GIF autorizado cadastrado como midia complementar; aguardando curadoria."
+            sign.educational_notes = _merge_educational_metadata(
+                sign.educational_notes,
+                source_reference_url=source_reference_url,
+                license_notes=license_notes,
+            )
+            sign.status = "pending"
+            sign.version = (sign.version or 1) + 1
+            db.flush()
+            db.add(
+                SignAuditLog(
+                    sign_id=sign.id,
+                    user_id=user.id,
+                    action="gif_media_import",
+                    old_value=old_value,
+                    new_value=_sign_snapshot(sign),
+                )
+            )
+            report["processed_items"] += 1
+            report["video_found_count"] += 1
+            report["pending_count"] += 1
+            if created:
+                report["created_count"] += 1
+                job.imported_records += 1
+            else:
+                report["updated_count"] += 1
+                job.updated_records += 1
+            report["items"].append(
+                {
+                    "word": sign.word,
+                    "status": sign.status,
+                    "video_found": False,
+                    "avatar_gif_url": sign.avatar_gif_url,
+                    "source_reference_url": source_reference_url,
+                    "image_url": sign.image_url,
+                    "reason": "GIF autorizado vinculado como midia complementar.",
+                    "recommended_action": "Revisar e aprovar manualmente",
+                    "warnings": [],
+                    "errors": [],
+                }
+            )
+            _append_import_log(job, "success", index, f"{sign.word}: GIF vinculado com status pending.")
+            db.commit()
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            _record_import_error(db, job, report, index, word, str(exc))
+
+    job.status = "completed"
+    job.failed_records = report["error_count"]
+    job.finished_at = utc_now()
+    _append_import_log(job, "report", None, "Relatorio final da importacao de GIFs.", report=report)
+    db.commit()
+    db.refresh(job)
+    return {"job_id": job.id, "status": job.status, "report": report}
+
+
 @router.get("/admin/import-jobs", response_model=list[ImportJobRead])
 def list_import_jobs(db: Session = Depends(get_db), _: User = Depends(require_role(["admin"]))):
     return list(db.scalars(select(ImportJob).order_by(ImportJob.created_at.desc()).limit(50)))
@@ -587,6 +763,8 @@ def _manual_educational_notes(payload: ManualSignCreate) -> str:
         lines.append(f"URL consultada: {payload.source_reference_url}")
     if payload.avatar_video_url:
         lines.append("URL de avatar/vídeo próprio informada manualmente.")
+    if payload.avatar_gif_url:
+        lines.append("URL de GIF complementar informada manualmente.")
     if payload.animation_payload_url:
         lines.append("Payload de animação informado manualmente.")
     return "\n".join(lines)
@@ -605,6 +783,8 @@ def _sign_snapshot(sign: Sign | None) -> dict | None:
         "license": sign.license,
         "license_notes": _license_notes(sign),
         "video_url": sign.video_url,
+        "avatar_gif_url": sign.avatar_gif_url,
+        "image_url": sign.image_url,
     }
 
 
@@ -693,6 +873,60 @@ def _import_job_report(job: ImportJob) -> dict:
     }
 
 
+def _empty_media_import_report(*, total_items: int = 0) -> dict:
+    return {
+        "total_items": total_items,
+        "processed_items": 0,
+        "created_count": 0,
+        "updated_count": 0,
+        "approved_count": 0,
+        "pending_count": 0,
+        "skipped_count": 0,
+        "error_count": 0,
+        "video_found_count": 0,
+        "video_missing_count": 0,
+        "errors": [],
+        "warnings": [],
+        "items": [],
+        "manual_required": [],
+    }
+
+
+def _append_import_log(job: ImportJob, level: str, row: int | None, message: str, **extra) -> None:
+    logs = list(job.logs or [])
+    entry = {"level": level, "row": row, "message": message}
+    entry.update(extra)
+    logs.append(entry)
+    job.logs = logs
+
+
+def _record_import_error(db: Session, job: ImportJob, report: dict, row: int | None, word: str | None, message: str) -> None:
+    report["error_count"] += 1
+    report["video_missing_count"] += 1
+    report["errors"].append({"word": word, "message": message})
+    report["items"].append(
+        {
+            "word": word or "registro",
+            "status": "error",
+            "video_found": False,
+            "reason": message,
+            "recommended_action": "Revisar manifesto e importar novamente",
+            "warnings": [],
+            "errors": [message],
+        }
+    )
+    job.failed_records = report["error_count"]
+    _append_import_log(job, "error", row, f"{word or 'registro'}: {message}")
+    db.commit()
+
+
+def _clean_value(value) -> str | None:
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
 def _approved_sign_payload(sign: Sign) -> dict:
     return {
         "id": sign.id,
@@ -704,6 +938,7 @@ def _approved_sign_payload(sign: Sign) -> dict:
         "imageUrl": sign.image_url,
         "videoUrl": sign.video_url,
         "avatarVideoUrl": sign.video_url,
+        "avatarGifUrl": sign.avatar_gif_url,
         "animationPayloadUrl": sign.avatar_animation_url,
         "sourceName": sign.source_name,
         "sourceUrl": sign.source_url,

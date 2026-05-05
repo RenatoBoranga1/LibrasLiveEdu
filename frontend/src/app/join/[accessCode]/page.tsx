@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookmarkPlus, CaptionsOff, History, Maximize2, Minimize2, RotateCcw, Trash2, Video, X } from "lucide-react";
+import { BookmarkPlus, CaptionsOff, History, Image as ImageIcon, Maximize2, Minimize2, RotateCcw, Trash2, Video, X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { AccessibleModeToggle } from "@/components/AccessibleModeToggle";
 import { AvatarPanel } from "@/components/AvatarPanel";
@@ -91,7 +91,7 @@ export default function JoinClassPage() {
 
   const cards = useMemo(() => live.cards.slice(0, 10), [live.cards]);
   const approvedMediaCard = useMemo(
-    () => cards.find((card) => card.status === "approved" && (card.avatarVideoUrl || card.videoUrl || card.avatarAnimationUrl || card.gloss)),
+    () => cards.find((card) => card.status === "approved" && (card.avatarVideoUrl || card.videoUrl || card.avatarGifUrl || card.imageUrl || card.avatarAnimationUrl || card.gloss)),
     [cards]
   );
   const showAvatar = viewMode === "full" || viewMode === "focus";
@@ -105,7 +105,7 @@ export default function JoinClassPage() {
       : live.reconnecting
         ? "Tentando reconectar"
         : "Aguardando professor";
-  const modalVideoUrl = videoCard?.avatarVideoUrl ?? videoCard?.videoUrl ?? null;
+  const modalMedia = getCardMedia(videoCard);
 
   async function handleSaveWord(card?: SignCard) {
     const target = card ?? cards[0];
@@ -177,6 +177,8 @@ export default function JoinClassPage() {
               glossText={live.translation.glossText || approvedMediaCard?.gloss}
               avatarVideoUrl={live.translation.avatarVideoUrl || approvedMediaCard?.avatarVideoUrl}
               videoUrl={approvedMediaCard?.videoUrl}
+              avatarGifUrl={live.translation.avatarGifUrl || approvedMediaCard?.avatarGifUrl}
+              imageUrl={approvedMediaCard?.imageUrl}
               animationPayloadUrl={live.translation.animationPayloadUrl || approvedMediaCard?.avatarAnimationUrl}
               sourceName={approvedMediaCard?.sourceName}
               sourceUrl={approvedMediaCard?.sourceUrl}
@@ -226,7 +228,15 @@ export default function JoinClassPage() {
                   const approved = card.status === "approved";
                   const unavailable = card.status === "unavailable" || card.status === "missing";
                   const statusLabel = approved ? "Sinal aprovado" : unavailable ? "Sinal ainda não cadastrado" : "Aguardando curadoria";
-                  const mediaUrl = approved ? card.avatarVideoUrl ?? card.videoUrl : null;
+                  const mediaInfo = approved ? getCardMedia(card) : null;
+                  const mediaLabel =
+                    mediaInfo?.type === "video"
+                      ? "Com vÃ­deo"
+                      : mediaInfo?.type === "gif"
+                        ? "Com GIF"
+                        : mediaInfo?.type === "image"
+                          ? "Com imagem"
+                          : "Sem mÃ­dia";
                   return (
                     <article key={`${card.word}-${card.id ?? card.status}`} className="w-72 shrink-0 rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
                       <div className="flex items-start justify-between gap-2">
@@ -235,12 +245,22 @@ export default function JoinClassPage() {
                           <span className={`rounded-full px-2 py-1 text-xs font-black ${approved ? "bg-ocean text-white" : unavailable ? "bg-zinc-200 text-ink" : "bg-amber/20 text-ink dark:text-white"}`}>
                             {statusLabel}
                           </span>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-black ${mediaUrl ? "bg-mint text-ink" : "bg-zinc-200 text-ink"}`}>
-                            {mediaUrl && <Video className="h-3.5 w-3.5" aria-hidden="true" />}
-                            {mediaUrl ? "Com vídeo" : "Sem vídeo"}
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-black ${mediaInfo ? "bg-mint text-ink" : "bg-zinc-200 text-ink"}`}>
+                            {mediaInfo?.type === "video" && <Video className="h-3.5 w-3.5" aria-hidden="true" />}
+                            {(mediaInfo?.type === "gif" || mediaInfo?.type === "image") && <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />}
+                            {mediaLabel}
                           </span>
                         </div>
                       </div>
+                      {mediaInfo?.type === "gif" && (
+                        <img
+                          className="mt-3 h-28 w-full rounded-lg bg-ink object-contain"
+                          src={mediaInfo.url}
+                          alt={`Preview do GIF do sinal ${card.word}`}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      )}
                       <div className="mt-3 space-y-1 text-xs font-bold leading-relaxed text-ink/65 dark:text-white/65">
                         {approved && card.gloss && <p>Glosa: {card.gloss}</p>}
                         {card.sourceName && <p>Fonte: {card.sourceName}</p>}
@@ -250,7 +270,7 @@ export default function JoinClassPage() {
                         {!approved && !unavailable && <p>Este sinal ainda está pendente de curadoria por especialista em Libras.</p>}
                       </div>
                       <div className="mt-4 grid gap-2">
-                        {mediaUrl && (
+                        {mediaInfo && (
                           <button
                             className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-ocean px-3 py-2 text-sm font-bold text-white"
                             onClick={() => setVideoCard(card)}
@@ -305,7 +325,7 @@ export default function JoinClassPage() {
         <InstallPWAButton />
       </div>
 
-      {videoCard && modalVideoUrl && (
+      {videoCard && modalMedia && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="sign-video-title">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-soft dark:bg-zinc-900">
             <div className="mb-3 flex items-start justify-between gap-3">
@@ -318,20 +338,30 @@ export default function JoinClassPage() {
               <button
                 className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-zinc-100 px-3 text-ink dark:bg-zinc-800 dark:text-white"
                 onClick={() => setVideoCard(null)}
-                aria-label="Fechar vídeo do sinal"
+                aria-label="Fechar mídia do sinal"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
-            <video
-              className="max-h-[52vh] w-full rounded-lg bg-ink object-contain"
-              src={modalVideoUrl}
-              controls
-              controlsList="nodownload"
-              playsInline
-              preload="metadata"
-              aria-label="Vídeo do sinal em Libras"
-            />
+            {modalMedia.type === "video" ? (
+              <video
+                className="max-h-[52vh] w-full rounded-lg bg-ink object-contain"
+                src={modalMedia.url}
+                controls
+                controlsList="nodownload"
+                playsInline
+                preload="metadata"
+                aria-label="Vídeo do sinal em Libras"
+              />
+            ) : (
+              <img
+                className="max-h-[52vh] w-full rounded-lg bg-ink object-contain"
+                src={modalMedia.url}
+                alt={`${modalMedia.type === "gif" ? "GIF" : "Imagem"} do sinal ${videoCard.word}`}
+                loading="lazy"
+                decoding="async"
+              />
+            )}
             <div className="mt-4 space-y-2 rounded-lg bg-teal-50 p-3 text-sm font-bold leading-relaxed text-ink/75 dark:bg-zinc-800 dark:text-white/75">
               {videoCard.gloss && <p>Glosa: {videoCard.gloss}</p>}
               {videoCard.sourceName && <p>Fonte: {videoCard.sourceName}</p>}
@@ -386,4 +416,13 @@ export default function JoinClassPage() {
       </nav>
     </main>
   );
+}
+
+function getCardMedia(card?: SignCard | null): { type: "video" | "gif" | "image"; url: string } | null {
+  if (!card) return null;
+  const videoUrl = card.avatarVideoUrl || card.videoUrl;
+  if (videoUrl) return { type: "video", url: videoUrl };
+  if (card.avatarGifUrl) return { type: "gif", url: card.avatarGifUrl };
+  if (card.imageUrl) return { type: "image", url: card.imageUrl };
+  return null;
 }

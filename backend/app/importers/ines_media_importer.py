@@ -60,11 +60,11 @@ class InesMediaImporter:
                 report["warnings"].append({"word": word, "message": "Palavra duplicada no lote."})
                 continue
             seen.add(normalized)
-            for key in ("video_url", "avatar_video_url", "image_url", "source_reference_url"):
+            for key in ("video_url", "avatar_video_url", "avatar_gif_url", "gif_url", "image_url", "source_url", "source_reference_url"):
                 value = self._clean(item.get(key))
                 if value and not self._is_http_url(value):
                     self._report_error(report, word, f"{key} deve começar com http:// ou https://.")
-            if payload.mode in {"json_items", "csv_items"} and not (item.get("video_url") or item.get("avatar_video_url")):
+            if payload.mode in {"json_items", "csv_items"} and not (item.get("video_url") or item.get("avatar_video_url") or item.get("avatar_gif_url") or item.get("gif_url")):
                 report["warnings"].append({"word": word, "message": "Item sem vídeo; será mantido como pending."})
 
         return report
@@ -506,7 +506,7 @@ class InesMediaImporter:
         limit = self._effective_limit(max_items)
         rows = self.db.scalars(
             select(Sign)
-            .where(Sign.status == SignStatus.pending.value, Sign.video_url.is_(None))
+            .where(Sign.status == SignStatus.pending.value, Sign.video_url.is_(None), Sign.avatar_gif_url.is_(None))
             .order_by(Sign.updated_at.desc())
             .limit(limit)
         )
@@ -559,7 +559,7 @@ class InesMediaImporter:
             max_items = self._effective_limit(payload.max_items)
             rows = self.db.scalars(
                 select(Sign)
-                .where(Sign.status == SignStatus.pending.value, Sign.video_url.is_(None))
+                .where(Sign.status == SignStatus.pending.value, Sign.video_url.is_(None), Sign.avatar_gif_url.is_(None))
                 .order_by(Sign.updated_at.desc())
                 .limit(max_items)
             )
@@ -599,6 +599,7 @@ class InesMediaImporter:
         license_notes = self._clean(item.get("license_notes")) or "Vídeo autorizado para uso educacional no aplicativo LibrasLive Edu."
         avatar_video = self._clean(item.get("avatar_video_url"))
         video = avatar_video or self._clean(item.get("video_url"))
+        avatar_gif = self._clean(item.get("avatar_gif_url")) or self._clean(item.get("gif_url"))
         image_url = self._clean(item.get("image_url"))
 
         sign.word = word
@@ -606,13 +607,15 @@ class InesMediaImporter:
         sign.gloss = self._clean(item.get("gloss")) or sign.gloss
         sign.example_sentence = self._clean(item.get("example_sentence")) or sign.example_sentence
         sign.description = self._description(item) or sign.description
-        sign.source_name = self.source_name
+        sign.source_name = self._clean(item.get("source_name")) or self.source_name
         sign.source_url = source_url
         sign.license = license_text
         if image_url:
             sign.image_url = image_url
         if video:
             sign.video_url = video
+        if avatar_gif:
+            sign.avatar_gif_url = avatar_gif
         sign.educational_notes = self._educational_notes(item, source_reference_url, license_notes)
         sign.curator_notes = self._clean(item.get("curator_notes")) or "Mídia INES registrada por rotina administrativa; aguardando curadoria."
 
@@ -649,7 +652,7 @@ class InesMediaImporter:
         )
 
     def _validate_urls(self, item: dict[str, Any]) -> None:
-        for key in ("source_reference_url", "video_url", "avatar_video_url", "image_url"):
+        for key in ("source_url", "source_reference_url", "video_url", "avatar_video_url", "avatar_gif_url", "gif_url", "image_url"):
             value = self._clean(item.get(key))
             if value and not self._is_http_url(value):
                 raise ValueError(f"{key} deve começar com http:// ou https://.")
@@ -863,6 +866,7 @@ class InesMediaImporter:
             "license_notes": sign.license_notes,
             "image_url": sign.image_url,
             "video_url": sign.video_url,
+            "avatar_gif_url": sign.avatar_gif_url,
         }
 
     def _clean(self, value: Any) -> str | None:

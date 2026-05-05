@@ -4,6 +4,8 @@ export type AvatarInput = {
   glossText?: string | null;
   avatarVideoUrl?: string | null;
   videoUrl?: string | null;
+  avatarGifUrl?: string | null;
+  imageUrl?: string | null;
   animationPayloadUrl?: string | null;
   status?: string | null;
   providerConfigured?: boolean | null;
@@ -12,7 +14,7 @@ export type AvatarInput = {
 };
 
 export type AvatarRenderState = {
-  type: "video" | "animation" | "gloss" | "fallback";
+  type: "video" | "gif" | "image" | "animation" | "gloss" | "fallback";
   label: string;
   message: string;
   canRenderAvatar: boolean;
@@ -44,6 +46,26 @@ export function resolveAvatarState(input: AvatarInput): AvatarRenderState {
         ? "Vídeo de avatar recebido de fonte configurada."
         : "Vídeo autorizado de apoio recebido para este sinal.",
       canRenderAvatar: true,
+      pendingCuration,
+    };
+  }
+
+  if (input.avatarGifUrl) {
+    return {
+      type: "gif",
+      label: "GIF complementar disponÃ­vel",
+      message: "GIF autorizado recebido como apoio visual complementar para este sinal.",
+      canRenderAvatar: true,
+      pendingCuration,
+    };
+  }
+
+  if (input.imageUrl) {
+    return {
+      type: "image",
+      label: "Imagem de apoio disponÃ­vel",
+      message: "Imagem autorizada recebida como apoio visual. Ela nÃ£o substitui sinal em Libras validado.",
+      canRenderAvatar: false,
       pendingCuration,
     };
   }

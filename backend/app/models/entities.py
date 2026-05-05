@@ -166,6 +166,7 @@ class Sign(TimestampMixin, Base):
     subject_id: Mapped[int | None] = mapped_column(ForeignKey("subjects.id"))
     image_url: Mapped[str | None] = mapped_column(String(500))
     video_url: Mapped[str | None] = mapped_column(String(500))
+    avatar_gif_url: Mapped[str | None] = mapped_column(String(500))
     avatar_animation_url: Mapped[str | None] = mapped_column(String(500))
     hand_configuration: Mapped[str | None] = mapped_column(String(220))
     movement_description: Mapped[str | None] = mapped_column(Text)

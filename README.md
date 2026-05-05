@@ -233,10 +233,10 @@ Também existe a tela `/admin/import/ines-media` para importar lote JSON/CSV de 
 
 Importante:
 
-- Aprovar sem vídeo não faz o avatar aparecer.
-- Para o avatar aparecer, o sinal precisa estar `approved` e ter `video_url`, `avatar_video_url` ou `animation_payload_url`.
-- Sinais aprovados sem vídeo podem aparecer como glosa/card, mas o Avatar Libras mantém fallback visual.
-- Não use URLs falsas, placeholders, vídeos sem autorização registrada ou mídia sem fonte/licença.
+- Aprovar sem vídeo/GIF não faz o avatar exibir mídia.
+- Para o avatar exibir mídia, o sinal precisa estar `approved` e ter `video_url`, `avatar_video_url`, `avatar_gif_url` ou `animation_payload_url`.
+- Sinais aprovados sem mídia podem aparecer como glosa/card, mas o Avatar Libras mantém fallback visual.
+- Não use URLs falsas, placeholders, vídeos/GIFs sem autorização registrada ou mídia sem fonte/licença.
 
 ## Importação administrativa de vídeos autorizados do INES
 
@@ -280,7 +280,7 @@ GET /api/admin/import/ines-media/{job_id}
 Modos disponíveis:
 
 - `json_items`: cola uma lista JSON de sinais já estruturados.
-- `csv_items`: cola CSV com cabeçalho `word,gloss,source_reference_url,video_url,avatar_video_url,image_url,license,license_notes,curator_notes,authorized`.
+- `csv_items`: cola CSV com cabeçalho `word,gloss,source_name,source_url,source_reference_url,video_url,avatar_video_url,gif_url,avatar_gif_url,image_url,license,license_notes,curator_notes,authorized`.
 - `selected_words`: tenta localizar mídia no INES para palavras informadas, com timeout e delay.
 - `pending_words`: busca sinais `pending` sem vídeo e tenta localizar mídia, respeitando o limite.
 
@@ -292,7 +292,7 @@ Como testar:
 4. Use `Iniciar importação` para criar o job sob demanda.
 5. Abra o relatório, revise sinais em `/admin`, aprove com curadoria e teste em aula.
 
-Para o Avatar Libras aparecer, o sinal precisa estar `approved` e ter `video_url` ou `avatar_video_url`. Aprovar sem vídeo não exibe avatar; a legenda e os cards continuam funcionando como fallback.
+Para o Avatar Libras aparecer com mídia, o sinal precisa estar `approved` e ter `video_url`, `avatar_video_url` ou `avatar_gif_url`. Aprovar sem mídia mantém o fallback visual; a legenda e os cards continuam funcionando.
 
 ### Diagnóstico de palavras no INES
 
@@ -339,14 +339,54 @@ Proteções:
 - o relatório lista vídeos encontrados, vídeos não encontrados, sinais criados/atualizados, avisos, erros e palavras que precisam de importação manual;
 - aprovação automática continua desativada por padrão e depende de `approve_authorized=true`, `INES_IMPORT_APPROVE_AUTHORIZED=true`, vídeo, fonte, licença e autorização registrada.
 
-Para testar em aula: rode a automação em lote pequeno, volte para `/admin`, aprove manualmente um sinal com vídeo, crie uma aula como professor e envie uma frase com a palavra aprovada. O aluno verá o vídeo no Avatar Libras quando a palavra for detectada.
+Para testar em aula: rode a automação em lote pequeno, volte para `/admin`, aprove manualmente um sinal com vídeo/GIF, crie uma aula como professor e envie uma frase com a palavra aprovada. O aluno verá a mídia no Avatar Libras quando a palavra for detectada.
+
+## Uso de GIFs como mídia complementar no Avatar Libras
+
+O LibrasLive Edu também aceita GIFs autorizados como mídia complementar para sinais em Libras. O GIF é um fallback leve quando ainda não houver vídeo aprovado, mas não substitui validação por especialista nem a atuação de intérprete humano.
+
+Regras:
+
+- o campo do banco é `avatar_gif_url`;
+- GIFs não são baixados no build/deploy/startup e não devem ser salvos no Git;
+- todo GIF precisa registrar `source_name`, `source_url`, `source_reference_url`, `license` e `license_notes`;
+- novos GIFs entram como `pending` e só aparecem como oficiais depois de curadoria;
+- o Avatar usa prioridade `avatar_video_url` > `video_url` > `avatar_gif_url` > `image_url` > fallback visual;
+- cards visuais mostram `Com vídeo`, `Com GIF`, `Com imagem` ou `Sem mídia` conforme o sinal aprovado.
+
+Importação por manifesto:
+
+```json
+[
+  {
+    "word": "professor",
+    "gloss": "PROFESSOR",
+    "avatar_gif_url": "https://...",
+    "source_name": "IFPR Campus Umuarama - Libras GIFs",
+    "source_url": "https://ifpr.edu.br/umuarama/libras-gifs/",
+    "source_reference_url": "https://ifpr.edu.br/umuarama/libras-gifs/",
+    "license": "Uso autorizado ou licença identificada para apoio educacional",
+    "license_notes": "GIF utilizado como apoio visual em Libras, com fonte registrada.",
+    "curator_notes": "Mídia GIF cadastrada para revisão por especialista em Libras.",
+    "authorized": true
+  }
+]
+```
+
+Endpoint administrativo:
+
+```bash
+POST /api/admin/import/libras-gif-media
+```
+
+Esse endpoint é `admin only`, não baixa arquivos, apenas vincula URL remota autorizada, registra auditoria `gif_media_import` e mantém os sinais como `pending` para revisão.
 
 ## Speech-to-Text e Avatar
 
 - Backend: `DemoSpeechToTextProvider`, `GoogleSpeechToTextProvider`, `AzureSpeechProvider` e `WhisperProvider`.
 - Frontend: reconhecimento de fala do navegador quando disponível.
 - O app envia texto transcrito por padrão e não armazena áudio bruto.
-- O `AvatarPanel` renderiza vídeo quando `avatar_video_url` existir e mostra fallback visual quando não houver avatar.
+- O `AvatarPanel` renderiza vídeo quando `avatar_video_url`/`video_url` existir, usa `avatar_gif_url` como fallback complementar aprovado e mostra fallback visual quando não houver mídia.
 
 ## Resumo Automático da Aula
 

@@ -46,6 +46,7 @@ export type SignCard = {
   imageUrl?: string | null;
   videoUrl?: string | null;
   avatarVideoUrl?: string | null;
+  avatarGifUrl?: string | null;
   avatarAnimationUrl?: string | null;
   sourceName?: string | null;
   sourceUrl?: string | null;
@@ -112,6 +113,7 @@ export type SignRecord = {
   image_url?: string | null;
   video_url?: string | null;
   avatar_video_url?: string | null;
+  avatar_gif_url?: string | null;
   avatar_animation_url?: string | null;
   status: string;
   source_name?: string | null;

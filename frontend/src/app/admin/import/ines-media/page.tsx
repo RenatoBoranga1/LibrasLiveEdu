@@ -20,7 +20,7 @@ import {
 } from "@/services/api";
 
 const DEFAULT_AUTHORIZATION = "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu";
-const EXAMPLE_CSV = "word,gloss,source_reference_url,video_url,avatar_video_url,image_url,license,license_notes,curator_notes,authorized";
+const EXAMPLE_CSV = "word,gloss,source_name,source_url,source_reference_url,video_url,avatar_video_url,gif_url,avatar_gif_url,image_url,license,license_notes,curator_notes,authorized";
 const EXAMPLE_JSON = JSON.stringify(
   [
     {
@@ -29,6 +29,7 @@ const EXAMPLE_JSON = JSON.stringify(
       source_reference_url: "https://dicionario.ines.gov.br/...",
       video_url: "https://...",
       avatar_video_url: "https://...",
+      avatar_gif_url: "https://...",
       image_url: "https://...",
       license: DEFAULT_AUTHORIZATION,
       license_notes: "Vídeo autorizado para uso educacional no aplicativo LibrasLive Edu.",
@@ -223,7 +224,7 @@ export default function InesMediaImportPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Rotina administrativa sob demanda</p>
-            <h1 className="mt-2 text-3xl font-black text-ink dark:text-white">Importar vídeos autorizados do INES</h1>
+            <h1 className="mt-2 text-3xl font-black text-ink dark:text-white">Importar mídias autorizadas</h1>
             <p className="mt-2 max-w-3xl text-base font-semibold leading-relaxed text-ink/70 dark:text-white/70">
               Esta rotina não roda no build/deploy. Ela só é executada sob demanda por administradores, com limite, relatório e auditoria por sinal.
             </p>
@@ -242,7 +243,7 @@ export default function InesMediaImportPage() {
           <div className="flex gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
             <p>
-              Use apenas vídeos autorizados. Registre fonte, URL específica, licença e observações. O padrão é vincular URL remota e manter os sinais pendentes para revisão.
+              Use apenas vídeos, GIFs ou imagens autorizadas. Registre fonte, URL específica, licença e observações. O padrão é vincular URL remota e manter os sinais pendentes para revisão.
             </p>
           </div>
         </section>
@@ -495,8 +496,8 @@ function ReportPanel({ result }: { result: InesImportJobResponse }) {
         <ReportCard label="Pendentes" value={report.pending_count} />
         <ReportCard label="Ignorados" value={report.skipped_count} />
         <ReportCard label="Erros" value={report.error_count} />
-        <ReportCard label="Vídeos encontrados" value={report.video_found_count} />
-        <ReportCard label="Vídeos não encontrados" value={report.video_missing_count} />
+        <ReportCard label="Mídias encontradas" value={report.video_found_count} />
+        <ReportCard label="Mídias não encontradas" value={report.video_missing_count} />
       </div>
       {report.items?.length ? <ImportItemsTable items={report.items} /> : null}
       <LogList title="Erros" items={report.errors} empty="Nenhum erro registrado." />
@@ -515,8 +516,8 @@ function ImportItemsTable({ items }: { items: NonNullable<InesImportReport["item
             <th className="px-3 py-3">Palavra</th>
             <th className="px-3 py-3">Página</th>
             <th className="px-3 py-3">Palavra encontrada</th>
-            <th className="px-3 py-3">Vídeo</th>
-            <th className="px-3 py-3">URL do vídeo</th>
+            <th className="px-3 py-3">Mídia</th>
+            <th className="px-3 py-3">URL da mídia</th>
             <th className="px-3 py-3">Fonte</th>
             <th className="px-3 py-3">Status</th>
             <th className="px-3 py-3">Motivo</th>
@@ -531,7 +532,11 @@ function ImportItemsTable({ items }: { items: NonNullable<InesImportReport["item
               <td className="px-3 py-3"><BooleanBadge value={Boolean(item.word_found)} /></td>
               <td className="px-3 py-3"><BooleanBadge value={Boolean(item.video_found)} /></td>
               <td className="max-w-xs px-3 py-3">
-                {item.video_url ? <ExternalUrl href={item.video_url} label="Abrir vídeo" /> : <span className="font-semibold text-ink/50 dark:text-white/50">Sem vídeo</span>}
+                {item.video_url || item.avatar_gif_url ? (
+                  <ExternalUrl href={item.video_url ?? item.avatar_gif_url} label={item.video_url ? "Abrir vídeo" : "Abrir GIF"} />
+                ) : (
+                  <span className="font-semibold text-ink/50 dark:text-white/50">Sem mídia</span>
+                )}
               </td>
               <td className="max-w-xs px-3 py-3">
                 {item.source_reference_url ? <ExternalUrl href={item.source_reference_url} label="Abrir fonte" subtle /> : <span className="font-semibold text-ink/50 dark:text-white/50">Sem fonte específica</span>}

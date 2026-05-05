@@ -34,6 +34,29 @@ def test_validate_rejects_invalid_media_url():
     assert "video_url" in report["errors"][0]["message"]
 
 
+def test_validate_accepts_authorized_gif_url_without_video_warning():
+    importer = InesMediaImporter(db=None)  # type: ignore[arg-type]
+    payload = InesMediaImportStartRequest(
+        mode="json_items",
+        items=[
+            {
+                "word": "professor",
+                "avatar_gif_url": "https://ifpr.edu.br/umuarama/libras-gifs/professor.gif",
+                "source_name": "IFPR Campus Umuarama - Libras GIFs",
+                "source_url": "https://ifpr.edu.br/umuarama/libras-gifs/",
+                "license": "Uso autorizado para apoio educacional",
+                "license_notes": "GIF cadastrado como apoio visual complementar.",
+            }
+        ],
+        max_items=10,
+    )
+
+    report = importer.validate(payload)
+
+    assert report["error_count"] == 0
+    assert not any("sem v" in item["message"].lower() for item in report["warnings"])
+
+
 def test_effective_limit_does_not_exceed_configuration():
     importer = InesMediaImporter(db=None)  # type: ignore[arg-type]
     old_limit = importer.settings.ines_import_max_items

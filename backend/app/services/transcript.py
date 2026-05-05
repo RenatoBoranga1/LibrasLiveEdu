@@ -65,6 +65,7 @@ class TranscriptService:
                 "status": translation.translation_status,
                 "glossText": translation.gloss_text,
                 "avatarVideoUrl": translation.avatar_video_url,
+                "avatarGifUrl": getattr(translation, "avatar_gif_url", None),
                 "animationPayloadUrl": translation.animation_payload_url,
                 "translationStatus": translation.translation_status,
                 "provider": translation.provider,

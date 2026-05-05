@@ -220,6 +220,7 @@ export type SignMediaPayload = {
   license_notes?: string | null;
   video_url?: string | null;
   avatar_video_url?: string | null;
+  avatar_gif_url?: string | null;
   image_url?: string | null;
   curator_notes?: string | null;
 };
@@ -250,6 +251,7 @@ export type ManualSignPayload = {
   image_url?: string;
   video_url?: string;
   avatar_video_url?: string;
+  avatar_gif_url?: string;
   animation_payload_url?: string;
   curator_notes?: string;
 };
@@ -330,9 +332,13 @@ export type InesImportMode = "pending_words" | "selected_words" | "json_items" |
 export type InesImportItem = {
   word?: string;
   gloss?: string;
+  source_name?: string;
+  source_url?: string;
   source_reference_url?: string;
   video_url?: string;
   avatar_video_url?: string;
+  avatar_gif_url?: string;
+  gif_url?: string;
   image_url?: string;
   license?: string;
   license_notes?: string;
@@ -374,6 +380,7 @@ export type InesImportReport = {
     word_found?: boolean;
     video_found?: boolean;
     video_url?: string | null;
+    avatar_gif_url?: string | null;
     source_reference_url?: string | null;
     image_url?: string | null;
     status?: string;
@@ -459,6 +466,34 @@ export function autoImportSelectedInesMedia(payload: {
 
 export function diagnoseInesMediaImport(payload: { words: string[]; max_items?: number }): Promise<InesDiagnoseResponse> {
   return request<InesDiagnoseResponse>("/api/admin/import/ines-media/diagnose", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export type LibrasGifMediaItem = {
+  word: string;
+  gloss?: string;
+  avatar_gif_url?: string;
+  gif_url?: string;
+  image_url?: string;
+  source_name?: string;
+  source_url?: string;
+  source_reference_url?: string;
+  license?: string;
+  license_notes?: string;
+  curator_notes?: string;
+  authorized?: boolean;
+};
+
+export function importLibrasGifMedia(payload: {
+  source_name?: string;
+  source_url?: string;
+  items: LibrasGifMediaItem[];
+  approve_authorized?: boolean;
+  overwrite?: boolean;
+}): Promise<InesImportJobResponse> {
+  return request<InesImportJobResponse>("/api/admin/import/libras-gif-media", {
     method: "POST",
     body: JSON.stringify(payload),
   });

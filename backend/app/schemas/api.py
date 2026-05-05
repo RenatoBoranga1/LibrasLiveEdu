@@ -31,6 +31,7 @@ class SignRead(BaseModel):
     image_url: str | None = None
     video_url: str | None = None
     avatar_video_url: str | None = None
+    avatar_gif_url: str | None = None
     avatar_animation_url: str | None = None
     example_sentence: str | None = None
     source_name: str | None = None
@@ -63,6 +64,7 @@ class SignUpdate(BaseModel):
     description: str | None = None
     image_url: str | None = None
     video_url: str | None = None
+    avatar_gif_url: str | None = None
     avatar_animation_url: str | None = None
     hand_configuration: str | None = None
     movement_description: str | None = None
@@ -153,9 +155,13 @@ class InesMediaImportRequest(BaseModel):
 class InesMediaImportItem(BaseModel):
     word: str | None = None
     gloss: str | None = None
+    source_name: str | None = None
+    source_url: str | None = None
     source_reference_url: str | None = None
     video_url: str | None = None
     avatar_video_url: str | None = None
+    avatar_gif_url: str | None = None
+    gif_url: str | None = None
     image_url: str | None = None
     license: str | None = None
     license_notes: str | None = None
@@ -199,6 +205,29 @@ class InesMediaImportJobResponse(BaseModel):
     job_id: int | None = None
     status: str
     report: InesMediaImportReport
+
+
+class LibrasGifMediaItem(BaseModel):
+    word: str
+    gloss: str | None = None
+    avatar_gif_url: str | None = None
+    gif_url: str | None = None
+    image_url: str | None = None
+    source_name: str | None = None
+    source_url: str | None = None
+    source_reference_url: str | None = None
+    license: str | None = None
+    license_notes: str | None = None
+    curator_notes: str | None = None
+    authorized: bool = False
+
+
+class LibrasGifMediaImportRequest(BaseModel):
+    source_name: str = "IFPR Campus Umuarama - Libras GIFs"
+    source_url: str = "https://ifpr.edu.br/umuarama/libras-gifs/"
+    items: list[LibrasGifMediaItem] = Field(default_factory=list)
+    approve_authorized: bool = False
+    overwrite: bool = False
 
 
 class InesMediaAutoPendingRequest(BaseModel):
@@ -387,6 +416,7 @@ class ManualSignCreate(BaseModel):
     image_url: str | None = None
     video_url: str | None = None
     avatar_video_url: str | None = None
+    avatar_gif_url: str | None = None
     animation_payload_url: str | None = None
     curator_notes: str | None = "Sinal cadastrado com base no Dicionário INES e autorização de uso registrada."
 
@@ -405,5 +435,6 @@ class SignMediaUpdate(BaseModel):
     license_notes: str | None = None
     video_url: str | None = None
     avatar_video_url: str | None = None
+    avatar_gif_url: str | None = None
     image_url: str | None = None
     curator_notes: str | None = None

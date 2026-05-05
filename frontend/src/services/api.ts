@@ -325,6 +325,73 @@ export function importInesAuthorizedMedia(payload: {
   });
 }
 
+export type InesImportMode = "pending_words" | "selected_words" | "json_items" | "csv_items";
+
+export type InesImportItem = {
+  word?: string;
+  gloss?: string;
+  source_reference_url?: string;
+  video_url?: string;
+  avatar_video_url?: string;
+  image_url?: string;
+  license?: string;
+  license_notes?: string;
+  curator_notes?: string;
+  authorized?: boolean;
+  example_sentence?: string;
+  grammatical_class?: string;
+  meaning?: string;
+};
+
+export type InesImportStartPayload = {
+  mode: InesImportMode;
+  words?: string[];
+  items?: InesImportItem[];
+  csv?: string;
+  max_items?: number;
+  approve_authorized?: boolean;
+  download_media?: boolean;
+  store_remote_url?: boolean;
+  overwrite?: boolean;
+};
+
+export type InesImportReport = {
+  total_items: number;
+  processed_items: number;
+  created_count: number;
+  updated_count: number;
+  approved_count: number;
+  pending_count: number;
+  skipped_count: number;
+  error_count: number;
+  errors: Array<{ word?: string | null; message: string }>;
+  warnings?: Array<{ word?: string | null; message: string }>;
+};
+
+export type InesImportJobResponse = {
+  job_id?: number | null;
+  status: string;
+  report: InesImportReport;
+};
+
+export function validateInesMediaImport(payload: InesImportStartPayload): Promise<InesImportJobResponse> {
+  return request<InesImportJobResponse>("/api/admin/import/ines-media/validate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function startInesMediaImport(payload: InesImportStartPayload): Promise<InesImportJobResponse> {
+  return request<InesImportJobResponse>("/api/admin/import/ines-media/start", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getInesMediaImportJob(jobId: number): Promise<InesImportJobResponse> {
+  return request<InesImportJobResponse>(`/api/admin/import/ines-media/${jobId}`);
+}
+
 export function login(payload: { email: string; password: string }): Promise<AuthResponse> {
   return request<AuthResponse>("/api/auth/login", {
     method: "POST",

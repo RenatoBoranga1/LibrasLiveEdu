@@ -238,6 +238,58 @@ Importante:
 - Sinais aprovados sem vídeo podem aparecer como glosa/card, mas o Avatar Libras mantém fallback visual.
 - Não use URLs falsas, placeholders, vídeos sem autorização registrada ou mídia sem fonte/licença.
 
+## Importação administrativa de vídeos autorizados do INES
+
+A rotina administrativa de importação fica em `/admin/import/ines-media` e só roda quando um usuário `admin` aciona manualmente. Ela não roda durante `npm run build`, `next build`, deploy da Vercel, start do Render, inicialização da API, migrations ou seed padrão.
+
+Proteções principais:
+
+- `INES_IMPORT_ENABLED=false` mantém o endpoint de execução bloqueado por padrão.
+- `INES_IMPORT_MAX_ITEMS` limita o total por execução; o formulário pode reduzir o limite, mas não ultrapassá-lo.
+- O padrão é vincular URL remota autorizada: `INES_IMPORT_STORE_REMOTE_URL=true` e `INES_IMPORT_DOWNLOAD_MEDIA=false`.
+- Vídeos não são salvos no Git. Se download for habilitado no futuro, use storage externo apropriado.
+- Cada sinal importado registra fonte, URL de referência, licença, observações e auditoria `ines_media_import`.
+- A aprovação automática só ocorre se `approve_authorized=true`, `authorized=true`, houver vídeo e `INES_IMPORT_APPROVE_AUTHORIZED=true`; caso contrário, o sinal fica `pending`.
+
+Variáveis:
+
+```env
+INES_IMPORT_ENABLED=false
+INES_BASE_URL=https://dicionario.ines.gov.br/
+INES_IMPORT_DELAY_MS=1000
+INES_IMPORT_MAX_ITEMS=50
+INES_IMPORT_APPROVE_AUTHORIZED=false
+INES_IMPORT_DOWNLOAD_MEDIA=false
+INES_IMPORT_STORE_REMOTE_URL=true
+INES_IMPORT_TIMEOUT_SECONDS=15
+INES_IMPORT_AUTHORIZATION_TEXT=Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu
+```
+
+Endpoints protegidos por admin:
+
+```bash
+POST /api/admin/import/ines-media/validate
+POST /api/admin/import/ines-media/start
+GET /api/admin/import/ines-media/{job_id}
+```
+
+Modos disponíveis:
+
+- `json_items`: cola uma lista JSON de sinais já estruturados.
+- `csv_items`: cola CSV com cabeçalho `word,gloss,source_reference_url,video_url,avatar_video_url,image_url,license,license_notes,curator_notes,authorized`.
+- `selected_words`: tenta localizar mídia no INES para palavras informadas, com timeout e delay.
+- `pending_words`: busca sinais `pending` sem vídeo e tenta localizar mídia, respeitando o limite.
+
+Como testar:
+
+1. Ative `INES_IMPORT_ENABLED=true` apenas no ambiente administrativo de teste.
+2. Entre como admin e acesse `/admin/import/ines-media`.
+3. Use `Validar` para revisar erros sem alterar o banco.
+4. Use `Iniciar importação` para criar o job sob demanda.
+5. Abra o relatório, revise sinais em `/admin`, aprove com curadoria e teste em aula.
+
+Para o Avatar Libras aparecer, o sinal precisa estar `approved` e ter `video_url` ou `avatar_video_url`. Aprovar sem vídeo não exibe avatar; a legenda e os cards continuam funcionando como fallback.
+
 ## Speech-to-Text e Avatar
 
 - Backend: `DemoSpeechToTextProvider`, `GoogleSpeechToTextProvider`, `AzureSpeechProvider` e `WhisperProvider`.

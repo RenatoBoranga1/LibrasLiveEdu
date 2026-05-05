@@ -142,12 +142,59 @@ class ImportRequest(BaseModel):
 class InesMediaImportRequest(BaseModel):
     source: str = "inline-admin-import"
     source_type: str = Field(default="json", pattern="^(csv|json)$")
-    download_media: bool = True
+    download_media: bool = False
     overwrite_files: bool = False
     authorized: bool = False
     authorization_reference: str | None = None
     content: str | None = None
     records: list[dict[str, Any]] | None = None
+
+
+class InesMediaImportItem(BaseModel):
+    word: str | None = None
+    gloss: str | None = None
+    source_reference_url: str | None = None
+    video_url: str | None = None
+    avatar_video_url: str | None = None
+    image_url: str | None = None
+    license: str | None = None
+    license_notes: str | None = None
+    curator_notes: str | None = None
+    authorized: bool = False
+    example_sentence: str | None = None
+    grammatical_class: str | None = None
+    meaning: str | None = None
+
+
+class InesMediaImportStartRequest(BaseModel):
+    mode: str = Field(pattern="^(pending_words|selected_words|json_items|csv_items)$")
+    words: list[str] = Field(default_factory=list)
+    items: list[InesMediaImportItem] = Field(default_factory=list)
+    csv: str = ""
+    max_items: int | None = None
+    approve_authorized: bool = False
+    download_media: bool = False
+    store_remote_url: bool = True
+    overwrite: bool = False
+
+
+class InesMediaImportReport(BaseModel):
+    total_items: int = 0
+    processed_items: int = 0
+    created_count: int = 0
+    updated_count: int = 0
+    approved_count: int = 0
+    pending_count: int = 0
+    skipped_count: int = 0
+    error_count: int = 0
+    errors: list[dict[str, Any]] = Field(default_factory=list)
+    warnings: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class InesMediaImportJobResponse(BaseModel):
+    job_id: int | None = None
+    status: str
+    report: InesMediaImportReport
 
 
 class ImportJobRead(BaseModel):

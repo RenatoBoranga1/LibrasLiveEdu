@@ -7,12 +7,15 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import hash_password, utc_now
 from app.importers.ines_authorized_media_importer import InesAuthorizedMediaImporter
+from app.importers.ines_media_importer import InesMediaImporter
 from app.importers.libras_dictionary_importer import LibrasDictionaryImporter
 from app.models import ClassSession, ImportJob, SavedWord, Sign, SignAuditLog, User, UserRole
 from app.repositories.sign_repository import SignRepository
 from app.schemas.api import (
     AdminStats,
+    InesMediaImportJobResponse,
     InesMediaImportRequest,
+    InesMediaImportStartRequest,
     ImportJobRead,
     ImportRequest,
     ManualSignCreate,
@@ -350,12 +353,53 @@ def import_dictionary(
     return importer.import_from_api(payload.provider_name or payload.source)
 
 
+@router.post("/admin/import/ines-media/validate", response_model=InesMediaImportJobResponse)
+def validate_ines_media_import(
+    payload: InesMediaImportStartRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role(["admin"])),
+):
+    report = InesMediaImporter(db).validate(payload)
+    return {"job_id": None, "status": "validated", "report": report}
+
+
+@router.post("/admin/import/ines-media/start", response_model=InesMediaImportJobResponse)
+def start_ines_media_import(
+    payload: InesMediaImportStartRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_import_enabled:
+        raise HTTPException(status_code=403, detail="Importação INES desativada neste ambiente.")
+    try:
+        job, report = InesMediaImporter(db).run(payload, user)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"job_id": job.id, "status": job.status, "report": report}
+
+
+@router.get("/admin/import/ines-media/{job_id}", response_model=InesMediaImportJobResponse)
+def get_ines_media_import_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role(["admin"])),
+):
+    job = db.get(ImportJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job de importação não encontrado.")
+    report = _import_job_report(job)
+    return {"job_id": job.id, "status": job.status, "report": report}
+
+
 @router.post("/admin/import/ines-media", response_model=ImportJobRead)
 def import_ines_authorized_media(
     payload: InesMediaImportRequest,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(["admin"])),
 ):
+    if not get_settings().ines_import_enabled:
+        raise HTTPException(status_code=403, detail="Importação INES desativada neste ambiente.")
     importer = InesAuthorizedMediaImporter(db)
     if payload.records is not None:
         return importer.import_records(
@@ -549,6 +593,32 @@ def _metadata_value_from_notes(notes: str, label: str) -> str | None:
             value = line.split(":", 1)[1].strip()
             return value or None
     return None
+
+
+def _import_job_report(job: ImportJob) -> dict:
+    for item in reversed(job.logs or []):
+        if item.get("level") == "report" and isinstance(item.get("report"), dict):
+            return item["report"]
+    return {
+        "total_items": job.total_records,
+        "processed_items": max(0, job.imported_records + job.updated_records),
+        "created_count": job.imported_records,
+        "updated_count": job.updated_records,
+        "approved_count": 0,
+        "pending_count": max(0, job.imported_records + job.updated_records),
+        "skipped_count": 0,
+        "error_count": job.failed_records,
+        "errors": [
+            {"word": None, "message": item.get("message", "")}
+            for item in job.logs or []
+            if item.get("level") == "error"
+        ],
+        "warnings": [
+            {"word": None, "message": item.get("message", "")}
+            for item in job.logs or []
+            if item.get("level") == "warning"
+        ],
+    }
 
 
 def _approved_sign_payload(sign: Sign) -> dict:

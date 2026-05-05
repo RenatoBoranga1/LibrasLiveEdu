@@ -13,7 +13,6 @@ import {
   getAdminStats,
   importSampleCsv,
   importSampleJson,
-  importInesAuthorizedMedia,
   importViaApi,
   listSignAudit,
   listCategories,
@@ -58,8 +57,6 @@ export default function AdminPage() {
   const [selected, setSelected] = useState<SignRecord | null>(fallbackSigns[0]);
   const [auditLog, setAuditLog] = useState<Array<{ id: number; action: string; created_at: string }>>([]);
   const [message, setMessage] = useState("Modo demo ativo: dados locais aparecem se a API estiver offline.");
-  const [inesManifest, setInesManifest] = useState("data/ines_authorized_media_manifest.json");
-  const [inesAuthorization, setInesAuthorization] = useState("");
 
   const params = useMemo(() => {
     const search = new URLSearchParams();
@@ -180,21 +177,6 @@ export default function AdminPage() {
     setMessage(result ? "Importação via API solicitada." : "VLibras/API não configurada ou backend offline.");
   }
 
-  async function runInesMediaImport() {
-    const result = await importInesAuthorizedMedia({
-      source: inesManifest,
-      source_type: inesManifest.toLowerCase().endsWith(".csv") ? "csv" : "json",
-      download_media: false,
-      authorized: true,
-      authorization_reference: inesAuthorization,
-    }).catch(() => null);
-    setMessage(
-      result
-        ? "Importação autorizada de mídia INES enviada. Os sinais entram como pendentes de curadoria."
-        : "Não foi possível importar mídias INES. Verifique autorização, manifesto e login admin."
-    );
-  }
-
   if (auth.loading) {
     return (
       <main className="min-h-screen bg-paper dark:bg-zinc-950">
@@ -261,30 +243,11 @@ export default function AdminPage() {
             <div className="mb-4 rounded-lg border border-ocean/15 bg-teal-50 p-4 dark:border-white/10 dark:bg-zinc-800">
               <h2 className="text-lg font-black text-ink dark:text-white">Importar mídias INES autorizadas</h2>
               <p className="mt-1 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-                Use apenas manifesto autorizado. As URLs são registradas no banco e os sinais ficam como pendentes até curadoria.
+                A rotina completa agora roda em uma tela dedicada, com validação, limite por execução, relatório e auditoria. Ela não roda em build/deploy.
               </p>
-              <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-                <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
-                  Manifesto CSV/JSON
-                  <input
-                    className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
-                    value={inesManifest}
-                    onChange={(event) => setInesManifest(event.target.value)}
-                  />
-                </label>
-                <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
-                  Referência da autorização
-                  <input
-                    className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
-                    value={inesAuthorization}
-                    onChange={(event) => setInesAuthorization(event.target.value)}
-                    placeholder="Ofício, processo, contrato ou URL"
-                  />
-                </label>
-                <ActionButton className="self-end" tone="quiet" onClick={runInesMediaImport} disabled={!inesManifest || !inesAuthorization}>
-                  Importar mídia INES
-                </ActionButton>
-              </div>
+              <Link className="focus-ring mt-3 inline-flex min-h-12 items-center rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white" href="/admin/import/ines-media">
+                Abrir rotina de importação
+              </Link>
             </div>
             <div className="flex flex-wrap items-end gap-3 border-b border-ink/10 pb-4 dark:border-white/10">
               <div className="min-w-52 flex-1">
@@ -380,19 +343,34 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {signs.map((sign) => (
+                  {signs.map((sign) => {
+                    const hasVideo = Boolean(sign.video_url || sign.avatar_video_url);
+                    const isInes = sign.source_name?.toLowerCase().includes("ines");
+                    return (
                     <tr key={sign.id} className="bg-teal-50 text-sm font-semibold text-ink dark:bg-zinc-800 dark:text-white">
                       <td className="rounded-l-lg px-3 py-3 text-base font-black">{sign.word}</td>
-                      <td className="px-3 py-3">{sign.status}</td>
                       <td className="px-3 py-3">
-                        {sign.video_url || sign.avatar_video_url ? (
+                        <div>{sign.status}</div>
+                        {sign.status === "pending" && hasVideo && (
+                          <span className="mt-1 inline-flex rounded-full bg-amber/25 px-2 py-1 text-xs font-black text-ink dark:text-white">
+                            Vídeo cadastrado, aguardando aprovação
+                          </span>
+                        )}
+                        {sign.status === "approved" && hasVideo && (
+                          <span className="mt-1 inline-flex rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">
+                            Pronto para Avatar
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        {hasVideo ? (
                           <span className="rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">Com vídeo</span>
                         ) : (
                           <span className="rounded-full bg-zinc-200 px-2 py-1 text-xs font-black text-ink">Sem vídeo</span>
                         )}
                       </td>
                       <td className="px-3 py-3">
-                        <div>{sign.source_name}</div>
+                        <div>{isInes ? "Dicionário INES" : sign.source_name}</div>
                         {(sign.source_reference_url || sign.source_url) && (
                           <a className="text-ocean underline-offset-4 hover:underline dark:text-mint" href={sign.source_reference_url || sign.source_url || "#"} target="_blank" rel="noreferrer">
                             Abrir fonte
@@ -405,7 +383,7 @@ export default function AdminPage() {
                           <button className="focus-ring rounded-lg bg-white px-3 py-2 font-bold text-ocean dark:bg-zinc-950 dark:text-mint" onClick={() => selectSign(sign)}>
                             Revisar
                           </button>
-                          {sign.video_url || sign.avatar_video_url ? (
+                          {hasVideo ? (
                             <a className="focus-ring rounded-lg bg-ocean px-3 py-2 font-bold text-white" href={sign.avatar_video_url || sign.video_url || "#"} target="_blank" rel="noreferrer">
                               Ver vídeo
                             </a>
@@ -417,7 +395,7 @@ export default function AdminPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>
@@ -536,6 +514,11 @@ export default function AdminPage() {
                       />
                     </div>
                   )}
+                  {!selected.avatar_video_url && !selected.video_url && (
+                    <div className="rounded-lg bg-amber/20 p-3 text-sm font-bold leading-relaxed text-ink dark:text-white">
+                      Sem vídeo cadastrado. Aprovar este sinal não fará o Avatar Libras exibir vídeo.
+                    </div>
+                  )}
                   <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
                     Notas do curador
                     <textarea
@@ -546,7 +529,7 @@ export default function AdminPage() {
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     <ActionButton tone="quiet" onClick={saveSelected}>
-                      Salvar
+                      Salvar mídia
                     </ActionButton>
                     <ActionButton tone="danger" onClick={rejectSelected}>
                       Reprovar

@@ -374,6 +374,31 @@ export type InesImportJobResponse = {
   report: InesImportReport;
 };
 
+export type InesDiagnoseResult = {
+  word: string;
+  normalized_word: string;
+  search_url: string;
+  http_status?: number | null;
+  page_loaded: boolean;
+  word_found_in_page: boolean;
+  source_reference_url?: string | null;
+  image_found: boolean;
+  image_url?: string | null;
+  video_found: boolean;
+  video_url?: string | null;
+  video_host_allowed: boolean;
+  can_import: boolean;
+  reason: string;
+  warnings: string[];
+  errors: string[];
+};
+
+export type InesDiagnoseResponse = {
+  status: string;
+  total_items: number;
+  results: InesDiagnoseResult[];
+};
+
 export function validateInesMediaImport(payload: InesImportStartPayload): Promise<InesImportJobResponse> {
   return request<InesImportJobResponse>("/api/admin/import/ines-media/validate", {
     method: "POST",
@@ -390,6 +415,13 @@ export function startInesMediaImport(payload: InesImportStartPayload): Promise<I
 
 export function getInesMediaImportJob(jobId: number): Promise<InesImportJobResponse> {
   return request<InesImportJobResponse>(`/api/admin/import/ines-media/${jobId}`);
+}
+
+export function diagnoseInesMediaImport(payload: { words: string[]; max_items?: number }): Promise<InesDiagnoseResponse> {
+  return request<InesDiagnoseResponse>("/api/admin/import/ines-media/diagnose", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function login(payload: { email: string; password: string }): Promise<AuthResponse> {

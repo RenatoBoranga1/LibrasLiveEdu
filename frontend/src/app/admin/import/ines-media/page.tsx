@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, FileJson, RotateCcw, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileJson, RotateCcw, Search, Upload, XCircle } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
+  diagnoseInesMediaImport,
   startInesMediaImport,
   validateInesMediaImport,
+  type InesDiagnoseResponse,
   type InesImportItem,
   type InesImportJobResponse,
   type InesImportMode,
@@ -58,6 +60,10 @@ export default function InesMediaImportPage() {
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<InesImportJobResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [diagnoseWordsText, setDiagnoseWordsText] = useState("bom dia\nprofessor\naluno");
+  const [diagnoseMaxItems, setDiagnoseMaxItems] = useState(10);
+  const [diagnoseResult, setDiagnoseResult] = useState<InesDiagnoseResponse | null>(null);
+  const [diagnoseLoading, setDiagnoseLoading] = useState(false);
 
   const payload = useMemo(
     () => ({
@@ -114,6 +120,34 @@ export default function InesMediaImportPage() {
     }
   }
 
+  async function diagnose() {
+    setDiagnoseLoading(true);
+    setDiagnoseResult(null);
+    try {
+      const response = await diagnoseInesMediaImport({
+        words: parseWords(diagnoseWordsText),
+        max_items: diagnoseMaxItems,
+      });
+      setDiagnoseResult(response);
+      setMessage("Diagnóstico concluído. Nenhum dado foi alterado no banco.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível diagnosticar as palavras no INES.");
+    } finally {
+      setDiagnoseLoading(false);
+    }
+  }
+
+  function useDiagnosedWords() {
+    const importableWords = diagnoseResult?.results.filter((item) => item.can_import).map((item) => item.word) ?? [];
+    if (!importableWords.length) {
+      setMessage("Nenhuma palavra diagnosticada está pronta para importação automática.");
+      return;
+    }
+    setMode("selected_words");
+    setWordsText(importableWords.join("\n"));
+    setMessage("Palavras com diagnóstico positivo copiadas para o modo Palavras selecionadas. A importação ainda não foi iniciada.");
+  }
+
   function reset() {
     setMode("json_items");
     setWordsText("bom dia\ntecnologia\ndados");
@@ -127,6 +161,9 @@ export default function InesMediaImportPage() {
     setOverwrite(false);
     setMessage("");
     setResult(null);
+    setDiagnoseWordsText("bom dia\nprofessor\naluno");
+    setDiagnoseMaxItems(10);
+    setDiagnoseResult(null);
   }
 
   if (auth.loading) {
@@ -253,6 +290,57 @@ export default function InesMediaImportPage() {
             </section>
 
             <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Leitura segura, sem gravação</p>
+                  <h2 className="mt-1 text-xl font-black text-ink dark:text-white">Diagnóstico INES</h2>
+                </div>
+                <span className="rounded-full bg-amber/20 px-3 py-1 text-xs font-black text-ink dark:text-white">não altera o banco</span>
+              </div>
+              <div className="mt-3 space-y-2 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
+                <p>O diagnóstico não altera o banco de dados. Ele apenas verifica se o INES retorna página, palavra, imagem e vídeo de forma detectável pelo importador.</p>
+                <p>
+                  Se a página carregar, mas o vídeo não for encontrado, pode ser que o vídeo seja carregado por JavaScript/API e precise de integração específica ou importação manual por
+                  JSON/CSV autorizado.
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_180px]">
+                <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
+                  Palavras para diagnosticar, uma por linha
+                  <textarea
+                    className="focus-ring mt-2 min-h-36 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
+                    value={diagnoseWordsText}
+                    onChange={(event) => setDiagnoseWordsText(event.target.value)}
+                  />
+                </label>
+                <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
+                  Máximo de itens
+                  <input
+                    className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 dark:border-white/15 dark:bg-zinc-950 dark:text-white"
+                    min={1}
+                    max={50}
+                    type="number"
+                    value={diagnoseMaxItems}
+                    onChange={(event) => setDiagnoseMaxItems(Number(event.target.value))}
+                  />
+                </label>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <ActionButton tone="quiet" onClick={diagnose} disabled={diagnoseLoading}>
+                  <Search className="h-5 w-5" aria-hidden="true" />
+                  {diagnoseLoading ? "Diagnosticando..." : "Diagnosticar"}
+                </ActionButton>
+                <ActionButton tone="quiet" onClick={useDiagnosedWords} disabled={!diagnoseResult?.results.some((item) => item.can_import)}>
+                  Usar palavras importáveis em selected_words
+                </ActionButton>
+              </div>
+
+              {diagnoseResult && <DiagnosePanel result={diagnoseResult} />}
+            </section>
+
+            <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
               <h2 className="text-xl font-black text-ink dark:text-white">Exemplos de formato</h2>
               <div className="mt-3 grid gap-3 lg:grid-cols-2">
                 <pre className="overflow-x-auto rounded-lg bg-teal-50 p-3 text-xs font-bold text-ink dark:bg-zinc-800 dark:text-white">{EXAMPLE_JSON}</pre>
@@ -363,6 +451,105 @@ function ReportPanel({ result }: { result: InesImportJobResponse }) {
       <LogList title="Erros" items={report.errors} empty="Nenhum erro registrado." />
       <LogList title="Avisos" items={report.warnings ?? []} empty="Nenhum aviso registrado." />
     </section>
+  );
+}
+
+function DiagnosePanel({ result }: { result: InesDiagnoseResponse }) {
+  return (
+    <div className="mt-5" aria-live="polite">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-lg font-black text-ink dark:text-white">Resultado do diagnóstico</h3>
+        <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-black text-ink dark:bg-zinc-800 dark:text-white">{result.total_items} itens</span>
+      </div>
+      <div className="mt-3 overflow-x-auto rounded-lg border border-ink/10 dark:border-white/10">
+        <table className="min-w-[1100px] w-full border-collapse text-left text-sm">
+          <thead className="bg-teal-50 text-xs font-black uppercase tracking-normal text-ink/70 dark:bg-zinc-800 dark:text-white/70">
+            <tr>
+              <th className="px-3 py-3">Palavra</th>
+              <th className="px-3 py-3">Página carregada</th>
+              <th className="px-3 py-3">Palavra encontrada</th>
+              <th className="px-3 py-3">Imagem</th>
+              <th className="px-3 py-3">Vídeo</th>
+              <th className="px-3 py-3">Host permitido</th>
+              <th className="px-3 py-3">Pode importar</th>
+              <th className="px-3 py-3">Motivo</th>
+              <th className="px-3 py-3">URL do vídeo</th>
+              <th className="px-3 py-3">URL da fonte</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-ink/10 dark:divide-white/10">
+            {result.results.map((item) => (
+              <tr key={`${item.word}-${item.search_url}`} className="align-top">
+                <td className="px-3 py-3 font-black text-ink dark:text-white">
+                  <span>{item.word}</span>
+                  <span className="mt-1 block text-xs font-semibold text-ink/55 dark:text-white/55">{item.normalized_word}</span>
+                  {item.http_status ? <span className="mt-1 block text-xs font-semibold text-ink/55 dark:text-white/55">HTTP {item.http_status}</span> : null}
+                </td>
+                <td className="px-3 py-3"><BooleanBadge value={item.page_loaded} /></td>
+                <td className="px-3 py-3"><BooleanBadge value={item.word_found_in_page} /></td>
+                <td className="px-3 py-3"><BooleanBadge value={item.image_found} /></td>
+                <td className="px-3 py-3"><BooleanBadge value={item.video_found} /></td>
+                <td className="px-3 py-3"><BooleanBadge value={item.video_host_allowed} /></td>
+                <td className="px-3 py-3"><BooleanBadge value={item.can_import} trueLabel="Sim" falseLabel="Não" /></td>
+                <td className="max-w-xs px-3 py-3">
+                  <p className="font-semibold leading-relaxed text-ink/75 dark:text-white/75">{item.reason}</p>
+                  <DiagnosticMessages title="Avisos" tone="warning" items={item.warnings} />
+                  <DiagnosticMessages title="Erros" tone="error" items={item.errors} />
+                </td>
+                <td className="max-w-xs px-3 py-3">
+                  {item.video_url ? <ExternalUrl href={item.video_url} label="Abrir vídeo" /> : <span className="font-semibold text-ink/50 dark:text-white/50">Sem vídeo detectado</span>}
+                </td>
+                <td className="max-w-xs px-3 py-3">
+                  <div className="space-y-2">
+                    <ExternalUrl href={item.source_reference_url ?? item.search_url} label="Abrir fonte" />
+                    <ExternalUrl href={item.search_url} label="URL de busca" subtle />
+                    {item.image_url ? <ExternalUrl href={item.image_url} label="Imagem detectada" subtle /> : null}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function BooleanBadge({ value, trueLabel = "Sim", falseLabel = "Não" }: { value: boolean; trueLabel?: string; falseLabel?: string }) {
+  return (
+    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${value ? "bg-mint text-ink" : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-200"}`}>
+      {value ? trueLabel : falseLabel}
+    </span>
+  );
+}
+
+function DiagnosticMessages({ title, items, tone }: { title: string; items: string[]; tone: "warning" | "error" }) {
+  if (!items.length) return null;
+  const toneClass = tone === "warning" ? "bg-amber/20 text-ink dark:text-white" : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-200";
+  return (
+    <div className="mt-2 space-y-1">
+      {items.map((item, index) => (
+        <p key={`${title}-${index}`} className={`rounded-md px-2 py-1 text-xs font-bold leading-relaxed ${toneClass}`}>
+          {title}: {item}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function ExternalUrl({ href, label, subtle }: { href?: string | null; label: string; subtle?: boolean }) {
+  if (!href) return null;
+  return (
+    <a
+      className={`focus-ring inline-flex max-w-full break-all rounded-md px-2 py-1 text-xs font-black ${
+        subtle ? "bg-teal-50 text-ink/70 dark:bg-zinc-800 dark:text-white/70" : "bg-ocean text-white dark:bg-mint dark:text-ink"
+      }`}
+      href={href}
+      rel="noreferrer"
+      target="_blank"
+    >
+      {label}
+    </a>
   );
 }
 

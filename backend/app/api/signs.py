@@ -13,6 +13,8 @@ from app.models import ClassSession, ImportJob, SavedWord, Sign, SignAuditLog, U
 from app.repositories.sign_repository import SignRepository
 from app.schemas.api import (
     AdminStats,
+    InesMediaDiagnoseRequest,
+    InesMediaDiagnoseResponse,
     InesMediaImportJobResponse,
     InesMediaImportRequest,
     InesMediaImportStartRequest,
@@ -377,6 +379,18 @@ def start_ines_media_import(
     except RuntimeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"job_id": job.id, "status": job.status, "report": report}
+
+
+@router.post("/admin/import/ines-media/diagnose", response_model=InesMediaDiagnoseResponse)
+def diagnose_ines_media_import(
+    payload: InesMediaDiagnoseRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_import_enabled:
+        raise HTTPException(status_code=403, detail="Importação INES desativada neste ambiente.")
+    return InesMediaImporter(db).diagnose_words(payload.words, payload.max_items)
 
 
 @router.get("/admin/import/ines-media/{job_id}", response_model=InesMediaImportJobResponse)

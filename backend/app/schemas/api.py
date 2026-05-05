@@ -197,6 +197,36 @@ class InesMediaImportJobResponse(BaseModel):
     report: InesMediaImportReport
 
 
+class InesMediaDiagnoseRequest(BaseModel):
+    words: list[str] = Field(default_factory=list)
+    max_items: int | None = None
+
+
+class InesMediaDiagnoseResult(BaseModel):
+    word: str
+    normalized_word: str
+    search_url: str
+    http_status: int | None = None
+    page_loaded: bool = False
+    word_found_in_page: bool = False
+    source_reference_url: str | None = None
+    image_found: bool = False
+    image_url: str | None = None
+    video_found: bool = False
+    video_url: str | None = None
+    video_host_allowed: bool = False
+    can_import: bool = False
+    reason: str
+    warnings: list[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+
+
+class InesMediaDiagnoseResponse(BaseModel):
+    status: str
+    total_items: int
+    results: list[InesMediaDiagnoseResult]
+
+
 class ImportJobRead(BaseModel):
     id: int
     source_type: str

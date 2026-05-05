@@ -166,8 +166,7 @@ class InesMediaImporter:
         returns found=false and leaves the sign pending for manual curation.
         """
 
-        base_url = self.settings.ines_base_url.rstrip("/") + "/"
-        search_url = f"{base_url}?q={quote_plus(word)}"
+        search_url = self._search_url(word)
         try:
             with httpx.Client(timeout=self.settings.ines_import_timeout_seconds, follow_redirects=True) as client:
                 response = client.get(search_url, headers={"User-Agent": "LibrasLiveEdu-admin-import/1.0"})
@@ -204,6 +203,101 @@ class InesMediaImporter:
             "avatar_video_url": video_url,
             "image_url": image_url,
         }
+
+    def diagnose_words(self, words: list[str], max_items: int | None = None) -> dict[str, Any]:
+        """Inspect INES responses without writing to the database.
+
+        This diagnostic is intentionally read-only. It is used by admins to see
+        whether the current importer can detect the page, word, image and video
+        before running an import job.
+        """
+
+        limit = self._effective_limit(max_items)
+        limited_words = [word.strip() for word in words if self._clean(word)][:limit]
+        results: list[dict[str, Any]] = []
+
+        for index, word in enumerate(limited_words):
+            results.append(self._diagnose_one_word(word))
+            if index < len(limited_words) - 1:
+                self._delay()
+
+        return {"status": "completed", "total_items": len(limited_words), "results": results}
+
+    def _diagnose_one_word(self, word: str) -> dict[str, Any]:
+        display_normalized = self.normalizer.normalize(word)
+        match_normalized = self.normalizer.normalize_word(word)
+        search_url = self._search_url(word)
+        result: dict[str, Any] = {
+            "word": word,
+            "normalized_word": display_normalized,
+            "search_url": search_url,
+            "http_status": None,
+            "page_loaded": False,
+            "word_found_in_page": False,
+            "source_reference_url": None,
+            "image_found": False,
+            "image_url": None,
+            "video_found": False,
+            "video_url": None,
+            "video_host_allowed": False,
+            "can_import": False,
+            "reason": "Diagnóstico não executado.",
+            "warnings": [],
+            "errors": [],
+        }
+
+        try:
+            with httpx.Client(timeout=self.settings.ines_import_timeout_seconds, follow_redirects=True) as client:
+                response = client.get(search_url, headers={"User-Agent": "LibrasLiveEdu-admin-diagnose/1.0"})
+        except httpx.TimeoutException:
+            result["reason"] = "Falha ao consultar INES."
+            result["errors"].append("Timeout ao consultar a página.")
+            return result
+        except httpx.RequestError as exc:
+            result["reason"] = "Falha ao consultar INES."
+            result["errors"].append(f"Erro de rede ao consultar a página: {exc}")
+            return result
+        except Exception as exc:  # noqa: BLE001
+            result["reason"] = "Falha ao consultar INES."
+            result["errors"].append(f"Erro inesperado ao consultar a página: {exc}")
+            return result
+
+        result["http_status"] = response.status_code
+        result["source_reference_url"] = str(response.url)
+
+        if response.status_code >= 400:
+            result["reason"] = "Falha ao consultar INES."
+            result["errors"].append(f"INES retornou HTTP {response.status_code}.")
+            return result
+
+        html = response.text
+        result["page_loaded"] = True
+        result["word_found_in_page"] = bool(match_normalized and match_normalized in self.normalizer.normalize_word(html))
+
+        image_url = self._first_media_url(html, str(response.url), {".jpg", ".jpeg", ".png", ".webp", ".gif"}, require_allowed=False)
+        video_url = self._first_media_url(html, str(response.url), {".mp4", ".webm", ".mov"}, require_allowed=False)
+        result["image_url"] = image_url
+        result["image_found"] = bool(image_url)
+        result["video_url"] = video_url
+        result["video_found"] = bool(video_url)
+        result["video_host_allowed"] = bool(video_url and self._is_allowed_media_url(video_url))
+        result["can_import"] = bool(result["page_loaded"] and result["word_found_in_page"] and result["video_found"] and result["video_host_allowed"] and self._is_http_url(video_url or ""))
+
+        if result["can_import"]:
+            result["reason"] = "Vídeo encontrado e host permitido."
+        elif not result["word_found_in_page"]:
+            result["reason"] = "Página carregada, mas a palavra não foi encontrada no conteúdo retornado."
+            result["warnings"].append("A busca automática pode não localizar palavras carregadas por JavaScript/API.")
+        elif not result["video_found"]:
+            result["reason"] = "Página carregada, mas nenhuma URL de vídeo .mp4, .webm ou .mov foi encontrada no HTML."
+            result["warnings"].append("Pode ser que o vídeo seja carregado por JavaScript/API e não esteja disponível no HTML inicial.")
+        elif not result["video_host_allowed"]:
+            result["reason"] = "Vídeo encontrado, mas o host não está permitido para importação automática."
+            result["warnings"].append("Use importação manual JSON/CSV se a URL tiver autorização registrada e for validada por curadoria.")
+        else:
+            result["reason"] = "A página foi analisada, mas o item não atende aos critérios seguros de importação automática."
+
+        return result
 
     def _items_for_payload(self, payload: InesMediaImportStartRequest, *, validate_only: bool) -> list[dict[str, Any]]:
         if payload.mode == "json_items":
@@ -332,14 +426,14 @@ class InesMediaImporter:
             notes.append(f"Classe gramatical: {self._clean(item.get('grammatical_class'))}")
         return "\n".join(notes)
 
-    def _first_media_url(self, html: str, base_url: str, extensions: set[str]) -> str | None:
+    def _first_media_url(self, html: str, base_url: str, extensions: set[str], *, require_allowed: bool = True) -> str | None:
         candidates = re.findall(r"""(?:src|href)=["']([^"']+)["']""", html, flags=re.IGNORECASE)
         for candidate in candidates:
             parsed_path = urlparse(candidate).path.lower()
             if not any(parsed_path.endswith(extension) for extension in extensions):
                 continue
             absolute = urljoin(base_url, candidate)
-            if self._is_allowed_media_url(absolute):
+            if not require_allowed or self._is_allowed_media_url(absolute):
                 return absolute
         return None
 
@@ -358,6 +452,10 @@ class InesMediaImporter:
         if requested is None:
             return configured
         return max(1, min(requested, configured))
+
+    def _search_url(self, word: str) -> str:
+        base_url = self.settings.ines_base_url.rstrip("/") + "/"
+        return f"{base_url}?q={quote_plus(word)}"
 
     def _delay(self) -> None:
         delay = max(0, self.settings.ines_import_delay_ms) / 1000

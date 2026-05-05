@@ -19,6 +19,32 @@ const validateInesMediaImport = vi.fn(() =>
     },
   })
 );
+const diagnoseInesMediaImport = vi.fn(() =>
+  Promise.resolve({
+    status: "completed",
+    total_items: 1,
+    results: [
+      {
+        word: "bom dia",
+        normalized_word: "bom dia",
+        search_url: "https://dicionario.ines.gov.br/?q=bom+dia",
+        http_status: 200,
+        page_loaded: true,
+        word_found_in_page: true,
+        source_reference_url: "https://dicionario.ines.gov.br/?q=bom+dia",
+        image_found: false,
+        image_url: null,
+        video_found: false,
+        video_url: null,
+        video_host_allowed: false,
+        can_import: false,
+        reason: "Página carregada, mas nenhuma URL de vídeo .mp4, .webm ou .mov foi encontrada no HTML.",
+        warnings: ["Pode ser que o vídeo seja carregado por JavaScript/API."],
+        errors: [],
+      },
+    ],
+  })
+);
 
 vi.mock("@/features/auth/AuthProvider", () => ({
   useRequireRole: () => ({ loading: false }),
@@ -28,6 +54,7 @@ vi.mock("@/services/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/services/api")>();
   return {
     ...actual,
+    diagnoseInesMediaImport,
     validateInesMediaImport,
     startInesMediaImport: vi.fn(),
   };
@@ -40,6 +67,7 @@ describe("INES media import admin page", () => {
 
     expect(screen.getByRole("heading", { name: /importar vídeos autorizados do ines/i })).toBeInTheDocument();
     expect(screen.getByText(/não roda no build\/deploy/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /diagnóstico ines/i })).toBeInTheDocument();
   });
 
   it("shows validation report after clicking validar", async () => {
@@ -50,5 +78,16 @@ describe("INES media import admin page", () => {
 
     await waitFor(() => expect(validateInesMediaImport).toHaveBeenCalledTimes(1));
     expect(await screen.findByRole("heading", { name: /relatório/i })).toBeInTheDocument();
+  });
+
+  it("shows diagnostic results after clicking diagnosticar", async () => {
+    const { default: Page } = await import("@/app/admin/import/ines-media/page");
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole("button", { name: /diagnosticar/i }));
+
+    await waitFor(() => expect(diagnoseInesMediaImport).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("heading", { name: /resultado do diagnóstico/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/página carregada/i).length).toBeGreaterThan(0);
   });
 });

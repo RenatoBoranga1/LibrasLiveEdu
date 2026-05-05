@@ -270,6 +270,7 @@ Endpoints protegidos por admin:
 ```bash
 POST /api/admin/import/ines-media/validate
 POST /api/admin/import/ines-media/start
+POST /api/admin/import/ines-media/diagnose
 GET /api/admin/import/ines-media/{job_id}
 ```
 
@@ -289,6 +290,22 @@ Como testar:
 5. Abra o relatório, revise sinais em `/admin`, aprove com curadoria e teste em aula.
 
 Para o Avatar Libras aparecer, o sinal precisa estar `approved` e ter `video_url` ou `avatar_video_url`. Aprovar sem vídeo não exibe avatar; a legenda e os cards continuam funcionando como fallback.
+
+### Diagnóstico de palavras no INES
+
+A tela `/admin/import/ines-media` inclui a seção **Diagnóstico INES**. Ela chama o endpoint protegido `POST /api/admin/import/ines-media/diagnose` e não altera o banco de dados: não cria sinais, não atualiza mídia, não aprova registros e não baixa vídeos.
+
+O diagnóstico mostra por palavra:
+
+- URL de busca consultada no INES;
+- status HTTP e se a página carregou;
+- se a palavra apareceu no conteúdo retornado;
+- se imagem e vídeo foram detectados no HTML;
+- se o host do vídeo é permitido;
+- se aquela palavra pode ser importada automaticamente;
+- motivo, avisos e erros.
+
+Use em lotes pequenos, como 5, 10 ou 20 palavras. Não use o diagnóstico para scraping massivo. Se a página carregar, mas o vídeo não aparecer no HTML inicial, use a importação manual por JSON/CSV com uma URL autorizada e registrada pela curadoria.
 
 ## Speech-to-Text e Avatar
 

@@ -364,8 +364,25 @@ export type InesImportReport = {
   pending_count: number;
   skipped_count: number;
   error_count: number;
+  video_found_count?: number;
+  video_missing_count?: number;
   errors: Array<{ word?: string | null; message: string }>;
   warnings?: Array<{ word?: string | null; message: string }>;
+  items?: Array<{
+    word: string;
+    page_loaded?: boolean;
+    word_found?: boolean;
+    video_found?: boolean;
+    video_url?: string | null;
+    source_reference_url?: string | null;
+    image_url?: string | null;
+    status?: string;
+    reason?: string;
+    recommended_action?: string;
+    warnings?: string[];
+    errors?: string[];
+  }>;
+  manual_required?: Array<{ word?: string | null; source_reference_url?: string | null; reason: string }>;
 };
 
 export type InesImportJobResponse = {
@@ -415,6 +432,29 @@ export function startInesMediaImport(payload: InesImportStartPayload): Promise<I
 
 export function getInesMediaImportJob(jobId: number): Promise<InesImportJobResponse> {
   return request<InesImportJobResponse>(`/api/admin/import/ines-media/${jobId}`);
+}
+
+export function autoImportPendingInesMedia(payload: {
+  max_items?: number;
+  approve_authorized?: boolean;
+  overwrite?: boolean;
+}): Promise<InesImportJobResponse> {
+  return request<InesImportJobResponse>("/api/admin/import/ines-media/auto-pending", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function autoImportSelectedInesMedia(payload: {
+  words: string[];
+  max_items?: number;
+  approve_authorized?: boolean;
+  overwrite?: boolean;
+}): Promise<InesImportJobResponse> {
+  return request<InesImportJobResponse>("/api/admin/import/ines-media/auto-selected", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function diagnoseInesMediaImport(payload: { words: string[]; max_items?: number }): Promise<InesDiagnoseResponse> {

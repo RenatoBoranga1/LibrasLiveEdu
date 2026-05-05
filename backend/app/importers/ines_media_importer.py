@@ -159,6 +159,57 @@ class InesMediaImporter:
         self.db.refresh(job)
         return job, report
 
+    def auto_import_pending_words(
+        self,
+        max_items: int | None = None,
+        approve_authorized: bool = False,
+        overwrite: bool = False,
+        user: User | None = None,
+    ) -> tuple[ImportJob, dict[str, Any]]:
+        if user is None:
+            raise RuntimeError("Usuário admin é obrigatório para registrar auditoria da automação INES.")
+        items = self._pending_word_items(max_items)
+        payload = InesMediaImportStartRequest(
+            mode="pending_words",
+            max_items=max_items,
+            approve_authorized=approve_authorized,
+            overwrite=overwrite,
+        )
+        return self._run_auto_items(
+            items,
+            payload=payload,
+            user=user,
+            source_name="INES assisted auto import: pending_words",
+            create_missing=False,
+        )
+
+    def auto_import_selected_words(
+        self,
+        words: list[str],
+        max_items: int | None = None,
+        approve_authorized: bool = False,
+        overwrite: bool = False,
+        user: User | None = None,
+    ) -> tuple[ImportJob, dict[str, Any]]:
+        if user is None:
+            raise RuntimeError("Usuário admin é obrigatório para registrar auditoria da automação INES.")
+        limit = self._effective_limit(max_items)
+        items = [{"word": word.strip()} for word in words if self._clean(word)][:limit]
+        payload = InesMediaImportStartRequest(
+            mode="selected_words",
+            words=[item["word"] for item in items],
+            max_items=max_items,
+            approve_authorized=approve_authorized,
+            overwrite=overwrite,
+        )
+        return self._run_auto_items(
+            items,
+            payload=payload,
+            user=user,
+            source_name="INES assisted auto import: selected_words",
+            create_missing=True,
+        )
+
     def find_ines_entry_for_word(self, word: str) -> dict[str, Any]:
         """Best-effort controlled lookup.
 
@@ -166,42 +217,47 @@ class InesMediaImporter:
         returns found=false and leaves the sign pending for manual curation.
         """
 
-        search_url = self._search_url(word)
-        try:
-            with httpx.Client(timeout=self.settings.ines_import_timeout_seconds, follow_redirects=True) as client:
-                response = client.get(search_url, headers={"User-Agent": "LibrasLiveEdu-admin-import/1.0"})
-                response.raise_for_status()
-        except Exception as exc:  # noqa: BLE001
-            return {"found": False, "word": word, "error": f"Falha ao consultar INES: {exc}"}
-
-        html = response.text
-        if self.normalizer.normalize_word(word) not in self.normalizer.normalize_word(html):
+        diagnosis = self._diagnose_one_word(word)
+        if not diagnosis.get("can_import"):
             return {
                 "found": False,
                 "word": word,
-                "source_reference_url": str(response.url),
-                "error": "Entrada da palavra não encontrada automaticamente no INES.",
+                "normalized_word": diagnosis.get("normalized_word"),
+                "search_url": diagnosis.get("search_url"),
+                "http_status": diagnosis.get("http_status"),
+                "page_loaded": diagnosis.get("page_loaded"),
+                "word_found_in_page": diagnosis.get("word_found_in_page"),
+                "source_reference_url": diagnosis.get("source_reference_url"),
+                "image_url": diagnosis.get("image_url"),
+                "image_found": diagnosis.get("image_found"),
+                "video_found": diagnosis.get("video_found"),
+                "video_host_allowed": diagnosis.get("video_host_allowed"),
+                "reason": diagnosis.get("reason"),
+                "warnings": diagnosis.get("warnings", []),
+                "errors": diagnosis.get("errors", []),
+                "error": diagnosis.get("reason") or "Vídeo não encontrado automaticamente no INES.",
             }
-
-        video_url = self._first_media_url(html, str(response.url), {".mp4", ".webm", ".mov"})
-        image_url = self._first_media_url(html, str(response.url), {".jpg", ".jpeg", ".png", ".webp", ".gif"})
-        if not video_url:
-            return {
-                "found": False,
-                "word": word,
-                "source_reference_url": str(response.url),
-                "image_url": image_url,
-                "error": "Vídeo não encontrado automaticamente no INES.",
-            }
-
         return {
             "found": True,
             "word": word,
+            "normalized_word": diagnosis.get("normalized_word"),
+            "search_url": diagnosis.get("search_url"),
+            "http_status": diagnosis.get("http_status"),
+            "page_loaded": diagnosis.get("page_loaded"),
+            "word_found_in_page": diagnosis.get("word_found_in_page"),
             "gloss": word.upper(),
-            "source_reference_url": str(response.url),
-            "video_url": video_url,
-            "avatar_video_url": video_url,
-            "image_url": image_url,
+            "source_reference_url": diagnosis.get("source_reference_url"),
+            "video_url": diagnosis.get("video_url"),
+            "avatar_video_url": diagnosis.get("video_url"),
+            "image_url": diagnosis.get("image_url"),
+            "image_found": diagnosis.get("image_found"),
+            "video_found": diagnosis.get("video_found"),
+            "video_host_allowed": diagnosis.get("video_host_allowed"),
+            "meaning": diagnosis.get("meaning"),
+            "grammatical_class": diagnosis.get("grammatical_class"),
+            "reason": "Vídeo encontrado.",
+            "warnings": diagnosis.get("warnings", []),
+            "errors": diagnosis.get("errors", []),
         }
 
     def diagnose_words(self, words: list[str], max_items: int | None = None) -> dict[str, Any]:
@@ -282,6 +338,8 @@ class InesMediaImporter:
         result["video_found"] = bool(video_url)
         result["video_host_allowed"] = bool(video_url and self._is_allowed_media_url(video_url))
         result["can_import"] = bool(result["page_loaded"] and result["word_found_in_page"] and result["video_found"] and result["video_host_allowed"] and self._is_http_url(video_url or ""))
+        result["meaning"] = self._extract_labeled_text(html, ["Acepção", "Significado"])
+        result["grammatical_class"] = self._extract_labeled_text(html, ["Classe Gramatical"])
 
         if result["can_import"]:
             result["reason"] = "Vídeo encontrado e host permitido."
@@ -291,6 +349,8 @@ class InesMediaImporter:
         elif not result["video_found"]:
             result["reason"] = "Página carregada, mas nenhuma URL de vídeo .mp4, .webm ou .mov foi encontrada no HTML."
             result["warnings"].append("Pode ser que o vídeo seja carregado por JavaScript/API e não esteja disponível no HTML inicial.")
+            if self.settings.ines_import_use_browser:
+                result["warnings"].append("INES_IMPORT_USE_BROWSER=true está configurado, mas este importador ainda não usa navegador renderizado para evitar dependência pesada no deploy.")
         elif not result["video_host_allowed"]:
             result["reason"] = "Vídeo encontrado, mas o host não está permitido para importação automática."
             result["warnings"].append("Use importação manual JSON/CSV se a URL tiver autorização registrada e for validada por curadoria.")
@@ -298,6 +358,195 @@ class InesMediaImporter:
             result["reason"] = "A página foi analisada, mas o item não atende aos critérios seguros de importação automática."
 
         return result
+
+    def _run_auto_items(
+        self,
+        items: list[dict[str, Any]],
+        *,
+        payload: InesMediaImportStartRequest,
+        user: User,
+        source_name: str,
+        create_missing: bool,
+    ) -> tuple[ImportJob, dict[str, Any]]:
+        if not self.settings.ines_import_enabled:
+            raise RuntimeError("Importação INES desativada neste ambiente.")
+        if self.settings.ines_import_download_media:
+            raise RuntimeError("Download de mídia exige storage externo configurado. Use vínculo por URL remota neste ambiente.")
+        if not self.settings.ines_import_store_remote_url:
+            raise RuntimeError("A rotina atual exige INES_IMPORT_STORE_REMOTE_URL=true para não salvar vídeos no repositório.")
+
+        limit = self._effective_limit(payload.max_items)
+        limited_items = items[:limit]
+        report = self._empty_report(total_items=len(limited_items))
+        job = ImportJob(
+            source_type="api",
+            source_name=source_name,
+            status=ImportStatus.running.value,
+            total_records=len(limited_items),
+            logs=[
+                {
+                    "level": "settings",
+                    "row": None,
+                    "message": "Automação assistida INES iniciada sob demanda por admin.",
+                    "settings": self._job_settings(payload, limit),
+                }
+            ],
+        )
+        self.db.add(job)
+        self.db.commit()
+        self.db.refresh(job)
+
+        seen: set[str] = set()
+        for index, item in enumerate(limited_items, start=1):
+            word = self._clean(item.get("word"))
+            normalized = self.normalizer.normalize_word(word or "")
+            if not word:
+                self._record_auto_error(job, report, index, None, "Item sem palavra.", action="Erro de consulta")
+                continue
+            if normalized in seen:
+                report["skipped_count"] += 1
+                self._append_report_item(
+                    report,
+                    word=word,
+                    status="skipped",
+                    reason="Palavra duplicada no lote.",
+                    recommended_action="Ignorar duplicado",
+                )
+                self._log(job, "warning", index, f"{word}: duplicado no lote.")
+                continue
+            seen.add(normalized)
+
+            try:
+                lookup = self.find_ines_entry_for_word(word)
+                if not lookup.get("found"):
+                    report["video_missing_count"] += 1
+                    reason = str(lookup.get("reason") or lookup.get("error") or "Vídeo não detectado.")
+                    self._report_error(report, word, reason)
+                    if create_missing:
+                        _, created, changed = self._create_pending_lookup_sign(word, lookup, user, overwrite=payload.overwrite)
+                        if created:
+                            report["created_count"] += 1
+                            job.imported_records += 1
+                        elif changed:
+                            report["updated_count"] += 1
+                            job.updated_records += 1
+                        if created or changed:
+                            report["pending_count"] += 1
+                            self.db.commit()
+                    report["manual_required"].append(
+                        {
+                            "word": word,
+                            "source_reference_url": lookup.get("source_reference_url") or lookup.get("search_url"),
+                            "reason": reason,
+                        }
+                    )
+                    self._append_report_item(
+                        report,
+                        word=word,
+                        status="not_found",
+                        page_loaded=bool(lookup.get("page_loaded")),
+                        word_found=bool(lookup.get("word_found_in_page")),
+                        video_found=False,
+                        source_reference_url=lookup.get("source_reference_url"),
+                        image_url=lookup.get("image_url"),
+                        reason=reason,
+                        recommended_action="Precisa de importação manual",
+                        warnings=lookup.get("warnings", []),
+                        errors=lookup.get("errors", []),
+                    )
+                    self._log(job, "warning", index, f"{word}: {reason}", lookup=lookup)
+                    self._delay()
+                    continue
+
+                enriched = {**item, **{key: value for key, value in lookup.items() if value is not None}}
+                sign, created, approved = self._create_or_update_sign(enriched, payload, user)
+                report["processed_items"] += 1
+                report["video_found_count"] += 1
+                if created:
+                    report["created_count"] += 1
+                    job.imported_records += 1
+                else:
+                    report["updated_count"] += 1
+                    job.updated_records += 1
+                if approved:
+                    report["approved_count"] += 1
+                else:
+                    report["pending_count"] += 1
+                self._append_report_item(
+                    report,
+                    word=sign.word,
+                    status=sign.status,
+                    page_loaded=True,
+                    word_found=True,
+                    video_found=True,
+                    video_url=sign.video_url,
+                    source_reference_url=lookup.get("source_reference_url"),
+                    image_url=sign.image_url,
+                    reason=str(lookup.get("reason") or "Vídeo encontrado."),
+                    recommended_action="Pronto para revisar" if not approved else "Aprovado automaticamente por configuração explícita",
+                    warnings=lookup.get("warnings", []),
+                    errors=lookup.get("errors", []),
+                )
+                self._log(job, "success", index, f"{sign.word}: vídeo INES vinculado com status {sign.status}.", lookup=lookup)
+                self.db.commit()
+                self._delay()
+            except Exception as exc:  # noqa: BLE001
+                self.db.rollback()
+                self._record_auto_error(job, report, index, word, str(exc), action="Erro de consulta")
+
+        job.status = ImportStatus.completed.value
+        job.failed_records = report["error_count"]
+        job.finished_at = datetime.now(timezone.utc)
+        self._log(job, "report", None, "Relatório final da automação assistida INES.", report=report)
+        self.db.commit()
+        self.db.refresh(job)
+        return job, report
+
+    def _pending_word_items(self, max_items: int | None) -> list[dict[str, Any]]:
+        limit = self._effective_limit(max_items)
+        rows = self.db.scalars(
+            select(Sign)
+            .where(Sign.status == SignStatus.pending.value, Sign.video_url.is_(None))
+            .order_by(Sign.updated_at.desc())
+            .limit(limit)
+        )
+        return [{"word": sign.word, "gloss": sign.gloss} for sign in rows]
+
+    def _create_pending_lookup_sign(self, word: str, lookup: dict[str, Any], user: User, *, overwrite: bool) -> tuple[Sign, bool, bool]:
+        normalized_word = self.normalizer.normalize_word(word)
+        sign = self.db.scalar(select(Sign).where(Sign.normalized_word == normalized_word).order_by(Sign.updated_at.desc()).limit(1))
+        created = sign is None
+        if sign and sign.status == SignStatus.approved.value and not overwrite:
+            return sign, False, False
+        old_value = self._snapshot(sign)
+        if not sign:
+            sign = Sign(word=word, normalized_word=normalized_word, status=SignStatus.pending.value)
+            self.db.add(sign)
+            self.db.flush()
+        sign.source_name = sign.source_name or self.source_name
+        sign.source_url = sign.source_url or self.settings.ines_base_url
+        sign.license = sign.license or self.settings.ines_import_authorization_text
+        sign.curator_notes = sign.curator_notes or "Consulta automática INES executada; vídeo não detectado no HTML inicial."
+        sign.educational_notes = self._educational_notes(
+            {
+                "meaning": lookup.get("meaning"),
+                "grammatical_class": lookup.get("grammatical_class"),
+            },
+            str(lookup.get("source_reference_url") or lookup.get("search_url") or self.settings.ines_base_url),
+            "Vídeo ainda não vinculado; requer importação manual autorizada se a mídia não for detectável automaticamente.",
+        )
+        sign.version = (sign.version or 1) + 1
+        self.db.flush()
+        self.db.add(
+            SignAuditLog(
+                sign_id=sign.id,
+                user_id=user.id,
+                action="auto_lookup",
+                old_value=old_value,
+                new_value=self._snapshot(sign),
+            )
+        )
+        return sign, created, True
 
     def _items_for_payload(self, payload: InesMediaImportStartRequest, *, validate_only: bool) -> list[dict[str, Any]]:
         if payload.mode == "json_items":
@@ -427,8 +676,7 @@ class InesMediaImporter:
         return "\n".join(notes)
 
     def _first_media_url(self, html: str, base_url: str, extensions: set[str], *, require_allowed: bool = True) -> str | None:
-        candidates = re.findall(r"""(?:src|href)=["']([^"']+)["']""", html, flags=re.IGNORECASE)
-        for candidate in candidates:
+        for candidate in self._media_candidates(html):
             parsed_path = urlparse(candidate).path.lower()
             if not any(parsed_path.endswith(extension) for extension in extensions):
                 continue
@@ -437,15 +685,47 @@ class InesMediaImporter:
                 return absolute
         return None
 
+    def _media_candidates(self, html: str) -> list[str]:
+        candidates: list[str] = []
+        patterns = [
+            r"""(?:src|href|data-src|data-video|data-url|data-mp4|poster)=["']([^"']+)["']""",
+            r"""["']([^"']+\.(?:mp4|webm|mov|jpg|jpeg|png|webp|gif)(?:\?[^"']*)?)["']""",
+            r"""(https?:\\?/\\?/[^"'\s<>]+\.(?:mp4|webm|mov|jpg|jpeg|png|webp|gif)(?:\?[^"'\s<>]*)?)""",
+        ]
+        for pattern in patterns:
+            for raw in re.findall(pattern, html, flags=re.IGNORECASE):
+                value = raw.replace("\\/", "/").strip()
+                if value and value not in candidates:
+                    candidates.append(value)
+        return candidates
+
+    def _extract_labeled_text(self, html: str, labels: list[str]) -> str | None:
+        text = re.sub(r"<[^>]+>", " ", html)
+        text = re.sub(r"\s+", " ", text)
+        for label in labels:
+            pattern = rf"{re.escape(label)}\s*:?\s*(.{{1,180}}?)(?:\s+(?:Palavra|Vídeo|Video|Acepção|Exemplo|Classe Gramatical|Exemplo Libras|Origem|Imagem)\s*:|\s{{2,}}|$)"
+            match = re.search(pattern, text, flags=re.IGNORECASE)
+            if match:
+                value = match.group(1).strip(" :-")
+                if value:
+                    return value[:180]
+        return None
+
     def _is_allowed_media_url(self, value: str) -> bool:
         if not self._is_http_url(value):
             return False
         host = urlparse(value).hostname
-        allowed = {urlparse(self.settings.ines_base_url).hostname, "dicionario.ines.gov.br", "ines.gov.br"}
+        allowed = {
+            urlparse(self.settings.ines_base_url).hostname,
+            *self.settings.ines_allowed_host_list,
+            "dicionario.ines.gov.br",
+            "ines.gov.br",
+        }
         return bool(host and host.lower() in {item for item in allowed if item})
 
     def _is_http_url(self, value: str) -> bool:
-        return value.startswith("http://") or value.startswith("https://")
+        normalized = value.lower()
+        return normalized.startswith("http://") or normalized.startswith("https://")
 
     def _effective_limit(self, requested: int | None) -> int:
         configured = max(1, self.settings.ines_import_max_items)
@@ -472,8 +752,12 @@ class InesMediaImporter:
             "pending_count": 0,
             "skipped_count": 0,
             "error_count": 0,
+            "video_found_count": 0,
+            "video_missing_count": 0,
             "errors": [],
             "warnings": [],
+            "items": [],
+            "manual_required": [],
         }
 
     def _record_error(self, job: ImportJob, report: dict[str, Any], row: int | None, word: str | None, message: str) -> None:
@@ -482,9 +766,67 @@ class InesMediaImporter:
         self._log(job, "error", row, f"{word or 'registro'}: {message}")
         self.db.commit()
 
+    def _record_auto_error(
+        self,
+        job: ImportJob,
+        report: dict[str, Any],
+        row: int | None,
+        word: str | None,
+        message: str,
+        *,
+        action: str,
+    ) -> None:
+        self._report_error(report, word, message)
+        report["video_missing_count"] += 1
+        self._append_report_item(
+            report,
+            word=word or "registro",
+            status="error",
+            reason=message,
+            recommended_action=action,
+            errors=[message],
+        )
+        job.failed_records = report["error_count"]
+        self._log(job, "error", row, f"{word or 'registro'}: {message}")
+        self.db.commit()
+
     def _report_error(self, report: dict[str, Any], word: str | None, message: str) -> None:
         report["error_count"] += 1
         report["errors"].append({"word": word, "message": message})
+
+    def _append_report_item(
+        self,
+        report: dict[str, Any],
+        *,
+        word: str,
+        status: str,
+        reason: str,
+        recommended_action: str,
+        page_loaded: bool = False,
+        word_found: bool = False,
+        video_found: bool = False,
+        video_url: str | None = None,
+        source_reference_url: str | None = None,
+        image_url: str | None = None,
+        warnings: list[str] | None = None,
+        errors: list[str] | None = None,
+    ) -> None:
+        report["items"].append(
+            {
+                "word": word,
+                "page_loaded": page_loaded,
+                "word_found": word_found,
+                "video_found": video_found,
+                "video_url": video_url,
+                "source_reference_url": source_reference_url,
+                "image_url": image_url,
+                "status": status,
+                "reason": reason,
+                "recommended_action": recommended_action,
+                "warnings": warnings or [],
+                "errors": errors or [],
+            }
+        )
 
     def _log(self, job: ImportJob, level: str, row: int | None, message: str, **extra: Any) -> None:
         logs = list(job.logs or [])
@@ -503,6 +845,7 @@ class InesMediaImporter:
             "overwrite": payload.overwrite,
             "delay_ms": self.settings.ines_import_delay_ms,
             "timeout_seconds": self.settings.ines_import_timeout_seconds,
+            "use_browser": self.settings.ines_import_use_browser,
         }
 
     def _snapshot(self, sign: Sign | None) -> dict[str, Any] | None:

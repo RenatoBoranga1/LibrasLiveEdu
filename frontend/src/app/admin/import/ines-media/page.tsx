@@ -7,6 +7,8 @@ import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
+  autoImportPendingInesMedia,
+  autoImportSelectedInesMedia,
   diagnoseInesMediaImport,
   startInesMediaImport,
   validateInesMediaImport,
@@ -134,6 +136,43 @@ export default function InesMediaImportPage() {
       setMessage(error instanceof Error ? error.message : "Não foi possível diagnosticar as palavras no INES.");
     } finally {
       setDiagnoseLoading(false);
+    }
+  }
+
+  async function autoImportSelected() {
+    setLoading(true);
+    setResult(null);
+    try {
+      const response = await autoImportSelectedInesMedia({
+        words: parseWords(diagnoseWordsText),
+        max_items: diagnoseMaxItems,
+        approve_authorized: approveAuthorized && !keepPending,
+        overwrite,
+      });
+      setResult(response);
+      setMessage("Importação assistida concluída para as palavras selecionadas. Revise e aprove os sinais antes de usar no Avatar Libras.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível importar as palavras selecionadas.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function autoImportPending() {
+    setLoading(true);
+    setResult(null);
+    try {
+      const response = await autoImportPendingInesMedia({
+        max_items: diagnoseMaxItems,
+        approve_authorized: approveAuthorized && !keepPending,
+        overwrite,
+      });
+      setResult(response);
+      setMessage("Importação assistida das próximas palavras pendentes concluída. Revise o relatório e faça a curadoria.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível importar palavras pendentes sem vídeo.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -289,19 +328,22 @@ export default function InesMediaImportPage() {
               )}
             </section>
 
-            <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+            <section className="rounded-lg border border-ocean/15 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Leitura segura, sem gravação</p>
-                  <h2 className="mt-1 text-xl font-black text-ink dark:text-white">Diagnóstico INES</h2>
+                  <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Fluxo seguro sob demanda</p>
+                  <h2 className="mt-1 text-xl font-black text-ink dark:text-white">Automação INES</h2>
                 </div>
-                <span className="rounded-full bg-amber/20 px-3 py-1 text-xs font-black text-ink dark:text-white">não altera o banco</span>
+                <span className="rounded-full bg-amber/20 px-3 py-1 text-xs font-black text-ink dark:text-white">admin manual</span>
               </div>
               <div className="mt-3 space-y-2 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
                 <p>O diagnóstico não altera o banco de dados. Ele apenas verifica se o INES retorna página, palavra, imagem e vídeo de forma detectável pelo importador.</p>
                 <p>
                   Se a página carregar, mas o vídeo não for encontrado, pode ser que o vídeo seja carregado por JavaScript/API e precise de integração específica ou importação manual por
                   JSON/CSV autorizado.
+                </p>
+                <p>
+                  A importação assistida atualiza sinais em lotes pequenos, vincula URLs remotas autorizadas e mantém tudo como pendente para curadoria, salvo configuração explícita de aprovação.
                 </p>
               </div>
 
@@ -331,6 +373,12 @@ export default function InesMediaImportPage() {
                 <ActionButton tone="quiet" onClick={diagnose} disabled={diagnoseLoading}>
                   <Search className="h-5 w-5" aria-hidden="true" />
                   {diagnoseLoading ? "Diagnosticando..." : "Diagnosticar"}
+                </ActionButton>
+                <ActionButton onClick={autoImportSelected} disabled={loading || !parseWords(diagnoseWordsText).length}>
+                  Importar selecionadas
+                </ActionButton>
+                <ActionButton tone="secondary" onClick={autoImportPending} disabled={loading}>
+                  Importar pendentes sem vídeo
                 </ActionButton>
                 <ActionButton tone="quiet" onClick={useDiagnosedWords} disabled={!diagnoseResult?.results.some((item) => item.can_import)}>
                   Usar palavras importáveis em selected_words
@@ -447,10 +495,55 @@ function ReportPanel({ result }: { result: InesImportJobResponse }) {
         <ReportCard label="Pendentes" value={report.pending_count} />
         <ReportCard label="Ignorados" value={report.skipped_count} />
         <ReportCard label="Erros" value={report.error_count} />
+        <ReportCard label="Vídeos encontrados" value={report.video_found_count} />
+        <ReportCard label="Vídeos não encontrados" value={report.video_missing_count} />
       </div>
+      {report.items?.length ? <ImportItemsTable items={report.items} /> : null}
       <LogList title="Erros" items={report.errors} empty="Nenhum erro registrado." />
       <LogList title="Avisos" items={report.warnings ?? []} empty="Nenhum aviso registrado." />
+      <LogList title="Precisam de importação manual" items={(report.manual_required ?? []).map((item) => ({ word: item.word, message: item.reason }))} empty="Nenhuma palavra pendente de importação manual neste relatório." />
     </section>
+  );
+}
+
+function ImportItemsTable({ items }: { items: NonNullable<InesImportReport["items"]> }) {
+  return (
+    <div className="mt-5 overflow-x-auto rounded-lg border border-ink/10 dark:border-white/10">
+      <table className="min-w-[960px] w-full border-collapse text-left text-sm">
+        <thead className="bg-teal-50 text-xs font-black uppercase tracking-normal text-ink/70 dark:bg-zinc-800 dark:text-white/70">
+          <tr>
+            <th className="px-3 py-3">Palavra</th>
+            <th className="px-3 py-3">Página</th>
+            <th className="px-3 py-3">Palavra encontrada</th>
+            <th className="px-3 py-3">Vídeo</th>
+            <th className="px-3 py-3">URL do vídeo</th>
+            <th className="px-3 py-3">Fonte</th>
+            <th className="px-3 py-3">Status</th>
+            <th className="px-3 py-3">Motivo</th>
+            <th className="px-3 py-3">Ação recomendada</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-ink/10 dark:divide-white/10">
+          {items.map((item, index) => (
+            <tr key={`${item.word}-${index}`} className="align-top">
+              <td className="px-3 py-3 font-black text-ink dark:text-white">{item.word}</td>
+              <td className="px-3 py-3"><BooleanBadge value={Boolean(item.page_loaded)} /></td>
+              <td className="px-3 py-3"><BooleanBadge value={Boolean(item.word_found)} /></td>
+              <td className="px-3 py-3"><BooleanBadge value={Boolean(item.video_found)} /></td>
+              <td className="max-w-xs px-3 py-3">
+                {item.video_url ? <ExternalUrl href={item.video_url} label="Abrir vídeo" /> : <span className="font-semibold text-ink/50 dark:text-white/50">Sem vídeo</span>}
+              </td>
+              <td className="max-w-xs px-3 py-3">
+                {item.source_reference_url ? <ExternalUrl href={item.source_reference_url} label="Abrir fonte" subtle /> : <span className="font-semibold text-ink/50 dark:text-white/50">Sem fonte específica</span>}
+              </td>
+              <td className="px-3 py-3 font-bold text-ink/75 dark:text-white/75">{item.status ?? "pending"}</td>
+              <td className="max-w-sm px-3 py-3 font-semibold leading-relaxed text-ink/70 dark:text-white/70">{item.reason}</td>
+              <td className="max-w-xs px-3 py-3 font-black text-ocean dark:text-mint">{item.recommended_action}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

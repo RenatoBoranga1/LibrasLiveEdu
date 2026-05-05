@@ -95,6 +95,11 @@ export type AdminStats = {
   rejected_signs: number;
   review_signs: number;
   import_jobs: number;
+  no_video_signs?: number;
+  pending_with_video_signs?: number;
+  approved_with_video_signs?: number;
+  ready_for_avatar_signs?: number;
+  needs_curation_signs?: number;
 };
 
 export type SignRecord = {

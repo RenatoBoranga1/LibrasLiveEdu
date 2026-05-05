@@ -187,14 +187,31 @@ class InesMediaImportReport(BaseModel):
     pending_count: int = 0
     skipped_count: int = 0
     error_count: int = 0
+    video_found_count: int = 0
+    video_missing_count: int = 0
     errors: list[dict[str, Any]] = Field(default_factory=list)
     warnings: list[dict[str, Any]] = Field(default_factory=list)
+    items: list[dict[str, Any]] = Field(default_factory=list)
+    manual_required: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class InesMediaImportJobResponse(BaseModel):
     job_id: int | None = None
     status: str
     report: InesMediaImportReport
+
+
+class InesMediaAutoPendingRequest(BaseModel):
+    max_items: int | None = 10
+    approve_authorized: bool = False
+    overwrite: bool = False
+
+
+class InesMediaAutoSelectedRequest(BaseModel):
+    words: list[str] = Field(default_factory=list)
+    max_items: int | None = 10
+    approve_authorized: bool = False
+    overwrite: bool = False
 
 
 class InesMediaDiagnoseRequest(BaseModel):
@@ -250,6 +267,11 @@ class AdminStats(BaseModel):
     rejected_signs: int
     review_signs: int
     import_jobs: int
+    no_video_signs: int = 0
+    pending_with_video_signs: int = 0
+    approved_with_video_signs: int = 0
+    ready_for_avatar_signs: int = 0
+    needs_curation_signs: int = 0
 
 
 class SavedWordCreate(BaseModel):

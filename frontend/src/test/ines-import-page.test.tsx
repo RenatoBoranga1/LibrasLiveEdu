@@ -45,6 +45,29 @@ const diagnoseInesMediaImport = vi.fn(() =>
     ],
   })
 );
+const autoImportSelectedInesMedia = vi.fn(() =>
+  Promise.resolve({
+    job_id: 10,
+    status: "completed",
+    report: {
+      total_items: 1,
+      processed_items: 1,
+      created_count: 0,
+      updated_count: 1,
+      approved_count: 0,
+      pending_count: 1,
+      skipped_count: 0,
+      error_count: 0,
+      video_found_count: 1,
+      video_missing_count: 0,
+      errors: [],
+      warnings: [],
+      items: [{ word: "bom dia", page_loaded: true, word_found: true, video_found: true, status: "pending", reason: "Vídeo encontrado.", recommended_action: "Pronto para revisar" }],
+      manual_required: [],
+    },
+  })
+);
+const autoImportPendingInesMedia = vi.fn(() => autoImportSelectedInesMedia());
 
 vi.mock("@/features/auth/AuthProvider", () => ({
   useRequireRole: () => ({ loading: false }),
@@ -54,6 +77,8 @@ vi.mock("@/services/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/services/api")>();
   return {
     ...actual,
+    autoImportPendingInesMedia,
+    autoImportSelectedInesMedia,
     diagnoseInesMediaImport,
     validateInesMediaImport,
     startInesMediaImport: vi.fn(),
@@ -67,7 +92,7 @@ describe("INES media import admin page", () => {
 
     expect(screen.getByRole("heading", { name: /importar vídeos autorizados do ines/i })).toBeInTheDocument();
     expect(screen.getByText(/não roda no build\/deploy/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /diagnóstico ines/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /automação ines/i })).toBeInTheDocument();
   });
 
   it("shows validation report after clicking validar", async () => {
@@ -89,5 +114,16 @@ describe("INES media import admin page", () => {
     await waitFor(() => expect(diagnoseInesMediaImport).toHaveBeenCalledTimes(1));
     expect(await screen.findByRole("heading", { name: /resultado do diagnóstico/i })).toBeInTheDocument();
     expect(screen.getAllByText(/página carregada/i).length).toBeGreaterThan(0);
+  });
+
+  it("starts selected word automation from the admin page", async () => {
+    const { default: Page } = await import("@/app/admin/import/ines-media/page");
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole("button", { name: /importar selecionadas/i }));
+
+    await waitFor(() => expect(autoImportSelectedInesMedia).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("heading", { name: /relatório/i })).toBeInTheDocument();
+    expect(screen.getByText(/pronto para revisar/i)).toBeInTheDocument();
   });
 });

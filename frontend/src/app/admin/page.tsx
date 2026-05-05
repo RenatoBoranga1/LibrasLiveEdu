@@ -34,7 +34,12 @@ const fallbackStats: AdminStats = {
   pending_signs: 180,
   rejected_signs: 0,
   review_signs: 0,
-  import_jobs: 1
+  import_jobs: 1,
+  no_video_signs: 180,
+  pending_with_video_signs: 0,
+  approved_with_video_signs: 0,
+  ready_for_avatar_signs: 0,
+  needs_curation_signs: 180
 };
 
 const fallbackSigns: SignRecord[] = [
@@ -206,7 +211,7 @@ export default function AdminPage() {
               Novo sinal INES
             </Link>
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-mint px-4 py-3 text-base font-bold text-ink" href="/admin/import/ines-media">
-              Importar vídeos INES
+              Automatizar busca de vídeos INES
             </Link>
             <ActionButton tone="secondary" onClick={runSampleImport}>
               <FileJson className="h-5 w-5" aria-hidden="true" />
@@ -223,13 +228,14 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           {[
-            ["Total", stats.total_signs],
-            ["Aprovados", stats.approved_signs],
-            ["Pendentes", stats.pending_signs],
-            ["Revisão", stats.review_signs],
-            ["Rejeitados", stats.rejected_signs]
+            ["Total de sinais", stats.total_signs],
+            ["Sem vídeo", stats.no_video_signs ?? 0],
+            ["Com vídeo pendente", stats.pending_with_video_signs ?? 0],
+            ["Aprovados com vídeo", stats.approved_with_video_signs ?? 0],
+            ["Prontos para Avatar", stats.ready_for_avatar_signs ?? 0],
+            ["Precisam de curadoria", stats.needs_curation_signs ?? 0]
           ].map(([label, value]) => (
             <section key={label} className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
               <p className="text-sm font-bold uppercase tracking-normal text-ink/60 dark:text-white/60">{label}</p>
@@ -241,12 +247,12 @@ export default function AdminPage() {
         <div className="grid gap-5 lg:grid-cols-[1fr_390px]">
           <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
             <div className="mb-4 rounded-lg border border-ocean/15 bg-teal-50 p-4 dark:border-white/10 dark:bg-zinc-800">
-              <h2 className="text-lg font-black text-ink dark:text-white">Importar mídias INES autorizadas</h2>
+              <h2 className="text-lg font-black text-ink dark:text-white">Automatizar busca de vídeos INES</h2>
               <p className="mt-1 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-                A rotina completa agora roda em uma tela dedicada, com validação, limite por execução, relatório e auditoria. Ela não roda em build/deploy.
+                A rotina completa roda em tela dedicada, com diagnóstico, lote pequeno, relatório por palavra e auditoria. Ela não roda em build/deploy.
               </p>
               <Link className="focus-ring mt-3 inline-flex min-h-12 items-center rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white" href="/admin/import/ines-media">
-                Abrir rotina de importação
+                Automatizar busca de vídeos INES
               </Link>
             </div>
             <div className="flex flex-wrap items-end gap-3 border-b border-ink/10 pb-4 dark:border-white/10">
@@ -353,7 +359,7 @@ export default function AdminPage() {
                         <div>{sign.status}</div>
                         {sign.status === "pending" && hasVideo && (
                           <span className="mt-1 inline-flex rounded-full bg-amber/25 px-2 py-1 text-xs font-black text-ink dark:text-white">
-                            Vídeo cadastrado, aguardando aprovação
+                            Vídeo encontrado — revisar
                           </span>
                         )}
                         {sign.status === "approved" && hasVideo && (

@@ -129,3 +129,33 @@ def test_diagnose_returns_can_import_false_when_video_is_not_found(monkeypatch):
     assert result["video_found"] is False
     assert result["can_import"] is False
     assert "nenhuma URL de vídeo" in result["reason"]
+
+
+def test_find_ines_entry_detects_video_urls_in_data_attributes(monkeypatch):
+    importer = InesMediaImporter(db=None)  # type: ignore[arg-type]
+
+    class FakeResponse:
+        status_code = 200
+        text = "<html><body>Professor <div data-video='/media/professor.mp4'></div></body></html>"
+        url = "https://dicionario.ines.gov.br/?q=professor"
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, *args, **kwargs):
+            return FakeResponse()
+
+    monkeypatch.setattr("app.importers.ines_media_importer.httpx.Client", FakeClient)
+
+    result = importer.find_ines_entry_for_word("professor")
+
+    assert result["found"] is True
+    assert result["video_url"].endswith("/media/professor.mp4")
+    assert result["avatar_video_url"] == result["video_url"]

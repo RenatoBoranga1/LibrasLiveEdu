@@ -257,11 +257,12 @@ Variáveis:
 INES_IMPORT_ENABLED=false
 INES_BASE_URL=https://dicionario.ines.gov.br/
 INES_IMPORT_DELAY_MS=1000
-INES_IMPORT_MAX_ITEMS=50
+INES_IMPORT_MAX_ITEMS=10
 INES_IMPORT_APPROVE_AUTHORIZED=false
 INES_IMPORT_DOWNLOAD_MEDIA=false
 INES_IMPORT_STORE_REMOTE_URL=true
 INES_IMPORT_TIMEOUT_SECONDS=15
+INES_IMPORT_USE_BROWSER=false
 INES_IMPORT_AUTHORIZATION_TEXT=Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu
 ```
 
@@ -271,6 +272,8 @@ Endpoints protegidos por admin:
 POST /api/admin/import/ines-media/validate
 POST /api/admin/import/ines-media/start
 POST /api/admin/import/ines-media/diagnose
+POST /api/admin/import/ines-media/auto-selected
+POST /api/admin/import/ines-media/auto-pending
 GET /api/admin/import/ines-media/{job_id}
 ```
 
@@ -306,6 +309,37 @@ O diagnóstico mostra por palavra:
 - motivo, avisos e erros.
 
 Use em lotes pequenos, como 5, 10 ou 20 palavras. Não use o diagnóstico para scraping massivo. Se a página carregar, mas o vídeo não aparecer no HTML inicial, use a importação manual por JSON/CSV com uma URL autorizada e registrada pela curadoria.
+
+### Automação assistida de vídeos INES
+
+A tela `/admin/import/ines-media` também possui o fluxo **Automação INES**. Ele automatiza a busca e vinculação de vídeos autorizados sem cadastro manual palavra por palavra, mas continua sendo uma rotina administrativa manual e controlada.
+
+Como funciona:
+
+1. O admin informa palavras ou escolhe importar as próximas pendentes sem vídeo.
+2. O backend consulta o Dicionário INES com timeout, delay e limite por lote.
+3. O importador tenta detectar vídeo no HTML inicial, tags `video/source`, `src`, `href`, `data-src`, `data-video`, `data-url` e URLs de mídia em scripts embutidos.
+4. Quando encontra vídeo em host permitido, o sinal recebe `video_url`, fonte, URL consultada, licença, observações e auditoria.
+5. O sinal permanece `pending` por padrão.
+6. Admin/curador revisa e aprova. Só depois o Avatar Libras exibe o vídeo como sinal oficial.
+
+Endpoints:
+
+```bash
+POST /api/admin/import/ines-media/auto-selected
+POST /api/admin/import/ines-media/auto-pending
+```
+
+Proteções:
+
+- não roda no deploy, build, startup, migrations ou seed;
+- não baixa vídeos por padrão e não salva mídia no Git;
+- `INES_IMPORT_MAX_ITEMS` usa padrão seguro `10`;
+- erros por palavra não derrubam o job inteiro;
+- o relatório lista vídeos encontrados, vídeos não encontrados, sinais criados/atualizados, avisos, erros e palavras que precisam de importação manual;
+- aprovação automática continua desativada por padrão e depende de `approve_authorized=true`, `INES_IMPORT_APPROVE_AUTHORIZED=true`, vídeo, fonte, licença e autorização registrada.
+
+Para testar em aula: rode a automação em lote pequeno, volte para `/admin`, aprove manualmente um sinal com vídeo, crie uma aula como professor e envie uma frase com a palavra aprovada. O aluno verá o vídeo no Avatar Libras quando a palavra for detectada.
 
 ## Speech-to-Text e Avatar
 

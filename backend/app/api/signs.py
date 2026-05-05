@@ -13,6 +13,8 @@ from app.models import ClassSession, ImportJob, SavedWord, Sign, SignAuditLog, U
 from app.repositories.sign_repository import SignRepository
 from app.schemas.api import (
     AdminStats,
+    InesMediaAutoPendingRequest,
+    InesMediaAutoSelectedRequest,
     InesMediaDiagnoseRequest,
     InesMediaDiagnoseResponse,
     InesMediaImportJobResponse,
@@ -331,6 +333,10 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_role(["
     stats = SignRepository(db).stats_by_status()
     total_signs = db.scalar(select(func.count(Sign.id))) or 0
     import_jobs = db.scalar(select(func.count(ImportJob.id))) or 0
+    no_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.video_url.is_(None))) or 0
+    pending_with_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status == "pending", Sign.video_url.is_not(None))) or 0
+    approved_with_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status == "approved", Sign.video_url.is_not(None))) or 0
+    needs_curation_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status.in_(["pending", "review", "needs_specialist_review"]))) or 0
     return AdminStats(
         total_signs=total_signs,
         approved_signs=stats.get("approved", 0),
@@ -338,6 +344,11 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_role(["
         rejected_signs=stats.get("rejected", 0),
         review_signs=stats.get("review", 0),
         import_jobs=import_jobs,
+        no_video_signs=no_video_signs,
+        pending_with_video_signs=pending_with_video_signs,
+        approved_with_video_signs=approved_with_video_signs,
+        ready_for_avatar_signs=approved_with_video_signs,
+        needs_curation_signs=needs_curation_signs,
     )
 
 
@@ -376,6 +387,49 @@ def start_ines_media_import(
         raise HTTPException(status_code=403, detail="Importação INES desativada neste ambiente.")
     try:
         job, report = InesMediaImporter(db).run(payload, user)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"job_id": job.id, "status": job.status, "report": report}
+
+
+@router.post("/admin/import/ines-media/auto-pending", response_model=InesMediaImportJobResponse)
+def auto_import_pending_ines_media(
+    payload: InesMediaAutoPendingRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_import_enabled:
+        raise HTTPException(status_code=403, detail="Importação INES desativada neste ambiente.")
+    try:
+        job, report = InesMediaImporter(db).auto_import_pending_words(
+            user=user,
+            max_items=payload.max_items,
+            approve_authorized=payload.approve_authorized,
+            overwrite=payload.overwrite,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"job_id": job.id, "status": job.status, "report": report}
+
+
+@router.post("/admin/import/ines-media/auto-selected", response_model=InesMediaImportJobResponse)
+def auto_import_selected_ines_media(
+    payload: InesMediaAutoSelectedRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_import_enabled:
+        raise HTTPException(status_code=403, detail="Importação INES desativada neste ambiente.")
+    try:
+        job, report = InesMediaImporter(db).auto_import_selected_words(
+            payload.words,
+            user=user,
+            max_items=payload.max_items,
+            approve_authorized=payload.approve_authorized,
+            overwrite=payload.overwrite,
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"job_id": job.id, "status": job.status, "report": report}
@@ -622,6 +676,8 @@ def _import_job_report(job: ImportJob) -> dict:
         "pending_count": max(0, job.imported_records + job.updated_records),
         "skipped_count": 0,
         "error_count": job.failed_records,
+        "video_found_count": 0,
+        "video_missing_count": job.failed_records,
         "errors": [
             {"word": None, "message": item.get("message", "")}
             for item in job.logs or []
@@ -632,6 +688,8 @@ def _import_job_report(job: ImportJob) -> dict:
             for item in job.logs or []
             if item.get("level") == "warning"
         ],
+        "items": [],
+        "manual_required": [],
     }
 
 

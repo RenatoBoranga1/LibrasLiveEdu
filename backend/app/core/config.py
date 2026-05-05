@@ -38,11 +38,12 @@ class Settings(BaseSettings):
     ines_import_enabled: bool = False
     ines_base_url: str = "https://dicionario.ines.gov.br/"
     ines_import_delay_ms: int = 1000
-    ines_import_max_items: int = 50
+    ines_import_max_items: int = 10
     ines_import_approve_authorized: bool = False
     ines_import_download_media: bool = False
     ines_import_store_remote_url: bool = True
     ines_import_timeout_seconds: int = 15
+    ines_import_use_browser: bool = False
     ines_import_authorization_text: str = "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

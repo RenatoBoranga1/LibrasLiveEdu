@@ -36,7 +36,10 @@ const fallbackStats: AdminStats = {
   review_signs: 0,
   import_jobs: 1,
   no_video_signs: 180,
+  video_signs: 0,
+  gif_signs: 0,
   pending_with_video_signs: 0,
+  pending_with_media_signs: 0,
   approved_with_video_signs: 0,
   ready_for_avatar_signs: 0,
   needs_curation_signs: 180
@@ -214,6 +217,9 @@ export default function AdminPage() {
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-mint px-4 py-3 text-base font-bold text-ink" href="/admin/import/ines-media">
               Automatizar busca de vídeos INES
             </Link>
+            <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-amber px-4 py-3 text-base font-bold text-ink" href="/admin/media-auto-fill">
+              Preencher URLs automaticamente
+            </Link>
             <ActionButton tone="secondary" onClick={runSampleImport}>
               <FileJson className="h-5 w-5" aria-hidden="true" />
               Importar JSON
@@ -233,8 +239,9 @@ export default function AdminPage() {
           {[
             ["Total de sinais", stats.total_signs],
             ["Sem mídia", stats.no_video_signs ?? 0],
-            ["Mídia pendente", stats.pending_with_video_signs ?? 0],
-            ["Aprovados com mídia", stats.approved_with_video_signs ?? 0],
+            ["Com vídeo", stats.video_signs ?? stats.approved_with_video_signs ?? 0],
+            ["Com GIF", stats.gif_signs ?? 0],
+            ["Mídia pendente", stats.pending_with_media_signs ?? stats.pending_with_video_signs ?? 0],
             ["Prontos para Avatar", stats.ready_for_avatar_signs ?? 0],
             ["Precisam de curadoria", stats.needs_curation_signs ?? 0]
           ].map(([label, value]) => (
@@ -248,12 +255,12 @@ export default function AdminPage() {
         <div className="grid gap-5 lg:grid-cols-[1fr_390px]">
           <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
             <div className="mb-4 rounded-lg border border-ocean/15 bg-teal-50 p-4 dark:border-white/10 dark:bg-zinc-800">
-              <h2 className="text-lg font-black text-ink dark:text-white">Automatizar busca de vídeos INES</h2>
+              <h2 className="text-lg font-black text-ink dark:text-white">Preencher URLs automaticamente</h2>
               <p className="mt-1 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-                A rotina completa roda em tela dedicada, com diagnóstico, lote pequeno, relatório por palavra e auditoria. Ela não roda em build/deploy.
+                A rotina completa roda em tela dedicada, com diagnóstico, lote pequeno, busca INES/IFPR, relatório por palavra e auditoria. Ela não roda em build/deploy.
               </p>
-              <Link className="focus-ring mt-3 inline-flex min-h-12 items-center rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white" href="/admin/import/ines-media">
-                Automatizar busca de vídeos INES
+              <Link className="focus-ring mt-3 inline-flex min-h-12 items-center rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white" href="/admin/media-auto-fill">
+                Preencher URLs automaticamente
               </Link>
             </div>
             <div className="flex flex-wrap items-end gap-3 border-b border-ink/10 pb-4 dark:border-white/10">

@@ -471,6 +471,84 @@ export function diagnoseInesMediaImport(payload: { words: string[]; max_items?: 
   });
 }
 
+export type MediaAutoFillSource = "ines" | "ifpr";
+
+export type MediaAutoFillReportItem = {
+  word: string;
+  normalized_word?: string;
+  source_used?: string | null;
+  media_type?: string;
+  media_found?: boolean;
+  video_url?: string | null;
+  avatar_gif_url?: string | null;
+  image_url?: string | null;
+  source_reference_url?: string | null;
+  status?: string;
+  reason?: string;
+  recommended_action?: string;
+  warnings?: string[];
+  errors?: string[];
+};
+
+export type MediaAutoFillReport = {
+  status: string;
+  total_items: number;
+  processed_items: number;
+  media_found_count: number;
+  video_found_count: number;
+  gif_found_count: number;
+  image_found_count: number;
+  media_missing_count: number;
+  created_count: number;
+  updated_count: number;
+  pending_count: number;
+  skipped_count: number;
+  error_count: number;
+  items: MediaAutoFillReportItem[];
+  warnings: Array<{ word?: string | null; message: string }>;
+  errors: Array<{ word?: string | null; message: string }>;
+};
+
+export type MediaAutoFillResponse = {
+  job_id?: number | null;
+  status: string;
+  report: MediaAutoFillReport;
+};
+
+export function diagnoseMediaAutoFill(payload: {
+  words: string[];
+  max_items?: number;
+  source_priority?: MediaAutoFillSource[];
+}): Promise<MediaAutoFillResponse> {
+  return request<MediaAutoFillResponse>("/api/admin/media-auto-fill/diagnose", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function startMediaAutoFillPending(payload: {
+  max_items?: number;
+  source_priority?: MediaAutoFillSource[];
+  overwrite?: boolean;
+}): Promise<MediaAutoFillResponse> {
+  return request<MediaAutoFillResponse>("/api/admin/media-auto-fill/pending", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function startMediaAutoFillSelected(payload: {
+  words: string[];
+  max_items?: number;
+  source_priority?: MediaAutoFillSource[];
+  overwrite?: boolean;
+}): Promise<MediaAutoFillResponse> {
+  return request<MediaAutoFillResponse>("/api/admin/media-auto-fill/selected", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export type LibrasGifMediaItem = {
   word: string;
   gloss?: string;

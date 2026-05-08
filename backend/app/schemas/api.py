@@ -273,6 +273,50 @@ class InesMediaDiagnoseResponse(BaseModel):
     results: list[InesMediaDiagnoseResult]
 
 
+class MediaAutoFillDiagnoseRequest(BaseModel):
+    words: list[str] = Field(default_factory=list)
+    max_items: int | None = 10
+    source_priority: list[str] = Field(default_factory=lambda: ["ines", "ifpr"])
+
+
+class MediaAutoFillPendingRequest(BaseModel):
+    max_items: int | None = 10
+    source_priority: list[str] = Field(default_factory=lambda: ["ines", "ifpr"])
+    overwrite: bool = False
+
+
+class MediaAutoFillSelectedRequest(BaseModel):
+    words: list[str] = Field(default_factory=list)
+    max_items: int | None = 10
+    source_priority: list[str] = Field(default_factory=lambda: ["ines", "ifpr"])
+    overwrite: bool = False
+
+
+class MediaAutoFillReport(BaseModel):
+    status: str = "completed"
+    total_items: int = 0
+    processed_items: int = 0
+    media_found_count: int = 0
+    video_found_count: int = 0
+    gif_found_count: int = 0
+    image_found_count: int = 0
+    media_missing_count: int = 0
+    created_count: int = 0
+    updated_count: int = 0
+    pending_count: int = 0
+    skipped_count: int = 0
+    error_count: int = 0
+    items: list[dict[str, Any]] = Field(default_factory=list)
+    warnings: list[dict[str, Any]] = Field(default_factory=list)
+    errors: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class MediaAutoFillResponse(BaseModel):
+    job_id: int | None = None
+    status: str
+    report: MediaAutoFillReport
+
+
 class ImportJobRead(BaseModel):
     id: int
     source_type: str
@@ -297,7 +341,10 @@ class AdminStats(BaseModel):
     review_signs: int
     import_jobs: int
     no_video_signs: int = 0
+    video_signs: int = 0
+    gif_signs: int = 0
     pending_with_video_signs: int = 0
+    pending_with_media_signs: int = 0
     approved_with_video_signs: int = 0
     ready_for_avatar_signs: int = 0
     needs_curation_signs: int = 0

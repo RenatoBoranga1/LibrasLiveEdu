@@ -341,6 +341,61 @@ Proteções:
 
 Para testar em aula: rode a automação em lote pequeno, volte para `/admin`, aprove manualmente um sinal com vídeo/GIF, crie uma aula como professor e envie uma frase com a palavra aprovada. O aluno verá a mídia no Avatar Libras quando a palavra for detectada.
 
+## Preenchimento automático de URLs de mídia
+
+A tela `/admin/media-auto-fill` cria uma rotina administrativa para preencher URLs de mídia sem editar palavra por palavra. Ela busca sinais `pending`, `review` ou `needs_specialist_review` sem `video_url`/`avatar_gif_url`, consulta fontes autorizadas em lote pequeno e mantém tudo como `pending` para curadoria.
+
+Essa rotina:
+
+- não roda em `npm run build`, `next build`, deploy da Vercel, start do Render, inicialização da API, migrations ou seed;
+- só roda quando um usuário `admin` aciona manualmente a tela ou os endpoints protegidos;
+- não baixa vídeos, GIFs ou imagens e não salva mídia no Git;
+- não aprova sinais automaticamente;
+- respeita `MEDIA_AUTO_FILL_MAX_ITEMS` e aplica delay entre consultas;
+- tenta INES primeiro e, se configurado, IFPR GIFs como fallback;
+- registra `ImportJob`, relatório por palavra e `SignAuditLog`;
+- preenche `source_name`, `source_url`, `source_reference_url`, `license`, `license_notes` e `curator_notes` quando encontra mídia.
+
+Variáveis:
+
+```env
+MEDIA_AUTO_FILL_ENABLED=false
+MEDIA_AUTO_FILL_MAX_ITEMS=10
+MEDIA_AUTO_FILL_DELAY_MS=1000
+MEDIA_AUTO_FILL_TIMEOUT_SECONDS=15
+MEDIA_AUTO_FILL_ALLOW_BROWSER=false
+MEDIA_AUTO_FILL_APPROVE_AUTOMATICALLY=false
+
+INES_IMPORT_ENABLED=false
+INES_BASE_URL=https://dicionario.ines.gov.br/
+
+IFPR_GIF_IMPORT_ENABLED=false
+IFPR_GIF_BASE_URL=https://ifpr.edu.br/umuarama/libras-gifs/
+IFPR_GIF_SOURCE_NAME=IFPR Campus Umuarama - Libras GIFs
+IFPR_GIF_LICENSE_TEXT=Uso autorizado ou licença identificada para apoio educacional
+IFPR_GIF_LICENSE_NOTES=GIF utilizado como apoio visual em Libras, com fonte registrada.
+```
+
+Endpoints protegidos:
+
+```bash
+POST /api/admin/media-auto-fill/diagnose
+POST /api/admin/media-auto-fill/selected
+POST /api/admin/media-auto-fill/pending
+```
+
+Uso recomendado:
+
+1. Ative `MEDIA_AUTO_FILL_ENABLED=true` apenas no ambiente administrativo.
+2. Ative somente as fontes que deseja consultar, como `INES_IMPORT_ENABLED=true` e/ou `IFPR_GIF_IMPORT_ENABLED=true`.
+3. Acesse `/admin/media-auto-fill`.
+4. Clique em `Diagnosticar palavras` para verificar se as fontes retornam mídia detectável.
+5. Use `Preencher palavras selecionadas` ou `Preencher próximas pendentes sem mídia`.
+6. Volte para `/admin`, revise fonte/licença e aprove manualmente o sinal.
+7. Teste em aula: quando a palavra aprovada aparecer, o Avatar Libras usa `avatar_video_url`/`video_url`, depois `avatar_gif_url`, depois `image_url`.
+
+Se o relatório indicar `Precisa de importação manual`, use JSON/CSV autorizado. A automação não deve ser usada para scraping massivo nem para burlar carregamento por JavaScript/API.
+
 ## Uso de GIFs como mídia complementar no Avatar Libras
 
 O LibrasLive Edu também aceita GIFs autorizados como mídia complementar para sinais em Libras. O GIF é um fallback leve quando ainda não houver vídeo aprovado, mas não substitui validação por especialista nem a atuação de intérprete humano.

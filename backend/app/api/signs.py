@@ -9,6 +9,7 @@ from app.core.security import hash_password, utc_now
 from app.importers.ines_authorized_media_importer import InesAuthorizedMediaImporter
 from app.importers.ines_media_importer import InesMediaImporter
 from app.importers.libras_dictionary_importer import LibrasDictionaryImporter
+from app.importers.media_auto_fill_importer import MediaAutoFillImporter
 from app.models import ClassSession, ImportJob, SavedWord, Sign, SignAuditLog, User, UserRole
 from app.repositories.sign_repository import SignRepository
 from app.schemas.api import (
@@ -24,6 +25,10 @@ from app.schemas.api import (
     ImportRequest,
     LibrasGifMediaImportRequest,
     ManualSignCreate,
+    MediaAutoFillDiagnoseRequest,
+    MediaAutoFillPendingRequest,
+    MediaAutoFillResponse,
+    MediaAutoFillSelectedRequest,
     RejectSignRequest,
     SavedWordCreate,
     SignCurationRequest,
@@ -348,7 +353,10 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_role(["
     avatar_media_filter = or_(Sign.video_url.is_not(None), Sign.avatar_gif_url.is_not(None))
     any_media_filter = or_(Sign.video_url.is_not(None), Sign.avatar_gif_url.is_not(None), Sign.image_url.is_not(None))
     no_video_signs = db.scalar(select(func.count(Sign.id)).where(~any_media_filter)) or 0
+    video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.video_url.is_not(None))) or 0
+    gif_signs = db.scalar(select(func.count(Sign.id)).where(Sign.avatar_gif_url.is_not(None))) or 0
     pending_with_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status == "pending", avatar_media_filter)) or 0
+    pending_with_media_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status == "pending", any_media_filter)) or 0
     approved_with_video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status == "approved", avatar_media_filter)) or 0
     needs_curation_signs = db.scalar(select(func.count(Sign.id)).where(Sign.status.in_(["pending", "review", "needs_specialist_review"]))) or 0
     return AdminStats(
@@ -359,7 +367,10 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_role(["
         review_signs=stats.get("review", 0),
         import_jobs=import_jobs,
         no_video_signs=no_video_signs,
+        video_signs=video_signs,
+        gif_signs=gif_signs,
         pending_with_video_signs=pending_with_video_signs,
+        pending_with_media_signs=pending_with_media_signs,
         approved_with_video_signs=approved_with_video_signs,
         ready_for_avatar_signs=approved_with_video_signs,
         needs_curation_signs=needs_curation_signs,
@@ -459,6 +470,66 @@ def diagnose_ines_media_import(
     if not settings.ines_import_enabled:
         raise HTTPException(status_code=403, detail="Importação INES desativada neste ambiente.")
     return InesMediaImporter(db).diagnose_words(payload.words, payload.max_items)
+
+
+@router.post("/admin/media-auto-fill/diagnose", response_model=MediaAutoFillResponse)
+def diagnose_media_auto_fill(
+    payload: MediaAutoFillDiagnoseRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.media_auto_fill_enabled:
+        raise HTTPException(status_code=403, detail="Preenchimento automÃ¡tico de mÃ­dia desativado neste ambiente.")
+    report = MediaAutoFillImporter(db).diagnose_media_sources(
+        payload.words,
+        max_items=payload.max_items,
+        source_priority=payload.source_priority,
+    )
+    return {"job_id": None, "status": "completed", "report": report}
+
+
+@router.post("/admin/media-auto-fill/pending", response_model=MediaAutoFillResponse)
+def start_media_auto_fill_pending(
+    payload: MediaAutoFillPendingRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.media_auto_fill_enabled:
+        raise HTTPException(status_code=403, detail="Preenchimento automÃ¡tico de mÃ­dia desativado neste ambiente.")
+    try:
+        job, report = MediaAutoFillImporter(db).auto_fill_pending_media(
+            max_items=payload.max_items,
+            source_priority=payload.source_priority,
+            user=user,
+            overwrite=payload.overwrite,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"job_id": job.id, "status": job.status, "report": report}
+
+
+@router.post("/admin/media-auto-fill/selected", response_model=MediaAutoFillResponse)
+def start_media_auto_fill_selected(
+    payload: MediaAutoFillSelectedRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.media_auto_fill_enabled:
+        raise HTTPException(status_code=403, detail="Preenchimento automÃ¡tico de mÃ­dia desativado neste ambiente.")
+    try:
+        job, report = MediaAutoFillImporter(db).auto_fill_selected_words(
+            payload.words,
+            max_items=payload.max_items,
+            source_priority=payload.source_priority,
+            user=user,
+            overwrite=payload.overwrite,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"job_id": job.id, "status": job.status, "report": report}
 
 
 @router.get("/admin/import/ines-media/{job_id}", response_model=InesMediaImportJobResponse)

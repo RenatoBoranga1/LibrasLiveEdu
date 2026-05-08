@@ -1,4 +1,6 @@
 from app.importers.ines_media_importer import InesMediaImporter
+from app.importers.ifpr_gif_importer import IfprGifImporter
+from app.importers.media_auto_fill_importer import MediaAutoFillImporter
 from app.schemas.api import InesMediaImportStartRequest
 
 
@@ -182,3 +184,113 @@ def test_find_ines_entry_detects_video_urls_in_data_attributes(monkeypatch):
     assert result["found"] is True
     assert result["video_url"].endswith("/media/professor.mp4")
     assert result["avatar_video_url"] == result["video_url"]
+
+
+def test_ifpr_gif_importer_detects_authorized_gif_by_alt_text(monkeypatch):
+    importer = IfprGifImporter()
+    old_enabled = importer.settings.ifpr_gif_import_enabled
+    importer.settings.ifpr_gif_import_enabled = True
+
+    class FakeResponse:
+        status_code = 200
+        text = "<html><body><img alt='Professor em Libras' src='/wp-content/professor.gif' /></body></html>"
+        url = "https://ifpr.edu.br/umuarama/libras-gifs/"
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, *args, **kwargs):
+            return FakeResponse()
+
+    monkeypatch.setattr("app.importers.ifpr_gif_importer.httpx.Client", FakeClient)
+    try:
+        result = importer.find_gif_for_word("professor")
+    finally:
+        importer.settings.ifpr_gif_import_enabled = old_enabled
+
+    assert result["found"] is True
+    assert result["media_type"] == "gif"
+    assert result["avatar_gif_url"].endswith("/wp-content/professor.gif")
+    assert result["source_name"] == importer.settings.ifpr_gif_source_name
+
+
+def test_media_auto_fill_diagnose_uses_ifpr_after_ines_miss(monkeypatch):
+    importer = MediaAutoFillImporter(db=None)  # type: ignore[arg-type]
+    monkeypatch.setattr(importer, "_delay", lambda: None)
+    monkeypatch.setattr(
+        importer.ines,
+        "find_ines_entry_for_word",
+        lambda word: {
+            "found": False,
+            "word": word,
+            "normalized_word": "aluno",
+            "reason": "Video nao encontrado no INES.",
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    monkeypatch.setattr(
+        importer.ifpr,
+        "find_gif_for_word",
+        lambda word: {
+            "source": "ifpr",
+            "found": True,
+            "media_type": "gif",
+            "word": word,
+            "avatar_gif_url": "https://ifpr.edu.br/umuarama/libras-gifs/aluno.gif",
+            "source_name": "IFPR Campus Umuarama - Libras GIFs",
+            "source_url": "https://ifpr.edu.br/umuarama/libras-gifs/",
+            "source_reference_url": "https://ifpr.edu.br/umuarama/libras-gifs/",
+            "license": "Uso autorizado",
+            "license_notes": "Fonte registrada.",
+            "reason": "GIF encontrado na fonte IFPR.",
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+    report = importer.diagnose_media_sources(["aluno"], max_items=1, source_priority=["ines", "ifpr"])
+
+    assert report["total_items"] == 1
+    assert report["gif_found_count"] == 1
+    assert report["media_missing_count"] == 0
+    assert report["items"][0]["source_used"] == "ifpr"
+    assert report["items"][0]["avatar_gif_url"].endswith("aluno.gif")
+
+
+def test_media_auto_fill_diagnose_respects_max_items(monkeypatch):
+    importer = MediaAutoFillImporter(db=None)  # type: ignore[arg-type]
+    old_limit = importer.settings.media_auto_fill_max_items
+    importer.settings.media_auto_fill_max_items = 1
+    calls: list[str] = []
+
+    def fake_find(word: str, source_priority: list[str]):
+        calls.append(word)
+        return {
+            "word": word,
+            "normalized_word": word,
+            "source_used": None,
+            "media_type": "none",
+            "media_found": False,
+            "reason": "Sem midia.",
+            "recommended_action": "Importar manualmente",
+            "warnings": [],
+            "errors": [],
+        }
+
+    monkeypatch.setattr(importer, "_find_media", fake_find)
+    monkeypatch.setattr(importer, "_delay", lambda: None)
+    try:
+        report = importer.diagnose_media_sources(["professor", "aluno"], max_items=10)
+    finally:
+        importer.settings.media_auto_fill_max_items = old_limit
+
+    assert report["total_items"] == 1
+    assert calls == ["professor"]

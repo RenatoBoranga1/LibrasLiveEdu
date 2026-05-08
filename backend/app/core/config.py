@@ -45,6 +45,17 @@ class Settings(BaseSettings):
     ines_import_timeout_seconds: int = 15
     ines_import_use_browser: bool = False
     ines_import_authorization_text: str = "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu"
+    media_auto_fill_enabled: bool = False
+    media_auto_fill_max_items: int = 10
+    media_auto_fill_delay_ms: int = 1000
+    media_auto_fill_timeout_seconds: int = 15
+    media_auto_fill_allow_browser: bool = False
+    media_auto_fill_approve_automatically: bool = False
+    ifpr_gif_import_enabled: bool = False
+    ifpr_gif_base_url: str = "https://ifpr.edu.br/umuarama/libras-gifs/"
+    ifpr_gif_source_name: str = "IFPR Campus Umuarama - Libras GIFs"
+    ifpr_gif_license_text: str = "Uso autorizado ou licença identificada para apoio educacional"
+    ifpr_gif_license_notes: str = "GIF utilizado como apoio visual em Libras, com fonte registrada."
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

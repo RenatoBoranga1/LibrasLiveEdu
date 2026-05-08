@@ -371,7 +371,7 @@ export default function AdminPage() {
                         <div>{sign.status}</div>
                         {sign.status === "pending" && hasMedia && (
                           <span className="mt-1 inline-flex rounded-full bg-amber/25 px-2 py-1 text-xs font-black text-ink dark:text-white">
-                            Mídia encontrada — revisar
+                            {hasAvatarMedia ? "Pronto para Avatar após aprovação" : "Apenas imagem de apoio — revisar"}
                           </span>
                         )}
                         {sign.status === "approved" && hasAvatarMedia && (

@@ -209,7 +209,7 @@ export default function MediaAutoFillPage() {
             <div className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
               <h2 className="text-xl font-black text-ink dark:text-white">Relatório</h2>
               <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-                O preenchimento mantém tudo como <strong>pending</strong>. Para o Avatar Libras exibir mídia, revise fonte/licença e aprove manualmente o sinal.
+                O preenchimento mantém tudo como <strong>pending</strong>. Para o Avatar Libras exibir mídia, revise fonte/licença e aprove manualmente um sinal com vídeo, GIF ou animação. Imagem estática é apenas apoio visual.
               </p>
               {message && (
                 <div className="mt-4 rounded-lg bg-teal-50 p-3 text-sm font-bold text-ink dark:bg-zinc-800 dark:text-white" role="status">
@@ -226,12 +226,18 @@ export default function MediaAutoFillPage() {
 }
 
 function ReportPanel({ report }: { report: MediaAutoFillReport }) {
+  const readyForAvatar = report.items.filter((item) => item.can_use_avatar).length;
+  const supportOnlyImages = report.items.filter((item) => item.image_found && !item.can_use_avatar).length;
+  const animationCount = report.items.filter((item) => item.media_type === "animation" || item.avatar_animation_url).length;
   const cards = [
     ["Total", report.total_items],
     ["Processados", report.processed_items],
     ["Vídeos", report.video_found_count],
     ["GIFs", report.gif_found_count],
+    ["Animações", animationCount],
     ["Imagens de apoio", report.image_found_count],
+    ["Prontos para Avatar", readyForAvatar],
+    ["Não servem para Avatar", supportOnlyImages],
     ["Sem mídia", report.media_missing_count],
     ["Atualizados", report.updated_count],
     ["Criados", report.created_count],
@@ -329,6 +335,11 @@ function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
       <td className="px-3 py-3">{item.status}</td>
       <td className="max-w-sm px-3 py-3">
         <div>{item.reason || "Sem motivo informado."}</div>
+        {item.image_found && !item.can_use_avatar ? (
+          <p className="mt-2 rounded-lg bg-amber/20 px-2 py-1 text-xs font-black text-amber-900 dark:text-amber-100">
+            Apenas imagem de apoio. Não há movimento em Libras.
+          </p>
+        ) : null}
         {(item.warnings?.length || item.errors?.length) ? (
           <div className="mt-2 space-y-1 text-xs">
             {item.warnings?.map((warning) => (

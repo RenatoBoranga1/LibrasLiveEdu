@@ -26,6 +26,11 @@ class InesMediaImporter:
     """
 
     source_name = "Dicionário da Língua Brasileira de Sinais - INES"
+    ines_sign_video_path = "/public/media/palavras/videos/"
+    ines_handshape_image_path = "/public/media/mao/"
+    video_extensions = {".mp4", ".webm", ".mov"}
+    gif_extensions = {".gif"}
+    image_extensions = {".jpg", ".jpeg", ".png", ".webp"}
 
     def __init__(self, db: Session):
         self.db = db
@@ -256,6 +261,7 @@ class InesMediaImporter:
             "image_url": diagnosis.get("image_url"),
             "image_found": diagnosis.get("image_found"),
             "gif_url": diagnosis.get("gif_url"),
+            "avatar_gif_url": diagnosis.get("gif_url"),
             "gif_found": diagnosis.get("gif_found"),
             "media_type": diagnosis.get("media_type"),
             "video_found": diagnosis.get("video_found"),
@@ -263,7 +269,7 @@ class InesMediaImporter:
             "can_use_avatar": diagnosis.get("can_use_avatar"),
             "meaning": diagnosis.get("meaning"),
             "grammatical_class": diagnosis.get("grammatical_class"),
-            "reason": "Vídeo encontrado.",
+            "reason": diagnosis.get("reason") or "Vídeo encontrado.",
             "warnings": diagnosis.get("warnings", []),
             "errors": diagnosis.get("errors", []),
         }
@@ -342,9 +348,9 @@ class InesMediaImporter:
         result["page_loaded"] = True
         result["word_found_in_page"] = bool(match_normalized and match_normalized in self.normalizer.normalize_word(html))
 
-        image_url = self._first_media_url(html, str(response.url), {".jpg", ".jpeg", ".png", ".webp"}, require_allowed=False)
-        gif_url = self._first_media_url(html, str(response.url), {".gif"}, require_allowed=False)
-        video_url = self._first_media_url(html, str(response.url), {".mp4", ".webm", ".mov"}, require_allowed=False)
+        image_url = self._first_support_image_url(html, str(response.url))
+        gif_url = self._first_media_url(html, str(response.url), self.gif_extensions, require_allowed=False)
+        video_url = self._first_sign_video_url(html, str(response.url))
         result["image_url"] = image_url
         result["image_found"] = bool(image_url)
         result["gif_url"] = gif_url
@@ -359,13 +365,20 @@ class InesMediaImporter:
         result["grammatical_class"] = self._extract_labeled_text(html, ["Classe Gramatical"])
 
         if result["can_import"]:
-            result["reason"] = "Vídeo encontrado e host permitido."
+            if self._is_ines_sign_video(video_url or ""):
+                result["reason"] = "Video real do sinal encontrado no diretorio /public/media/palavras/videos/."
+            else:
+                result["reason"] = "Vídeo encontrado e host permitido."
         elif not result["word_found_in_page"]:
             result["reason"] = "Página carregada, mas a palavra não foi encontrada no conteúdo retornado."
             result["warnings"].append("A busca automática pode não localizar palavras carregadas por JavaScript/API.")
         elif not result["video_found"]:
-            result["reason"] = "Página carregada, mas nenhuma URL de vídeo .mp4, .webm ou .mov foi encontrada no HTML."
-            result["warnings"].append("Pode ser que o vídeo seja carregado por JavaScript/API e não esteja disponível no HTML inicial.")
+            if image_url and self._is_ines_handshape_image(image_url):
+                result["reason"] = "Imagem estatica de configuracao de mao; nao representa movimento do sinal em Libras."
+                result["warnings"].append("A URL em /public/media/mao/ foi registrada apenas como apoio visual.")
+            else:
+                result["reason"] = "Página carregada, mas nenhuma URL de vídeo .mp4, .webm ou .mov foi encontrada no HTML."
+                result["warnings"].append("Pode ser que o vídeo seja carregado por JavaScript/API e não esteja disponível no HTML inicial.")
             if self.settings.ines_import_use_browser:
                 result["warnings"].append("INES_IMPORT_USE_BROWSER=true está configurado, mas este importador ainda não usa navegador renderizado para evitar dependência pesada no deploy.")
         elif not result["video_host_allowed"]:
@@ -716,29 +729,71 @@ class InesMediaImporter:
             notes.append(f"Classe gramatical: {self._clean(item.get('grammatical_class'))}")
         return "\n".join(notes)
 
+    def _first_sign_video_url(self, html: str, base_url: str) -> str | None:
+        video_candidates = self._media_urls(html, base_url, self.video_extensions)
+        for candidate in video_candidates:
+            if self._is_ines_sign_video(candidate) and self._is_allowed_media_url(candidate):
+                return candidate
+        for candidate in video_candidates:
+            if self._is_allowed_media_url(candidate):
+                return candidate
+        return None
+
+    def _first_support_image_url(self, html: str, base_url: str) -> str | None:
+        image_candidates = self._media_urls(html, base_url, self.image_extensions)
+        for candidate in image_candidates:
+            if self._is_ines_handshape_image(candidate):
+                return candidate
+        return image_candidates[0] if image_candidates else None
+
     def _first_media_url(self, html: str, base_url: str, extensions: set[str], *, require_allowed: bool = True) -> str | None:
-        for candidate in self._media_candidates(html):
-            parsed_path = urlparse(candidate).path.lower()
-            if not any(parsed_path.endswith(extension) for extension in extensions):
-                continue
-            absolute = urljoin(base_url, candidate)
+        for absolute in self._media_urls(html, base_url, extensions):
             if not require_allowed or self._is_allowed_media_url(absolute):
                 return absolute
         return None
 
+    def _media_urls(self, html: str, base_url: str, extensions: set[str]) -> list[str]:
+        urls: list[str] = []
+        for candidate in self._media_candidates(html):
+            absolute = self._absolute_media_url(candidate, base_url)
+            parsed_path = urlparse(absolute).path.lower()
+            if not any(parsed_path.endswith(extension) for extension in extensions):
+                continue
+            if absolute not in urls:
+                urls.append(absolute)
+        return urls
+
     def _media_candidates(self, html: str) -> list[str]:
         candidates: list[str] = []
         patterns = [
-            r"""(?:src|href|data-src|data-video|data-url|data-mp4|poster)=["']([^"']+)["']""",
+            r"""(?:src|href|data-src|data-video|data-url|data-mp4|data-file|data-media|poster)=["']([^"']+)["']""",
+            r"""((?:https?:\\?/\\?/[^"'\s<>]+)?/?(?:public/)?media/palavras/videos/[^"'\s<>]+\.(?:mp4|webm|mov)(?:\?[^"'\s<>]*)?)""",
+            r"""((?:https?:\\?/\\?/[^"'\s<>]+)?/?public/media/mao/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)(?:\?[^"'\s<>]*)?)""",
             r"""["']([^"']+\.(?:mp4|webm|mov|jpg|jpeg|png|webp|gif)(?:\?[^"']*)?)["']""",
             r"""(https?:\\?/\\?/[^"'\s<>]+\.(?:mp4|webm|mov|jpg|jpeg|png|webp|gif)(?:\?[^"'\s<>]*)?)""",
         ]
         for pattern in patterns:
             for raw in re.findall(pattern, html, flags=re.IGNORECASE):
-                value = raw.replace("\\/", "/").strip()
+                value = (raw[0] if isinstance(raw, tuple) else raw).replace("\\/", "/").strip()
                 if value and value not in candidates:
                     candidates.append(value)
         return candidates
+
+    def _absolute_media_url(self, value: str, base_url: str) -> str:
+        cleaned = value.replace("\\/", "/").strip()
+        if cleaned.startswith("//"):
+            return f"https:{cleaned}"
+        if cleaned.startswith("public/media/"):
+            cleaned = f"/{cleaned}"
+        return urljoin(base_url, cleaned)
+
+    def _is_ines_handshape_image(self, value: str) -> bool:
+        return self.ines_handshape_image_path in urlparse(value).path.lower()
+
+    def _is_ines_sign_video(self, value: str) -> bool:
+        path = urlparse(value).path.lower()
+        return self.ines_sign_video_path in path and any(path.endswith(extension) for extension in self.video_extensions)
+
 
     def _extract_labeled_text(self, html: str, labels: list[str]) -> str | None:
         text = re.sub(r"<[^>]+>", " ", html)

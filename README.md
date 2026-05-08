@@ -397,6 +397,26 @@ Uso recomendado:
 
 Se o relatório indicar `Precisa de importação manual`, use JSON/CSV autorizado. A automação não deve ser usada para scraping massivo nem para burlar carregamento por JavaScript/API.
 
+### Imagem de apoio não é Avatar Libras
+
+O campo `image_url` é usado somente como apoio visual nos cards e na curadoria. JPG, PNG ou WebP não representam o movimento do sinal em Libras e nunca entram na prioridade do Avatar.
+
+No Dicionário INES, URLs em `/public/media/mao/` são imagens estáticas de configuração de mão. Exemplo:
+
+```text
+https://dicionario.ines.gov.br/public/media/mao/cg51a.jpg
+```
+
+Essas imagens devem ser salvas apenas em `image_url`, com `media_type = "image"` e `can_use_avatar = false`.
+
+Vídeos reais do sinal aparecem no padrão `/public/media/palavras/videos/`. Exemplo da palavra `aprender`:
+
+```text
+https://dicionario.ines.gov.br/public/media/palavras/videos/aprenderSm_Prog001.mp4
+```
+
+Quando o importador encontrar esse padrão, ele preenche `video_url` e `avatar_video_url`, mantém o sinal como `pending` e registra fonte/licença para revisão. O Avatar Libras só usa mídia com movimento: `avatar_video_url`, `video_url`, `avatar_gif_url` ou `avatar_animation_url`.
+
 ## Uso de GIFs como mídia complementar no Avatar Libras
 
 O LibrasLive Edu também aceita GIFs autorizados como mídia complementar para sinais em Libras. O GIF é um fallback leve quando ainda não houver vídeo aprovado, mas não substitui validação por especialista nem a atuação de intérprete humano.

@@ -263,7 +263,12 @@ class MediaAutoFillImporter:
                     return self._normalize_media_result(word, "ifpr", "gif", lookup)
 
         if fallback_image:
-            fallback_image["reason"] = "Imagem encontrada como apoio visual; vídeo/GIF não foram detectados."
+            image_url = str(fallback_image.get("image_url") or "")
+            if "/public/media/mao/" in image_url:
+                fallback_image["reason"] = "Imagem estatica de configuracao de mao; nao representa movimento do sinal em Libras."
+            else:
+                fallback_image["reason"] = "Imagem encontrada como apoio visual; vídeo/GIF não foram detectados."
+            fallback_image["recommended_action"] = "Precisa de video/GIF/animacao"
             return fallback_image
 
         reasons = [str(item.get("reason")) for item in diagnostics if item.get("reason")]
@@ -309,12 +314,13 @@ class MediaAutoFillImporter:
 
         video_url = self._clean(lookup.get("avatar_video_url")) or self._clean(lookup.get("video_url"))
         avatar_gif_url = self._clean(lookup.get("avatar_gif_url")) or self._clean(lookup.get("gif_url"))
-        image_url = self._clean(lookup.get("image_url"))
+        explicit_image_url = self._clean(lookup.get("image_url"))
+        image_url = explicit_image_url
         if media_type == "gif" and not image_url:
             image_url = avatar_gif_url
-        video_found = media_type == "video" and bool(video_url)
-        gif_found = media_type == "gif" and bool(avatar_gif_url)
-        image_found = media_type == "image" and bool(image_url)
+        video_found = bool(video_url)
+        gif_found = bool(avatar_gif_url)
+        image_found = bool(explicit_image_url)
         can_use_avatar = video_found or gif_found or media_type == "animation"
 
         return {

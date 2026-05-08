@@ -417,6 +417,20 @@ https://dicionario.ines.gov.br/public/media/palavras/videos/aprenderSm_Prog001.m
 
 Quando o importador encontrar esse padrão, ele preenche `video_url` e `avatar_video_url`, mantém o sinal como `pending` e registra fonte/licença para revisão. O Avatar Libras só usa mídia com movimento: `avatar_video_url`, `video_url`, `avatar_gif_url` ou `avatar_animation_url`.
 
+Quando o HTML inicial do INES não expõe o vídeo, a rotina administrativa pode fazer um probing controlado de URLs conhecidas do próprio diretório de vídeos, sem baixar mídia e sem rodar no deploy. Para `aprender`, por exemplo, ela testa candidatos como:
+
+```text
+https://dicionario.ines.gov.br/public/media/palavras/videos/aprenderSm_Prog001.mp4
+```
+
+O relatório mostra `detection_method` para explicar como a mídia foi detectada:
+
+- `html_video`: vídeo apareceu no HTML inicial.
+- `probed_video_url`: vídeo foi localizado por probing controlado de URL.
+- `gif_lookup`: GIF autorizado localizado por fonte configurada.
+- `support_image_only`: apenas imagem estática foi encontrada.
+- `none`: nenhuma mídia detectável.
+
 ## Uso de GIFs como mídia complementar no Avatar Libras
 
 O LibrasLive Edu também aceita GIFs autorizados como mídia complementar para sinais em Libras. O GIF é um fallback leve quando ainda não houver vídeo aprovado, mas não substitui validação por especialista nem a atuação de intérprete humano.

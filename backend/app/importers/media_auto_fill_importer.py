@@ -161,6 +161,7 @@ class MediaAutoFillImporter:
                         gif_found=bool(sign.avatar_gif_url),
                         image_found=bool(sign.image_url),
                         can_use_avatar=self._has_primary_media(sign),
+                        detection_method="manual",
                         status=sign.status,
                         reason="Sinal aprovado existente não foi alterado automaticamente.",
                         recommended_action="Revisar manualmente se precisar trocar mídia",
@@ -181,6 +182,7 @@ class MediaAutoFillImporter:
                         gif_found=bool(sign.avatar_gif_url),
                         image_found=bool(sign.image_url),
                         can_use_avatar=self._has_primary_media(sign),
+                        detection_method="manual",
                         status=sign.status,
                         reason="Sinal já possui vídeo ou GIF; nada foi sobrescrito.",
                         recommended_action="Revisar mídia existente",
@@ -269,6 +271,7 @@ class MediaAutoFillImporter:
             else:
                 fallback_image["reason"] = "Imagem encontrada como apoio visual; vídeo/GIF não foram detectados."
             fallback_image["recommended_action"] = "Precisa de video/GIF/animacao"
+            fallback_image["detection_method"] = "support_image_only"
             return fallback_image
 
         reasons = [str(item.get("reason")) for item in diagnostics if item.get("reason")]
@@ -295,6 +298,7 @@ class MediaAutoFillImporter:
             "license_notes": None,
             "reason": "Nenhuma mídia foi localizada automaticamente." if not reasons else " | ".join(reasons[:3]),
             "recommended_action": "Importar manualmente por JSON/CSV autorizado",
+            "detection_method": "none",
             "warnings": warnings,
             "errors": errors,
             "diagnostics": diagnostics,
@@ -322,12 +326,16 @@ class MediaAutoFillImporter:
         gif_found = bool(avatar_gif_url)
         image_found = bool(explicit_image_url)
         can_use_avatar = video_found or gif_found or media_type == "animation"
+        detection_method = self._clean(lookup.get("detection_method"))
+        if not detection_method:
+            detection_method = "gif_lookup" if media_type == "gif" else "support_image_only" if media_type == "image" else "html_video" if media_type == "video" else "none"
 
         return {
             "word": word,
             "normalized_word": self.normalizer.normalize_word(word),
             "source_used": source,
             "media_type": media_type,
+            "detection_method": detection_method,
             "media_found": True,
             "video_found": video_found,
             "gif_found": gif_found,
@@ -525,6 +533,7 @@ class MediaAutoFillImporter:
             normalized_word=str(result.get("normalized_word") or self.normalizer.normalize_word(word)),
             source_used=result.get("source_used"),
             media_type=media_type,
+            detection_method=str(result.get("detection_method") or "none"),
             media_found=media_found,
             video_found=video_found,
             gif_found=gif_found,
@@ -554,6 +563,7 @@ class MediaAutoFillImporter:
         status: str,
         reason: str,
         recommended_action: str,
+        detection_method: str = "none",
         video_found: bool = False,
         gif_found: bool = False,
         image_found: bool = False,
@@ -572,6 +582,7 @@ class MediaAutoFillImporter:
                 "normalized_word": normalized_word,
                 "source_used": source_used,
                 "media_type": media_type,
+                "detection_method": detection_method,
                 "media_found": media_found,
                 "video_found": video_found,
                 "gif_found": gif_found,

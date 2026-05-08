@@ -273,12 +273,13 @@ function ReportPanel({ report }: { report: MediaAutoFillReport }) {
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1180px] border-separate border-spacing-y-2 text-left text-sm">
+        <table className="w-full min-w-[1260px] border-separate border-spacing-y-2 text-left text-sm">
           <thead className="uppercase tracking-normal text-ink/60 dark:text-white/60">
             <tr>
               <th className="px-3 py-2">Palavra</th>
               <th className="px-3 py-2">Fonte usada</th>
               <th className="px-3 py-2">Tipo</th>
+              <th className="px-3 py-2">Método</th>
               <th className="px-3 py-2">Encontrou</th>
               <th className="px-3 py-2">Video</th>
               <th className="px-3 py-2">GIF</th>
@@ -308,6 +309,7 @@ function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
       <td className="rounded-l-lg px-3 py-3 text-base font-black">{item.word}</td>
       <td className="px-3 py-3">{item.source_used || "nenhuma"}</td>
       <td className="px-3 py-3">{mediaTypeLabel(item.media_type)}</td>
+      <td className="px-3 py-3">{detectionMethodLabel(item.detection_method)}</td>
       <td className="px-3 py-3">
         <StatusBadge ok={Boolean(item.media_found)} />
       </td>
@@ -357,7 +359,12 @@ function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
           </div>
         ) : null}
       </td>
-      <td className="rounded-r-lg px-3 py-3">{item.recommended_action || "Revisar"}</td>
+      <td className="rounded-r-lg px-3 py-3">
+        <div>{item.recommended_action || "Revisar"}</div>
+        {item.can_use_avatar ? (
+          <p className="mt-2 rounded-lg bg-mint px-2 py-1 text-xs font-black text-ink">Pronto para Avatar após aprovação</p>
+        ) : null}
+      </td>
     </tr>
   );
 }
@@ -399,6 +406,15 @@ function mediaTypeLabel(type?: string) {
   if (type === "animation") return "Animação";
   if (type === "existing") return "Existente";
   return "Sem mídia";
+}
+
+function detectionMethodLabel(method?: string) {
+  if (method === "html_video") return "HTML";
+  if (method === "probed_video_url") return "Probing de URL";
+  if (method === "gif_lookup") return "GIF";
+  if (method === "support_image_only") return "Imagem de apoio";
+  if (method === "manual") return "Manual";
+  return "Nenhum";
 }
 
 function parseWords(value: string) {

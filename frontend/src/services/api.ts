@@ -382,6 +382,7 @@ export type InesImportReport = {
     gif_found?: boolean;
     image_found?: boolean;
     media_type?: string;
+    detection_method?: string;
     can_use_avatar?: boolean;
     video_url?: string | null;
     gif_url?: string | null;
@@ -418,6 +419,7 @@ export type InesDiagnoseResult = {
   gif_found?: boolean;
   gif_url?: string | null;
   media_type?: string;
+  detection_method?: string;
   video_host_allowed: boolean;
   can_import: boolean;
   can_use_avatar?: boolean;
@@ -487,6 +489,7 @@ export type MediaAutoFillReportItem = {
   normalized_word?: string;
   source_used?: string | null;
   media_type?: string;
+  detection_method?: string;
   media_found?: boolean;
   video_found?: boolean;
   gif_found?: boolean;

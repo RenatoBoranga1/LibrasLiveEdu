@@ -1,6 +1,7 @@
 import csv
 import re
 import time
+import unicodedata
 from datetime import datetime, timezone
 from io import StringIO
 from typing import Any
@@ -31,6 +32,7 @@ class InesMediaImporter:
     video_extensions = {".mp4", ".webm", ".mov"}
     gif_extensions = {".gif"}
     image_extensions = {".jpg", ".jpeg", ".png", ".webp"}
+    max_probe_candidates = 40
 
     def __init__(self, db: Session):
         self.db = db
@@ -238,7 +240,9 @@ class InesMediaImporter:
                 "gif_url": diagnosis.get("gif_url"),
                 "gif_found": diagnosis.get("gif_found"),
                 "media_type": diagnosis.get("media_type"),
+                "detection_method": diagnosis.get("detection_method"),
                 "video_found": diagnosis.get("video_found"),
+                "video_url": diagnosis.get("video_url"),
                 "video_host_allowed": diagnosis.get("video_host_allowed"),
                 "can_use_avatar": diagnosis.get("can_use_avatar"),
                 "reason": diagnosis.get("reason"),
@@ -264,6 +268,7 @@ class InesMediaImporter:
             "avatar_gif_url": diagnosis.get("gif_url"),
             "gif_found": diagnosis.get("gif_found"),
             "media_type": diagnosis.get("media_type"),
+            "detection_method": diagnosis.get("detection_method"),
             "video_found": diagnosis.get("video_found"),
             "video_host_allowed": diagnosis.get("video_host_allowed"),
             "can_use_avatar": diagnosis.get("can_use_avatar"),
@@ -312,6 +317,7 @@ class InesMediaImporter:
             "gif_found": False,
             "gif_url": None,
             "media_type": "none",
+            "detection_method": "none",
             "video_host_allowed": False,
             "can_import": False,
             "can_use_avatar": False,
@@ -348,9 +354,18 @@ class InesMediaImporter:
         result["page_loaded"] = True
         result["word_found_in_page"] = bool(match_normalized and match_normalized in self.normalizer.normalize_word(html))
 
-        image_url = self._first_support_image_url(html, str(response.url))
-        gif_url = self._first_media_url(html, str(response.url), self.gif_extensions, require_allowed=False)
         video_url = self._first_sign_video_url(html, str(response.url))
+        detection_method = "html_video" if video_url else "none"
+        if not video_url:
+            video_url = self._probe_ines_video_candidates(word, html, str(response.url))
+            if video_url:
+                detection_method = "probed_video_url"
+        gif_url = self._first_media_url(html, str(response.url), self.gif_extensions, require_allowed=False)
+        if not video_url and gif_url:
+            detection_method = "gif_lookup"
+        image_url = self._first_support_image_url(html, str(response.url))
+        if not video_url and not gif_url and image_url:
+            detection_method = "support_image_only"
         result["image_url"] = image_url
         result["image_found"] = bool(image_url)
         result["gif_url"] = gif_url
@@ -358,14 +373,18 @@ class InesMediaImporter:
         result["video_url"] = video_url
         result["video_found"] = bool(video_url)
         result["media_type"] = "video" if result["video_found"] else "gif" if result["gif_found"] else "image" if result["image_found"] else "none"
+        result["detection_method"] = detection_method
         result["video_host_allowed"] = bool(video_url and self._is_allowed_media_url(video_url))
-        result["can_import"] = bool(result["page_loaded"] and result["word_found_in_page"] and result["video_found"] and result["video_host_allowed"] and self._is_http_url(video_url or ""))
-        result["can_use_avatar"] = bool(result["can_import"] or (result["gif_found"] and self._is_http_url(gif_url or "")))
+        has_valid_video = bool(result["video_found"] and result["video_host_allowed"] and self._is_http_url(video_url or ""))
+        result["can_import"] = bool(result["page_loaded"] and result["word_found_in_page"] and has_valid_video)
+        result["can_use_avatar"] = bool(has_valid_video or (result["gif_found"] and self._is_http_url(gif_url or "")))
         result["meaning"] = self._extract_labeled_text(html, ["Acepção", "Significado"])
         result["grammatical_class"] = self._extract_labeled_text(html, ["Classe Gramatical"])
 
         if result["can_import"]:
-            if self._is_ines_sign_video(video_url or ""):
+            if detection_method == "probed_video_url":
+                result["reason"] = "Video real do sinal encontrado por probing no diretorio /public/media/palavras/videos/."
+            elif self._is_ines_sign_video(video_url or ""):
                 result["reason"] = "Video real do sinal encontrado no diretorio /public/media/palavras/videos/."
             else:
                 result["reason"] = "Vídeo encontrado e host permitido."
@@ -374,7 +393,7 @@ class InesMediaImporter:
             result["warnings"].append("A busca automática pode não localizar palavras carregadas por JavaScript/API.")
         elif not result["video_found"]:
             if image_url and self._is_ines_handshape_image(image_url):
-                result["reason"] = "Imagem estatica de configuracao de mao; nao representa movimento do sinal em Libras."
+                result["reason"] = "Apenas imagem estatica de configuracao de mao foi encontrada. Essa imagem nao representa o movimento do sinal em Libras."
                 result["warnings"].append("A URL em /public/media/mao/ foi registrada apenas como apoio visual.")
             else:
                 result["reason"] = "Página carregada, mas nenhuma URL de vídeo .mp4, .webm ou .mov foi encontrada no HTML."
@@ -481,10 +500,11 @@ class InesMediaImporter:
                         image_found=bool(lookup.get("image_found")),
                         media_type=str(lookup.get("media_type") or ("image" if lookup.get("image_url") else "none")),
                         can_use_avatar=bool(lookup.get("can_use_avatar")),
+                        detection_method=str(lookup.get("detection_method") or "none"),
                         source_reference_url=lookup.get("source_reference_url"),
                         image_url=lookup.get("image_url"),
                         reason=reason,
-                        recommended_action="Precisa de importação manual",
+                        recommended_action="Precisa de video/GIF/animacao" if lookup.get("image_url") else "Precisa de importação manual",
                         warnings=lookup.get("warnings", []),
                         errors=lookup.get("errors", []),
                     )
@@ -515,8 +535,9 @@ class InesMediaImporter:
                     video_found=True,
                     gif_found=False,
                     image_found=bool(sign.image_url),
-                    media_type="video",
+                    media_type=str(lookup.get("media_type") or "video"),
                     can_use_avatar=True,
+                    detection_method=str(lookup.get("detection_method") or "html_video"),
                     video_url=sign.video_url,
                     source_reference_url=lookup.get("source_reference_url"),
                     image_url=sign.image_url,
@@ -729,6 +750,88 @@ class InesMediaImporter:
             notes.append(f"Classe gramatical: {self._clean(item.get('grammatical_class'))}")
         return "\n".join(notes)
 
+    def _probe_ines_video_candidates(self, word: str, html: str, base_url: str) -> str | None:
+        del html
+        del base_url
+        videos_base_url = urljoin(self.settings.ines_base_url.rstrip("/") + "/", "public/media/palavras/videos/")
+        for filename in self._ines_video_probe_filenames(word):
+            candidate_url = urljoin(videos_base_url, filename)
+            if not self._is_ines_sign_video(candidate_url) or not self._is_allowed_media_url(candidate_url):
+                continue
+            if self._probe_video_url_exists(candidate_url):
+                return candidate_url
+        return None
+
+    def _ines_video_probe_filenames(self, word: str) -> list[str]:
+        suffixes = [
+            "Sm_Prog001.mp4",
+            "Sm_Prog002.mp4",
+            "Sm_Prog003.mp4",
+            "Prog001.mp4",
+            "_Prog001.mp4",
+            ".mp4",
+        ]
+        filenames: list[str] = []
+        for stem in self._ines_word_stem_variants(word):
+            for suffix in suffixes:
+                filename = f"{stem}{suffix}"
+                if filename not in filenames:
+                    filenames.append(filename)
+                if len(filenames) >= self.max_probe_candidates:
+                    return filenames
+        return filenames
+
+    def _ines_word_stem_variants(self, word: str) -> list[str]:
+        ascii_word = unicodedata.normalize("NFKD", word)
+        ascii_word = "".join(char for char in ascii_word if not unicodedata.combining(char))
+        tokens = re.findall(r"[a-zA-Z0-9]+", ascii_word)
+        if not tokens:
+            return []
+        lower_tokens = [token.lower() for token in tokens]
+        joined = "".join(lower_tokens)
+        underscore = "_".join(lower_tokens)
+        hyphen = "-".join(lower_tokens)
+        camel = "".join(token.capitalize() for token in lower_tokens)
+        variants = [joined, underscore, hyphen, camel, joined.capitalize(), joined.upper()]
+        unique: list[str] = []
+        for variant in variants:
+            if variant and variant not in unique:
+                unique.append(variant)
+        return unique
+
+    def _probe_video_url_exists(self, url: str) -> bool:
+        headers = {"User-Agent": "LibrasLiveEdu-admin-probe/1.0"}
+        try:
+            with httpx.Client(timeout=self.settings.ines_import_timeout_seconds, follow_redirects=True) as client:
+                try:
+                    response = client.head(url, headers=headers)
+                    if self._is_valid_video_probe_response(response, url):
+                        return True
+                    if getattr(response, "status_code", None) not in {403, 405, 501}:
+                        return False
+                except AttributeError:
+                    return False
+                except Exception:  # noqa: BLE001
+                    pass
+                try:
+                    response = client.get(url, headers={**headers, "Range": "bytes=0-0"})
+                    return self._is_valid_video_probe_response(response, url)
+                except Exception:  # noqa: BLE001
+                    return False
+        except Exception:  # noqa: BLE001
+            return False
+
+    def _is_valid_video_probe_response(self, response: Any, url: str) -> bool:
+        if getattr(response, "status_code", None) != 200:
+            return False
+        headers = getattr(response, "headers", {}) or {}
+        content_type = str(headers.get("content-type", "")).split(";")[0].strip().lower()
+        allowed_types = {"video/mp4", "video/webm", "video/quicktime", "application/octet-stream"}
+        path = urlparse(url).path.lower()
+        if content_type in allowed_types:
+            return True
+        return not content_type and path.endswith((".mp4", ".webm", ".mov"))
+
     def _first_sign_video_url(self, html: str, base_url: str) -> str | None:
         video_candidates = self._media_urls(html, base_url, self.video_extensions)
         for candidate in video_candidates:
@@ -905,6 +1008,7 @@ class InesMediaImporter:
         image_found: bool = False,
         media_type: str = "none",
         can_use_avatar: bool = False,
+        detection_method: str = "none",
         video_url: str | None = None,
         source_reference_url: str | None = None,
         image_url: str | None = None,
@@ -920,6 +1024,7 @@ class InesMediaImporter:
                 "gif_found": gif_found,
                 "image_found": image_found,
                 "media_type": media_type,
+                "detection_method": detection_method,
                 "can_use_avatar": can_use_avatar,
                 "video_url": video_url,
                 "source_reference_url": source_reference_url,

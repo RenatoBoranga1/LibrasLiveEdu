@@ -263,6 +263,7 @@ class InesMediaDiagnoseResult(BaseModel):
     gif_found: bool = False
     gif_url: str | None = None
     media_type: str = "none"
+    detection_method: str = "none"
     video_host_allowed: bool = False
     can_import: bool = False
     can_use_avatar: bool = False

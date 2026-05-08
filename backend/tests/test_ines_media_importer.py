@@ -231,6 +231,91 @@ def test_find_ines_entry_prioritizes_ines_sign_video_over_handshape_image(monkey
     assert "public/media/palavras/videos" in result["reason"]
 
 
+def test_probe_ines_video_candidates_finds_aprender_video(monkeypatch):
+    importer = InesMediaImporter(db=None)  # type: ignore[arg-type]
+    expected_video = "https://dicionario.ines.gov.br/public/media/palavras/videos/aprenderSm_Prog001.mp4"
+
+    class FakeSearchResponse:
+        status_code = 200
+        text = "<html><body>Aprender <img src='/public/media/mao/cg51a.jpg' /></body></html>"
+        url = "https://dicionario.ines.gov.br/?q=aprender"
+
+    class FakeProbeResponse:
+        def __init__(self, status_code: int, content_type: str = ""):
+            self.status_code = status_code
+            self.headers = {"content-type": content_type} if content_type else {}
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, url, *args, **kwargs):
+            return FakeSearchResponse()
+
+        def head(self, url, *args, **kwargs):
+            if url == expected_video:
+                return FakeProbeResponse(200, "video/mp4")
+            return FakeProbeResponse(404)
+
+    monkeypatch.setattr("app.importers.ines_media_importer.httpx.Client", FakeClient)
+
+    result = importer.find_ines_entry_for_word("aprender")
+
+    assert result["found"] is True
+    assert result["image_url"] == "https://dicionario.ines.gov.br/public/media/mao/cg51a.jpg"
+    assert result["video_url"] == expected_video
+    assert result["avatar_video_url"] == expected_video
+    assert result["media_type"] == "video"
+    assert result["can_use_avatar"] is True
+    assert result["detection_method"] == "probed_video_url"
+
+
+def test_probe_ines_video_candidates_does_not_treat_jpg_as_avatar(monkeypatch):
+    importer = InesMediaImporter(db=None)  # type: ignore[arg-type]
+
+    class FakeSearchResponse:
+        status_code = 200
+        text = "<html><body>Aprender <img src='/public/media/mao/cg51a.jpg' /></body></html>"
+        url = "https://dicionario.ines.gov.br/?q=aprender"
+
+    class FakeProbeResponse:
+        status_code = 404
+        headers: dict[str, str] = {}
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, url, *args, **kwargs):
+            return FakeSearchResponse()
+
+        def head(self, url, *args, **kwargs):
+            return FakeProbeResponse()
+
+    monkeypatch.setattr("app.importers.ines_media_importer.httpx.Client", FakeClient)
+
+    result = importer.find_ines_entry_for_word("aprender")
+
+    assert result["found"] is False
+    assert result["image_url"] == "https://dicionario.ines.gov.br/public/media/mao/cg51a.jpg"
+    assert result.get("video_url") is None
+    assert result["media_type"] == "image"
+    assert result["can_use_avatar"] is False
+    assert result["detection_method"] == "support_image_only"
+
+
 def test_ifpr_gif_importer_detects_authorized_gif_by_alt_text(monkeypatch):
     importer = IfprGifImporter()
     old_enabled = importer.settings.ifpr_gif_import_enabled

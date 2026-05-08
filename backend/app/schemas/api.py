@@ -260,8 +260,12 @@ class InesMediaDiagnoseResult(BaseModel):
     image_url: str | None = None
     video_found: bool = False
     video_url: str | None = None
+    gif_found: bool = False
+    gif_url: str | None = None
+    media_type: str = "none"
     video_host_allowed: bool = False
     can_import: bool = False
+    can_use_avatar: bool = False
     reason: str
     warnings: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)

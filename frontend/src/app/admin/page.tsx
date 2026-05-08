@@ -358,28 +358,35 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {signs.map((sign) => {
-                    const hasVideo = Boolean(sign.video_url || sign.avatar_video_url || sign.avatar_gif_url || sign.image_url);
-                    const mediaHref = sign.avatar_video_url || sign.video_url || sign.avatar_gif_url || sign.image_url || "#";
-                    const mediaLabel = sign.avatar_video_url || sign.video_url ? "Com vídeo" : sign.avatar_gif_url ? "Com GIF" : sign.image_url ? "Com imagem" : "Sem mídia";
+                    const hasAvatarMedia = Boolean(sign.video_url || sign.avatar_video_url || sign.avatar_gif_url || sign.avatar_animation_url);
+                    const hasSupportImage = Boolean(sign.image_url);
+                    const hasMedia = hasAvatarMedia || hasSupportImage;
+                    const mediaHref = sign.avatar_video_url || sign.video_url || sign.avatar_gif_url || sign.avatar_animation_url || sign.image_url || "#";
+                    const mediaLabel = sign.avatar_video_url || sign.video_url ? "Com vídeo" : sign.avatar_gif_url ? "Com GIF" : sign.avatar_animation_url ? "Com animação" : sign.image_url ? "Com imagem de apoio" : "Sem mídia";
                     const isInes = sign.source_name?.toLowerCase().includes("ines");
                     return (
                     <tr key={sign.id} className="bg-teal-50 text-sm font-semibold text-ink dark:bg-zinc-800 dark:text-white">
                       <td className="rounded-l-lg px-3 py-3 text-base font-black">{sign.word}</td>
                       <td className="px-3 py-3">
                         <div>{sign.status}</div>
-                        {sign.status === "pending" && hasVideo && (
+                        {sign.status === "pending" && hasMedia && (
                           <span className="mt-1 inline-flex rounded-full bg-amber/25 px-2 py-1 text-xs font-black text-ink dark:text-white">
                             Mídia encontrada — revisar
                           </span>
                         )}
-                        {sign.status === "approved" && hasVideo && (
+                        {sign.status === "approved" && hasAvatarMedia && (
                           <span className="mt-1 inline-flex rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">
                             Pronto para Avatar
                           </span>
                         )}
+                        {sign.status === "approved" && !hasAvatarMedia && hasSupportImage && (
+                          <span className="mt-1 inline-flex rounded-full bg-zinc-200 px-2 py-1 text-xs font-black text-ink">
+                            Imagem de apoio
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-3">
-                        {hasVideo ? (
+                        {hasMedia ? (
                           <span className="rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">{mediaLabel}</span>
                         ) : (
                           <span className="rounded-full bg-zinc-200 px-2 py-1 text-xs font-black text-ink">{mediaLabel}</span>
@@ -399,9 +406,9 @@ export default function AdminPage() {
                           <button className="focus-ring rounded-lg bg-white px-3 py-2 font-bold text-ocean dark:bg-zinc-950 dark:text-mint" onClick={() => selectSign(sign)}>
                             Revisar
                           </button>
-                          {hasVideo ? (
+                          {hasMedia ? (
                             <a className="focus-ring rounded-lg bg-ocean px-3 py-2 font-bold text-white" href={mediaHref} target="_blank" rel="noreferrer">
-                              Ver mídia
+                              {hasAvatarMedia ? "Ver mídia" : "Ver apoio visual"}
                             </a>
                           ) : (
                             <button className="focus-ring rounded-lg bg-mint px-3 py-2 font-bold text-ink" onClick={() => prepareInesMedia(sign)}>
@@ -442,8 +449,8 @@ export default function AdminPage() {
                     <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-ink dark:bg-zinc-800 dark:text-white">
                       Status: {selected.status}
                     </span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-black ${selected.video_url || selected.avatar_video_url || selected.avatar_gif_url || selected.image_url ? "bg-mint text-ink" : "bg-zinc-200 text-ink"}`}>
-                      {selected.video_url || selected.avatar_video_url ? "Com vídeo" : selected.avatar_gif_url ? "Com GIF" : selected.image_url ? "Com imagem" : "Sem mídia"}
+                    <span className={`rounded-full px-3 py-1 text-xs font-black ${selected.video_url || selected.avatar_video_url || selected.avatar_gif_url || selected.avatar_animation_url || selected.image_url ? "bg-mint text-ink" : "bg-zinc-200 text-ink"}`}>
+                      {selected.video_url || selected.avatar_video_url ? "Com vídeo" : selected.avatar_gif_url ? "Com GIF" : selected.avatar_animation_url ? "Com animação" : selected.image_url ? "Com imagem de apoio" : "Sem mídia"}
                     </span>
                   </div>
                   <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
@@ -554,9 +561,11 @@ export default function AdminPage() {
                       </p>
                     </div>
                   )}
-                  {!selected.avatar_video_url && !selected.video_url && !selected.avatar_gif_url && (
+                  {!selected.avatar_video_url && !selected.video_url && !selected.avatar_gif_url && !selected.avatar_animation_url && (
                     <div className="rounded-lg bg-amber/20 p-3 text-sm font-bold leading-relaxed text-ink dark:text-white">
-                      Sem vídeo/GIF cadastrado. Aprovar este sinal sem mídia fará o Avatar Libras manter fallback visual.
+                      {selected.image_url
+                        ? "Apenas imagem de apoio cadastrada. Aprovar este sinal nao fara o Avatar Libras exibir traducao animada."
+                        : "Sem video/GIF/animacao cadastrado. Aprovar este sinal sem midia animada fara o Avatar Libras manter fallback visual."}
                     </div>
                   )}
                   <label className="block text-sm font-bold text-ink/70 dark:text-white/70">

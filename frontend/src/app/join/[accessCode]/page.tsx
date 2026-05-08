@@ -90,10 +90,10 @@ export default function JoinClassPage() {
   }, [accessCode, classSession]);
 
   const cards = useMemo(() => live.cards.slice(0, 10), [live.cards]);
-  const approvedMediaCard = useMemo(
-    () => cards.find((card) => card.status === "approved" && (card.avatarVideoUrl || card.videoUrl || card.avatarGifUrl || card.imageUrl || card.avatarAnimationUrl || card.gloss)),
-    [cards]
-  );
+  const approvedMediaCard = useMemo(() => {
+    const animatedCard = cards.find((card) => card.status === "approved" && hasAvatarMedia(card));
+    return animatedCard ?? cards.find((card) => card.status === "approved" && (card.imageUrl || card.gloss));
+  }, [cards]);
   const showAvatar = viewMode === "full" || viewMode === "focus";
   const showCaption = viewMode === "full" || viewMode === "focus" || viewMode === "caption";
   const showCards = viewMode === "full" || viewMode === "cards";
@@ -231,12 +231,12 @@ export default function JoinClassPage() {
                   const mediaInfo = approved ? getCardMedia(card) : null;
                   const mediaLabel =
                     mediaInfo?.type === "video"
-                      ? "Com vÃ­deo"
+                      ? "Com vídeo"
                       : mediaInfo?.type === "gif"
                         ? "Com GIF"
                         : mediaInfo?.type === "image"
-                          ? "Com imagem"
-                          : "Sem mÃ­dia";
+                          ? "Com imagem de apoio"
+                          : "Sem mídia";
                   return (
                     <article key={`${card.word}-${card.id ?? card.status}`} className="w-72 shrink-0 rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
                       <div className="flex items-start justify-between gap-2">
@@ -275,7 +275,7 @@ export default function JoinClassPage() {
                             className="focus-ring inline-flex min-h-11 items-center justify-center rounded-lg bg-ocean px-3 py-2 text-sm font-bold text-white"
                             onClick={() => setVideoCard(card)}
                           >
-                            Ver sinal
+                            {mediaInfo.type === "image" ? "Ver apoio visual" : "Ver sinal"}
                           </button>
                         )}
                         <button className="focus-ring min-h-11 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm font-bold text-ocean dark:border-white/10 dark:bg-zinc-950 dark:text-mint" onClick={() => handleSaveWord(card)}>
@@ -330,7 +330,9 @@ export default function JoinClassPage() {
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-soft dark:bg-zinc-900">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-normal text-ocean dark:text-mint">Sinal em Libras</p>
+                <p className="text-xs font-bold uppercase tracking-normal text-ocean dark:text-mint">
+                  {modalMedia.type === "image" ? "Apoio visual" : "Sinal em Libras"}
+                </p>
                 <h2 id="sign-video-title" className="text-2xl font-black text-ink dark:text-white">
                   {videoCard.word}
                 </h2>
@@ -357,7 +359,7 @@ export default function JoinClassPage() {
               <img
                 className="max-h-[52vh] w-full rounded-lg bg-ink object-contain"
                 src={modalMedia.url}
-                alt={`${modalMedia.type === "gif" ? "GIF" : "Imagem"} do sinal ${videoCard.word}`}
+                alt={`${modalMedia.type === "gif" ? "GIF" : "Imagem de apoio"} do sinal ${videoCard.word}`}
                 loading="lazy"
                 decoding="async"
               />
@@ -425,4 +427,8 @@ function getCardMedia(card?: SignCard | null): { type: "video" | "gif" | "image"
   if (card.avatarGifUrl) return { type: "gif", url: card.avatarGifUrl };
   if (card.imageUrl) return { type: "image", url: card.imageUrl };
   return null;
+}
+
+function hasAvatarMedia(card: SignCard) {
+  return Boolean(card.avatarVideoUrl || card.videoUrl || card.avatarGifUrl || card.avatarAnimationUrl);
 }

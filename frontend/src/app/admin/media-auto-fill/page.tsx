@@ -231,6 +231,7 @@ function ReportPanel({ report }: { report: MediaAutoFillReport }) {
     ["Processados", report.processed_items],
     ["Vídeos", report.video_found_count],
     ["GIFs", report.gif_found_count],
+    ["Imagens de apoio", report.image_found_count],
     ["Sem mídia", report.media_missing_count],
     ["Atualizados", report.updated_count],
     ["Criados", report.created_count],
@@ -266,13 +267,17 @@ function ReportPanel({ report }: { report: MediaAutoFillReport }) {
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-left text-sm">
+        <table className="w-full min-w-[1180px] border-separate border-spacing-y-2 text-left text-sm">
           <thead className="uppercase tracking-normal text-ink/60 dark:text-white/60">
             <tr>
               <th className="px-3 py-2">Palavra</th>
               <th className="px-3 py-2">Fonte usada</th>
               <th className="px-3 py-2">Tipo</th>
               <th className="px-3 py-2">Encontrou</th>
+              <th className="px-3 py-2">Video</th>
+              <th className="px-3 py-2">GIF</th>
+              <th className="px-3 py-2">Imagem</th>
+              <th className="px-3 py-2">Avatar</th>
               <th className="px-3 py-2">URL da mídia</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Motivo</th>
@@ -291,7 +296,7 @@ function ReportPanel({ report }: { report: MediaAutoFillReport }) {
 }
 
 function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
-  const mediaUrl = item.video_url || item.avatar_gif_url || item.image_url;
+  const mediaUrl = item.video_url || item.avatar_gif_url || item.avatar_animation_url || item.image_url;
   return (
     <tr className="bg-teal-50 font-semibold text-ink dark:bg-zinc-800 dark:text-white">
       <td className="rounded-l-lg px-3 py-3 text-base font-black">{item.word}</td>
@@ -299,6 +304,18 @@ function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
       <td className="px-3 py-3">{mediaTypeLabel(item.media_type)}</td>
       <td className="px-3 py-3">
         <StatusBadge ok={Boolean(item.media_found)} />
+      </td>
+      <td className="px-3 py-3">
+        <StatusBadge ok={Boolean(item.video_found)} compact />
+      </td>
+      <td className="px-3 py-3">
+        <StatusBadge ok={Boolean(item.gif_found)} compact />
+      </td>
+      <td className="px-3 py-3">
+        <StatusBadge ok={Boolean(item.image_found)} compact />
+      </td>
+      <td className="px-3 py-3">
+        <StatusBadge ok={Boolean(item.can_use_avatar)} compact />
       </td>
       <td className="max-w-72 px-3 py-3">
         {mediaUrl ? (
@@ -342,16 +359,17 @@ function EmptyReport() {
   );
 }
 
-function StatusBadge({ ok }: { ok: boolean }) {
+function StatusBadge({ ok, compact = false }: { ok: boolean; compact?: boolean }) {
+  const label = ok ? "Sim" : "Nao";
   return ok ? (
     <span className="inline-flex items-center gap-1 rounded-full bg-mint px-2 py-1 text-xs font-black text-ink">
       <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-      Sim
+      {compact ? label : "Sim"}
     </span>
   ) : (
     <span className="inline-flex items-center gap-1 rounded-full bg-zinc-200 px-2 py-1 text-xs font-black text-ink">
       <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
-      Não
+      {label}
     </span>
   );
 }
@@ -366,7 +384,8 @@ function priorityForMode(mode: SourceMode): MediaAutoFillSource[] {
 function mediaTypeLabel(type?: string) {
   if (type === "video") return "Vídeo";
   if (type === "gif") return "GIF";
-  if (type === "image") return "Imagem";
+  if (type === "image") return "Imagem de apoio";
+  if (type === "animation") return "Animação";
   if (type === "existing") return "Existente";
   return "Sem mídia";
 }

@@ -53,19 +53,9 @@ export function resolveAvatarState(input: AvatarInput): AvatarRenderState {
   if (input.avatarGifUrl) {
     return {
       type: "gif",
-      label: "GIF complementar disponÃ­vel",
+      label: "GIF complementar disponível",
       message: "GIF autorizado recebido como apoio visual complementar para este sinal.",
       canRenderAvatar: true,
-      pendingCuration,
-    };
-  }
-
-  if (input.imageUrl) {
-    return {
-      type: "image",
-      label: "Imagem de apoio disponÃ­vel",
-      message: "Imagem autorizada recebida como apoio visual. Ela nÃ£o substitui sinal em Libras validado.",
-      canRenderAvatar: false,
       pendingCuration,
     };
   }
@@ -75,6 +65,16 @@ export function resolveAvatarState(input: AvatarInput): AvatarRenderState {
       type: "animation",
       label: "Dados de animação recebidos",
       message: "Dados de animação recebidos. Conecte um renderer 3D para exibir o avatar.",
+      canRenderAvatar: false,
+      pendingCuration,
+    };
+  }
+
+  if (input.imageUrl) {
+    return {
+      type: "image",
+      label: "Apoio visual disponível",
+      message: "Apenas apoio visual disponível. Não há mídia animada aprovada para este sinal.",
       canRenderAvatar: false,
       pendingCuration,
     };

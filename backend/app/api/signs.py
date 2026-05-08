@@ -350,8 +350,17 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_role(["
     stats = SignRepository(db).stats_by_status()
     total_signs = db.scalar(select(func.count(Sign.id))) or 0
     import_jobs = db.scalar(select(func.count(ImportJob.id))) or 0
-    avatar_media_filter = or_(Sign.video_url.is_not(None), Sign.avatar_gif_url.is_not(None))
-    any_media_filter = or_(Sign.video_url.is_not(None), Sign.avatar_gif_url.is_not(None), Sign.image_url.is_not(None))
+    avatar_media_filter = or_(
+        Sign.video_url.is_not(None),
+        Sign.avatar_gif_url.is_not(None),
+        Sign.avatar_animation_url.is_not(None),
+    )
+    any_media_filter = or_(
+        Sign.video_url.is_not(None),
+        Sign.avatar_gif_url.is_not(None),
+        Sign.avatar_animation_url.is_not(None),
+        Sign.image_url.is_not(None),
+    )
     no_video_signs = db.scalar(select(func.count(Sign.id)).where(~any_media_filter)) or 0
     video_signs = db.scalar(select(func.count(Sign.id)).where(Sign.video_url.is_not(None))) or 0
     gif_signs = db.scalar(select(func.count(Sign.id)).where(Sign.avatar_gif_url.is_not(None))) or 0

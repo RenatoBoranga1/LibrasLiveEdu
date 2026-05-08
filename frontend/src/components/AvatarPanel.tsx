@@ -53,7 +53,7 @@ export function AvatarPanel({
   });
   const StatusIcon = avatarState.canRenderAvatar ? BadgeCheck : avatarState.type === "animation" ? Box : VideoOff;
   const playableVideoUrl = avatarVideoUrl || videoUrl;
-  const mediaLabel = playableVideoUrl ? "VIDEO" : avatarGifUrl ? "GIF" : imageUrl ? "IMAGEM" : null;
+  const mediaLabel = playableVideoUrl ? "VIDEO" : avatarGifUrl ? "GIF" : null;
   const referenceUrl = sourceReferenceUrl || sourceUrl;
 
   return (
@@ -66,7 +66,7 @@ export function AvatarPanel({
       <div className="flex items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 dark:border-white/10">
         <div>
           <h2 className="text-lg font-black text-ink dark:text-white">Avatar Libras</h2>
-          <p className="text-xs font-bold text-ink/60 dark:text-white/60">apoio visual, legenda sempre ativa</p>
+          <p className="text-xs font-bold text-ink/60 dark:text-white/60">mídia animada, legenda sempre ativa</p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-full bg-ocean/10 px-3 py-1 text-xs font-black text-ocean dark:bg-mint/10 dark:text-mint">
           <StatusIcon className="h-4 w-4" aria-hidden="true" />
@@ -104,19 +104,6 @@ export function AvatarPanel({
               loading="lazy"
               decoding="async"
             />
-          ) : imageUrl ? (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-4 text-center">
-              <img
-                className="max-h-72 w-full rounded-lg object-contain"
-                src={imageUrl}
-                alt={`Imagem de apoio visual para ${word ?? "o termo atual"}`}
-                loading="lazy"
-                decoding="async"
-              />
-              <p className="max-w-md text-xs font-bold text-white/75">
-                Imagem de apoio visual. Ela nÃ£o representa traduÃ§Ã£o completa em Libras.
-              </p>
-            </div>
           ) : (
             <div className="flex max-w-md flex-col items-center gap-4 px-5 py-10 text-center">
               <div className="grid h-24 w-24 place-items-center rounded-full bg-mint text-ink shadow-soft">
@@ -132,7 +119,7 @@ export function AvatarPanel({
               </div>
               <p className="text-base font-black leading-relaxed">{avatarState.message}</p>
               <p className="text-sm font-semibold leading-relaxed text-white/75">
-                A legenda está ativa. O avatar será exibido quando houver sinal aprovado ou provedor configurado.
+                A legenda está ativa. O avatar será exibido quando houver vídeo, GIF ou animação aprovada.
               </p>
             </div>
           )}
@@ -142,6 +129,12 @@ export function AvatarPanel({
           {animationPayloadUrl && (
             <div role="status" className="rounded-lg bg-ocean/10 p-3 text-sm font-bold leading-relaxed text-ink dark:bg-mint/10 dark:text-white">
               Dados de animação recebidos. Conecte um renderer 3D para exibir o avatar.
+            </div>
+          )}
+
+          {imageUrl && !playableVideoUrl && !avatarGifUrl && (
+            <div role="status" className="rounded-lg bg-amber/20 p-3 text-sm font-bold leading-relaxed text-ink dark:text-white">
+              Apenas apoio visual disponível. Não há mídia animada aprovada para este sinal.
             </div>
           )}
 

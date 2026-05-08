@@ -230,8 +230,12 @@ class InesMediaImporter:
                 "source_reference_url": diagnosis.get("source_reference_url"),
                 "image_url": diagnosis.get("image_url"),
                 "image_found": diagnosis.get("image_found"),
+                "gif_url": diagnosis.get("gif_url"),
+                "gif_found": diagnosis.get("gif_found"),
+                "media_type": diagnosis.get("media_type"),
                 "video_found": diagnosis.get("video_found"),
                 "video_host_allowed": diagnosis.get("video_host_allowed"),
+                "can_use_avatar": diagnosis.get("can_use_avatar"),
                 "reason": diagnosis.get("reason"),
                 "warnings": diagnosis.get("warnings", []),
                 "errors": diagnosis.get("errors", []),
@@ -251,8 +255,12 @@ class InesMediaImporter:
             "avatar_video_url": diagnosis.get("video_url"),
             "image_url": diagnosis.get("image_url"),
             "image_found": diagnosis.get("image_found"),
+            "gif_url": diagnosis.get("gif_url"),
+            "gif_found": diagnosis.get("gif_found"),
+            "media_type": diagnosis.get("media_type"),
             "video_found": diagnosis.get("video_found"),
             "video_host_allowed": diagnosis.get("video_host_allowed"),
+            "can_use_avatar": diagnosis.get("can_use_avatar"),
             "meaning": diagnosis.get("meaning"),
             "grammatical_class": diagnosis.get("grammatical_class"),
             "reason": "Vídeo encontrado.",
@@ -295,8 +303,12 @@ class InesMediaImporter:
             "image_url": None,
             "video_found": False,
             "video_url": None,
+            "gif_found": False,
+            "gif_url": None,
+            "media_type": "none",
             "video_host_allowed": False,
             "can_import": False,
+            "can_use_avatar": False,
             "reason": "Diagnóstico não executado.",
             "warnings": [],
             "errors": [],
@@ -330,14 +342,19 @@ class InesMediaImporter:
         result["page_loaded"] = True
         result["word_found_in_page"] = bool(match_normalized and match_normalized in self.normalizer.normalize_word(html))
 
-        image_url = self._first_media_url(html, str(response.url), {".jpg", ".jpeg", ".png", ".webp", ".gif"}, require_allowed=False)
+        image_url = self._first_media_url(html, str(response.url), {".jpg", ".jpeg", ".png", ".webp"}, require_allowed=False)
+        gif_url = self._first_media_url(html, str(response.url), {".gif"}, require_allowed=False)
         video_url = self._first_media_url(html, str(response.url), {".mp4", ".webm", ".mov"}, require_allowed=False)
         result["image_url"] = image_url
         result["image_found"] = bool(image_url)
+        result["gif_url"] = gif_url
+        result["gif_found"] = bool(gif_url)
         result["video_url"] = video_url
         result["video_found"] = bool(video_url)
+        result["media_type"] = "video" if result["video_found"] else "gif" if result["gif_found"] else "image" if result["image_found"] else "none"
         result["video_host_allowed"] = bool(video_url and self._is_allowed_media_url(video_url))
         result["can_import"] = bool(result["page_loaded"] and result["word_found_in_page"] and result["video_found"] and result["video_host_allowed"] and self._is_http_url(video_url or ""))
+        result["can_use_avatar"] = bool(result["can_import"] or (result["gif_found"] and self._is_http_url(gif_url or "")))
         result["meaning"] = self._extract_labeled_text(html, ["Acepção", "Significado"])
         result["grammatical_class"] = self._extract_labeled_text(html, ["Classe Gramatical"])
 
@@ -447,6 +464,10 @@ class InesMediaImporter:
                         page_loaded=bool(lookup.get("page_loaded")),
                         word_found=bool(lookup.get("word_found_in_page")),
                         video_found=False,
+                        gif_found=bool(lookup.get("gif_found")),
+                        image_found=bool(lookup.get("image_found")),
+                        media_type=str(lookup.get("media_type") or ("image" if lookup.get("image_url") else "none")),
+                        can_use_avatar=bool(lookup.get("can_use_avatar")),
                         source_reference_url=lookup.get("source_reference_url"),
                         image_url=lookup.get("image_url"),
                         reason=reason,
@@ -479,6 +500,10 @@ class InesMediaImporter:
                     page_loaded=True,
                     word_found=True,
                     video_found=True,
+                    gif_found=False,
+                    image_found=bool(sign.image_url),
+                    media_type="video",
+                    can_use_avatar=True,
                     video_url=sign.video_url,
                     source_reference_url=lookup.get("source_reference_url"),
                     image_url=sign.image_url,
@@ -506,7 +531,12 @@ class InesMediaImporter:
         limit = self._effective_limit(max_items)
         rows = self.db.scalars(
             select(Sign)
-            .where(Sign.status == SignStatus.pending.value, Sign.video_url.is_(None), Sign.avatar_gif_url.is_(None))
+            .where(
+                Sign.status == SignStatus.pending.value,
+                Sign.video_url.is_(None),
+                Sign.avatar_gif_url.is_(None),
+                Sign.avatar_animation_url.is_(None),
+            )
             .order_by(Sign.updated_at.desc())
             .limit(limit)
         )
@@ -526,6 +556,9 @@ class InesMediaImporter:
         sign.source_name = sign.source_name or self.source_name
         sign.source_url = sign.source_url or self.settings.ines_base_url
         sign.license = sign.license or self.settings.ines_import_authorization_text
+        image_url = self._clean(lookup.get("image_url"))
+        if image_url and self._is_http_url(image_url) and not sign.image_url:
+            sign.image_url = image_url
         sign.curator_notes = sign.curator_notes or "Consulta automática INES executada; vídeo não detectado no HTML inicial."
         sign.educational_notes = self._educational_notes(
             {
@@ -559,7 +592,12 @@ class InesMediaImporter:
             max_items = self._effective_limit(payload.max_items)
             rows = self.db.scalars(
                 select(Sign)
-                .where(Sign.status == SignStatus.pending.value, Sign.video_url.is_(None), Sign.avatar_gif_url.is_(None))
+                .where(
+                    Sign.status == SignStatus.pending.value,
+                    Sign.video_url.is_(None),
+                    Sign.avatar_gif_url.is_(None),
+                    Sign.avatar_animation_url.is_(None),
+                )
                 .order_by(Sign.updated_at.desc())
                 .limit(max_items)
             )
@@ -808,6 +846,10 @@ class InesMediaImporter:
         page_loaded: bool = False,
         word_found: bool = False,
         video_found: bool = False,
+        gif_found: bool = False,
+        image_found: bool = False,
+        media_type: str = "none",
+        can_use_avatar: bool = False,
         video_url: str | None = None,
         source_reference_url: str | None = None,
         image_url: str | None = None,
@@ -820,6 +862,10 @@ class InesMediaImporter:
                 "page_loaded": page_loaded,
                 "word_found": word_found,
                 "video_found": video_found,
+                "gif_found": gif_found,
+                "image_found": image_found,
+                "media_type": media_type,
+                "can_use_avatar": can_use_avatar,
                 "video_url": video_url,
                 "source_reference_url": source_reference_url,
                 "image_url": image_url,
@@ -867,6 +913,7 @@ class InesMediaImporter:
             "image_url": sign.image_url,
             "video_url": sign.video_url,
             "avatar_gif_url": sign.avatar_gif_url,
+            "avatar_animation_url": sign.avatar_animation_url,
         }
 
     def _clean(self, value: Any) -> str | None:

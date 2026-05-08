@@ -343,7 +343,7 @@ Para testar em aula: rode a automação em lote pequeno, volte para `/admin`, ap
 
 ## Preenchimento automático de URLs de mídia
 
-A tela `/admin/media-auto-fill` cria uma rotina administrativa para preencher URLs de mídia sem editar palavra por palavra. Ela busca sinais `pending`, `review` ou `needs_specialist_review` sem `video_url`/`avatar_gif_url`, consulta fontes autorizadas em lote pequeno e mantém tudo como `pending` para curadoria.
+A tela `/admin/media-auto-fill` cria uma rotina administrativa para preencher URLs de mídia sem editar palavra por palavra. Ela busca sinais `pending`, `review` ou `needs_specialist_review` sem `video_url`/`avatar_gif_url`/`avatar_animation_url`, consulta fontes autorizadas em lote pequeno e mantém tudo como `pending` para curadoria.
 
 Essa rotina:
 
@@ -354,7 +354,8 @@ Essa rotina:
 - respeita `MEDIA_AUTO_FILL_MAX_ITEMS` e aplica delay entre consultas;
 - tenta INES primeiro e, se configurado, IFPR GIFs como fallback;
 - registra `ImportJob`, relatório por palavra e `SignAuditLog`;
-- preenche `source_name`, `source_url`, `source_reference_url`, `license`, `license_notes` e `curator_notes` quando encontra mídia.
+- preenche `source_name`, `source_url`, `source_reference_url`, `license`, `license_notes` e `curator_notes` quando encontra mídia;
+- separa mídia animada de apoio visual: JPG/PNG entram apenas em `image_url` e não contam como Avatar Libras.
 
 Variáveis:
 
@@ -392,7 +393,7 @@ Uso recomendado:
 4. Clique em `Diagnosticar palavras` para verificar se as fontes retornam mídia detectável.
 5. Use `Preencher palavras selecionadas` ou `Preencher próximas pendentes sem mídia`.
 6. Volte para `/admin`, revise fonte/licença e aprove manualmente o sinal.
-7. Teste em aula: quando a palavra aprovada aparecer, o Avatar Libras usa `avatar_video_url`/`video_url`, depois `avatar_gif_url`, depois `image_url`.
+7. Teste em aula: quando a palavra aprovada aparecer, o Avatar Libras usa `avatar_video_url`/`video_url`, depois `avatar_gif_url`, depois `avatar_animation_url`. `image_url` aparece apenas como apoio visual/card.
 
 Se o relatório indicar `Precisa de importação manual`, use JSON/CSV autorizado. A automação não deve ser usada para scraping massivo nem para burlar carregamento por JavaScript/API.
 
@@ -406,8 +407,9 @@ Regras:
 - GIFs não são baixados no build/deploy/startup e não devem ser salvos no Git;
 - todo GIF precisa registrar `source_name`, `source_url`, `source_reference_url`, `license` e `license_notes`;
 - novos GIFs entram como `pending` e só aparecem como oficiais depois de curadoria;
-- o Avatar usa prioridade `avatar_video_url` > `video_url` > `avatar_gif_url` > `image_url` > fallback visual;
-- cards visuais mostram `Com vídeo`, `Com GIF`, `Com imagem` ou `Sem mídia` conforme o sinal aprovado.
+- o Avatar usa prioridade `avatar_video_url` > `video_url` > `avatar_gif_url` > `avatar_animation_url` > fallback visual;
+- `image_url` é somente apoio visual/card e não deve ser tratada como tradução animada;
+- cards visuais mostram `Com vídeo`, `Com GIF`, `Com imagem de apoio` ou `Sem mídia` conforme o sinal aprovado.
 
 Importação por manifesto:
 
@@ -441,7 +443,7 @@ Esse endpoint é `admin only`, não baixa arquivos, apenas vincula URL remota au
 - Backend: `DemoSpeechToTextProvider`, `GoogleSpeechToTextProvider`, `AzureSpeechProvider` e `WhisperProvider`.
 - Frontend: reconhecimento de fala do navegador quando disponível.
 - O app envia texto transcrito por padrão e não armazena áudio bruto.
-- O `AvatarPanel` renderiza vídeo quando `avatar_video_url`/`video_url` existir, usa `avatar_gif_url` como fallback complementar aprovado e mostra fallback visual quando não houver mídia.
+- O `AvatarPanel` renderiza vídeo quando `avatar_video_url`/`video_url` existir, usa `avatar_gif_url` como fallback complementar aprovado, aceita `avatar_animation_url` como mídia animada futura e mostra fallback visual quando houver apenas `image_url` ou nenhuma mídia animada.
 
 ## Resumo Automático da Aula
 

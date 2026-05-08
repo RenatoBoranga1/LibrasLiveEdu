@@ -35,4 +35,18 @@ describe("AvatarPanel", () => {
     );
     expect(screen.queryByAltText(/sinal em libras para professor/i)).not.toBeInTheDocument();
   });
+
+  it("does not render a static image as Avatar Libras media", () => {
+    render(
+      <AvatarPanel
+        status="success"
+        word="configuracao de mao"
+        imageUrl="https://example.com/public/media/mao/cg02.jpg"
+      />
+    );
+
+    expect(screen.queryByRole("img", { name: /sinal em libras/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/apenas apoio visual dispon/i)).toBeInTheDocument();
+    expect(screen.getByText(/gif ou anima/i)).toBeInTheDocument();
+  });
 });

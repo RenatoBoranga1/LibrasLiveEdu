@@ -263,6 +263,56 @@ def test_media_auto_fill_diagnose_uses_ifpr_after_ines_miss(monkeypatch):
     assert report["media_missing_count"] == 0
     assert report["items"][0]["source_used"] == "ifpr"
     assert report["items"][0]["avatar_gif_url"].endswith("aluno.gif")
+    assert report["items"][0]["gif_found"] is True
+    assert report["items"][0]["can_use_avatar"] is True
+
+
+def test_media_auto_fill_reports_static_image_as_support_only(monkeypatch):
+    importer = MediaAutoFillImporter(db=None)  # type: ignore[arg-type]
+    monkeypatch.setattr(importer, "_delay", lambda: None)
+    monkeypatch.setattr(
+        importer.ines,
+        "find_ines_entry_for_word",
+        lambda word: {
+            "found": False,
+            "word": word,
+            "normalized_word": "mao",
+            "source_used": "ines",
+            "media_type": "image",
+            "media_found": True,
+            "image_url": "https://dicionario.ines.gov.br/public/media/mao/cg02.jpg",
+            "image_found": True,
+            "video_found": False,
+            "gif_found": False,
+            "can_use_avatar": False,
+            "source_reference_url": "https://dicionario.ines.gov.br/?q=mao",
+            "reason": "Imagem encontrada como apoio visual; video/GIF nao foram detectados.",
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    monkeypatch.setattr(
+        importer.ifpr,
+        "find_gif_for_word",
+        lambda word: {
+            "source": "ifpr",
+            "found": False,
+            "media_type": "none",
+            "word": word,
+            "reason": "GIF nao encontrado.",
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+    report = importer.diagnose_media_sources(["mao"], max_items=1, source_priority=["ines", "ifpr"])
+    item = report["items"][0]
+
+    assert item["media_type"] == "image"
+    assert item["image_found"] is True
+    assert item["video_found"] is False
+    assert item["gif_found"] is False
+    assert item["can_use_avatar"] is False
 
 
 def test_media_auto_fill_diagnose_respects_max_items(monkeypatch):

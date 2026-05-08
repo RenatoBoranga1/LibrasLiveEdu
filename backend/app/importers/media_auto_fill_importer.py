@@ -46,6 +46,7 @@ class MediaAutoFillImporter:
                     Sign.status.in_([SignStatus.pending.value, SignStatus.review.value, SignStatus.needs_specialist_review.value]),
                     Sign.video_url.is_(None),
                     Sign.avatar_gif_url.is_(None),
+                    Sign.avatar_animation_url.is_(None),
                 )
                 .order_by(Sign.updated_at.desc())
                 .limit(limit)
@@ -154,8 +155,12 @@ class MediaAutoFillImporter:
                         word=word,
                         normalized_word=self.normalizer.normalize_word(word),
                         source_used=None,
-                        media_type="existing",
-                        media_found=bool(sign.video_url or sign.avatar_gif_url or sign.image_url),
+                        media_type=self._sign_media_type(sign),
+                        media_found=self._sign_media_found(sign),
+                        video_found=bool(sign.video_url),
+                        gif_found=bool(sign.avatar_gif_url),
+                        image_found=bool(sign.image_url),
+                        can_use_avatar=self._has_primary_media(sign),
                         status=sign.status,
                         reason="Sinal aprovado existente não foi alterado automaticamente.",
                         recommended_action="Revisar manualmente se precisar trocar mídia",
@@ -170,8 +175,12 @@ class MediaAutoFillImporter:
                         word=word,
                         normalized_word=self.normalizer.normalize_word(word),
                         source_used=None,
-                        media_type="existing",
-                        media_found=True,
+                        media_type=self._sign_media_type(sign),
+                        media_found=self._sign_media_found(sign),
+                        video_found=bool(sign.video_url),
+                        gif_found=bool(sign.avatar_gif_url),
+                        image_found=bool(sign.image_url),
+                        can_use_avatar=self._has_primary_media(sign),
                         status=sign.status,
                         reason="Sinal já possui vídeo ou GIF; nada foi sobrescrito.",
                         recommended_action="Revisar mídia existente",
@@ -266,6 +275,10 @@ class MediaAutoFillImporter:
             "source_used": None,
             "media_type": "none",
             "media_found": False,
+            "video_found": False,
+            "gif_found": False,
+            "image_found": False,
+            "can_use_avatar": False,
             "video_url": None,
             "avatar_video_url": None,
             "avatar_gif_url": None,
@@ -299,6 +312,10 @@ class MediaAutoFillImporter:
         image_url = self._clean(lookup.get("image_url"))
         if media_type == "gif" and not image_url:
             image_url = avatar_gif_url
+        video_found = media_type == "video" and bool(video_url)
+        gif_found = media_type == "gif" and bool(avatar_gif_url)
+        image_found = media_type == "image" and bool(image_url)
+        can_use_avatar = video_found or gif_found or media_type == "animation"
 
         return {
             "word": word,
@@ -306,6 +323,10 @@ class MediaAutoFillImporter:
             "source_used": source,
             "media_type": media_type,
             "media_found": True,
+            "video_found": video_found,
+            "gif_found": gif_found,
+            "image_found": image_found,
+            "can_use_avatar": can_use_avatar,
             "video_url": video_url,
             "avatar_video_url": video_url,
             "avatar_gif_url": avatar_gif_url,
@@ -417,7 +438,21 @@ class MediaAutoFillImporter:
         return self.db.scalar(select(Sign).where(Sign.normalized_word == normalized).order_by(Sign.updated_at.desc()).limit(1))
 
     def _has_primary_media(self, sign: Sign) -> bool:
-        return bool(sign.video_url or sign.avatar_gif_url)
+        return bool(sign.video_url or sign.avatar_gif_url or sign.avatar_animation_url)
+
+    def _sign_media_found(self, sign: Sign) -> bool:
+        return bool(sign.video_url or sign.avatar_gif_url or sign.avatar_animation_url or sign.image_url)
+
+    def _sign_media_type(self, sign: Sign) -> str:
+        if sign.video_url:
+            return "video"
+        if sign.avatar_gif_url:
+            return "gif"
+        if sign.avatar_animation_url:
+            return "animation"
+        if sign.image_url:
+            return "image"
+        return "none"
 
     def _source_priority(self, value: list[str] | None) -> list[str]:
         priority = [item.strip().lower() for item in value or [] if item and item.strip().lower() in self.allowed_sources]
@@ -457,13 +492,22 @@ class MediaAutoFillImporter:
     def _append_item_from_result(self, report: dict[str, Any], *, word: str, sign_status: str, result: dict[str, Any], changed: bool) -> None:
         media_type = result.get("media_type") or "none"
         media_found = bool(result.get("media_found"))
+        video_found = bool(result.get("video_found") or result.get("video_url") or result.get("avatar_video_url"))
+        gif_found = bool(result.get("gif_found") or result.get("avatar_gif_url"))
+        image_found = bool(result.get("image_found") or (media_type == "image" and result.get("image_url")))
+        can_use_avatar = bool(
+            result.get("can_use_avatar")
+            or (media_type == "video" and video_found)
+            or (media_type == "gif" and gif_found)
+            or (media_type == "animation" and result.get("avatar_animation_url"))
+        )
         if media_found:
             report["media_found_count"] += 1
-            if media_type == "video":
+            if video_found:
                 report["video_found_count"] += 1
-            elif media_type == "gif":
+            if gif_found:
                 report["gif_found_count"] += 1
-            elif media_type == "image":
+            if image_found:
                 report["image_found_count"] += 1
         elif sign_status == "diagnostic":
             report["media_missing_count"] += 1
@@ -476,8 +520,13 @@ class MediaAutoFillImporter:
             source_used=result.get("source_used"),
             media_type=media_type,
             media_found=media_found,
+            video_found=video_found,
+            gif_found=gif_found,
+            image_found=image_found,
+            can_use_avatar=can_use_avatar,
             video_url=result.get("video_url") or result.get("avatar_video_url"),
             avatar_gif_url=result.get("avatar_gif_url"),
+            avatar_animation_url=result.get("avatar_animation_url"),
             image_url=result.get("image_url"),
             source_reference_url=result.get("source_reference_url"),
             status=sign_status,
@@ -499,8 +548,13 @@ class MediaAutoFillImporter:
         status: str,
         reason: str,
         recommended_action: str,
+        video_found: bool = False,
+        gif_found: bool = False,
+        image_found: bool = False,
+        can_use_avatar: bool = False,
         video_url: str | None = None,
         avatar_gif_url: str | None = None,
+        avatar_animation_url: str | None = None,
         image_url: str | None = None,
         source_reference_url: str | None = None,
         warnings: list[str] | None = None,
@@ -513,8 +567,13 @@ class MediaAutoFillImporter:
                 "source_used": source_used,
                 "media_type": media_type,
                 "media_found": media_found,
+                "video_found": video_found,
+                "gif_found": gif_found,
+                "image_found": image_found,
+                "can_use_avatar": can_use_avatar,
                 "video_url": video_url,
                 "avatar_gif_url": avatar_gif_url,
+                "avatar_animation_url": avatar_animation_url,
                 "image_url": image_url,
                 "source_reference_url": source_reference_url,
                 "status": status,
@@ -593,6 +652,7 @@ class MediaAutoFillImporter:
             "license_notes": sign.license_notes,
             "video_url": sign.video_url,
             "avatar_gif_url": sign.avatar_gif_url,
+            "avatar_animation_url": sign.avatar_animation_url,
             "image_url": sign.image_url,
             "curator_notes": sign.curator_notes,
         }

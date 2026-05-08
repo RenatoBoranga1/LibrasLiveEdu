@@ -560,7 +560,7 @@ function DiagnosePanel({ result }: { result: InesDiagnoseResponse }) {
         <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-black text-ink dark:bg-zinc-800 dark:text-white">{result.total_items} itens</span>
       </div>
       <div className="mt-3 overflow-x-auto rounded-lg border border-ink/10 dark:border-white/10">
-        <table className="min-w-[1100px] w-full border-collapse text-left text-sm">
+        <table className="min-w-[1280px] w-full border-collapse text-left text-sm">
           <thead className="bg-teal-50 text-xs font-black uppercase tracking-normal text-ink/70 dark:bg-zinc-800 dark:text-white/70">
             <tr>
               <th className="px-3 py-3">Palavra</th>
@@ -568,8 +568,11 @@ function DiagnosePanel({ result }: { result: InesDiagnoseResponse }) {
               <th className="px-3 py-3">Palavra encontrada</th>
               <th className="px-3 py-3">Imagem</th>
               <th className="px-3 py-3">Vídeo</th>
+              <th className="px-3 py-3">GIF</th>
+              <th className="px-3 py-3">Tipo</th>
               <th className="px-3 py-3">Host permitido</th>
               <th className="px-3 py-3">Pode importar</th>
+              <th className="px-3 py-3">Pode usar no avatar</th>
               <th className="px-3 py-3">Motivo</th>
               <th className="px-3 py-3">URL do vídeo</th>
               <th className="px-3 py-3">URL da fonte</th>
@@ -587,15 +590,18 @@ function DiagnosePanel({ result }: { result: InesDiagnoseResponse }) {
                 <td className="px-3 py-3"><BooleanBadge value={item.word_found_in_page} /></td>
                 <td className="px-3 py-3"><BooleanBadge value={item.image_found} /></td>
                 <td className="px-3 py-3"><BooleanBadge value={item.video_found} /></td>
+                <td className="px-3 py-3"><BooleanBadge value={Boolean(item.gif_found)} /></td>
+                <td className="px-3 py-3 font-black text-ink/70 dark:text-white/70">{mediaTypeLabel(item.media_type)}</td>
                 <td className="px-3 py-3"><BooleanBadge value={item.video_host_allowed} /></td>
                 <td className="px-3 py-3"><BooleanBadge value={item.can_import} trueLabel="Sim" falseLabel="Não" /></td>
+                <td className="px-3 py-3"><BooleanBadge value={Boolean(item.can_use_avatar)} trueLabel="Sim" falseLabel="Não" /></td>
                 <td className="max-w-xs px-3 py-3">
                   <p className="font-semibold leading-relaxed text-ink/75 dark:text-white/75">{item.reason}</p>
                   <DiagnosticMessages title="Avisos" tone="warning" items={item.warnings} />
                   <DiagnosticMessages title="Erros" tone="error" items={item.errors} />
                 </td>
                 <td className="max-w-xs px-3 py-3">
-                  {item.video_url ? <ExternalUrl href={item.video_url} label="Abrir vídeo" /> : <span className="font-semibold text-ink/50 dark:text-white/50">Sem vídeo detectado</span>}
+                  {item.video_url ? <ExternalUrl href={item.video_url} label="Abrir vídeo" /> : item.gif_url ? <ExternalUrl href={item.gif_url} label="Abrir GIF" /> : <span className="font-semibold text-ink/50 dark:text-white/50">Sem vídeo detectado</span>}
                 </td>
                 <td className="max-w-xs px-3 py-3">
                   <div className="space-y-2">
@@ -611,6 +617,13 @@ function DiagnosePanel({ result }: { result: InesDiagnoseResponse }) {
       </div>
     </div>
   );
+}
+
+function mediaTypeLabel(type?: string) {
+  if (type === "video") return "Video";
+  if (type === "gif") return "GIF";
+  if (type === "image") return "Imagem de apoio";
+  return "Sem midia animada";
 }
 
 function BooleanBadge({ value, trueLabel = "Sim", falseLabel = "Não" }: { value: boolean; trueLabel?: string; falseLabel?: string }) {

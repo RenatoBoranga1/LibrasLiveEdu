@@ -497,6 +497,9 @@ export type MediaAutoFillReportItem = {
   gif_found?: boolean;
   image_found?: boolean;
   can_use_avatar?: boolean;
+  validated?: boolean | null;
+  http_status?: number | null;
+  content_type?: string | null;
   video_url?: string | null;
   avatar_gif_url?: string | null;
   avatar_animation_url?: string | null;

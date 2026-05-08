@@ -155,3 +155,48 @@ def test_media_auto_fill_uses_manifest_before_live_lookup(tmp_path, monkeypatch)
     assert result["detection_method"] == "site_crawl"
     assert result["video_url"].endswith("professorSm_Prog001.mp4")
     assert result["can_use_avatar"] is True
+
+
+def test_media_auto_fill_uses_escola_manifest_url_when_probe_would_fail(tmp_path, monkeypatch):
+    real_video_url = "https://dicionario.ines.gov.br/public/media/palavras/videos/escolaEntradaReal.mp4"
+    manifest = {
+        "source_name": "Dicionário da Língua Brasileira de Sinais - INES",
+        "source_url": "https://dicionario.ines.gov.br/",
+        "license": "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu",
+        "license_notes": "Mídia autorizada para uso educacional.",
+        "entries": {
+            "escola": {
+                "word": "escola",
+                "normalized_word": "escola",
+                "video_url": real_video_url,
+                "avatar_video_url": real_video_url,
+                "image_url": "https://dicionario.ines.gov.br/public/media/mao/cg02.jpg",
+                "source_reference_url": "https://dicionario.ines.gov.br/?q=escola",
+                "media_type": "video",
+                "can_use_avatar": True,
+                "detection_method": "site_crawl",
+                "validated": True,
+                "http_status": 200,
+                "content_type": "video/mp4",
+            }
+        },
+    }
+    (tmp_path / "ines_video_manifest.generated.json").write_text(json.dumps(manifest), encoding="utf-8")
+    importer = MediaAutoFillImporter(db=None)  # type: ignore[arg-type]
+    old_output_dir = importer.settings.crawler_output_dir
+    importer.settings.crawler_output_dir = str(tmp_path)
+    monkeypatch.setattr(importer.ines, "find_ines_entry_for_word", lambda word: (_ for _ in ()).throw(AssertionError("probing should not run when manifest has escola")))
+
+    try:
+        result = importer._find_media("escola", ["ines", "ifpr"])
+    finally:
+        importer.settings.crawler_output_dir = old_output_dir
+
+    assert result["video_url"] == real_video_url
+    assert result["avatar_video_url"] == real_video_url
+    assert result["image_url"] == "https://dicionario.ines.gov.br/public/media/mao/cg02.jpg"
+    assert result["detection_method"] == "site_crawl"
+    assert result["validated"] is True
+    assert result["http_status"] == 200
+    assert result["content_type"] == "video/mp4"
+    assert result["can_use_avatar"] is True

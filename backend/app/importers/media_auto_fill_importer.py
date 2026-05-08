@@ -241,10 +241,24 @@ class MediaAutoFillImporter:
         diagnostics: list[dict[str, Any]] = []
         fallback_image: dict[str, Any] | None = None
 
-        for source in source_priority:
-            manifest_lookup = self._find_manifest_media(word, source)
+        if "ines" in source_priority:
+            manifest_lookup = self._find_manifest_media(word, "ines")
             if manifest_lookup:
-                return self._normalize_media_result(word, source, str(manifest_lookup.get("media_type") or "video"), manifest_lookup)
+                manifest_result = self._normalize_media_result(word, "ines", str(manifest_lookup.get("media_type") or "video"), manifest_lookup)
+                if manifest_result.get("can_use_avatar"):
+                    return manifest_result
+                if manifest_result.get("image_url"):
+                    fallback_image = manifest_result
+
+        manual_lookup = self._find_manual_manifest_media(word)
+        if manual_lookup:
+            manual_result = self._normalize_media_result(word, str(manual_lookup.get("source_used") or "manual"), str(manual_lookup.get("media_type") or "video"), manual_lookup)
+            if manual_result.get("can_use_avatar"):
+                return manual_result
+            if manual_result.get("image_url") and not fallback_image:
+                fallback_image = manual_result
+
+        for source in source_priority:
             if source == "ines":
                 if not self.settings.ines_import_enabled:
                     diagnostics.append(
@@ -264,6 +278,13 @@ class MediaAutoFillImporter:
                 if lookup.get("image_url") and not fallback_image:
                     fallback_image = self._normalize_media_result(word, "ines", "image", lookup)
             if source == "ifpr":
+                manifest_lookup = self._find_manifest_media(word, "ifpr")
+                if manifest_lookup:
+                    manifest_result = self._normalize_media_result(word, "ifpr", str(manifest_lookup.get("media_type") or "gif"), manifest_lookup)
+                    if manifest_result.get("can_use_avatar"):
+                        return manifest_result
+                    if manifest_result.get("image_url") and not fallback_image:
+                        fallback_image = manifest_result
                 lookup = self.ifpr.find_gif_for_word(word)
                 diagnostics.append(lookup)
                 if lookup.get("found") and lookup.get("avatar_gif_url"):
@@ -346,6 +367,9 @@ class MediaAutoFillImporter:
             "gif_found": gif_found,
             "image_found": image_found,
             "can_use_avatar": can_use_avatar,
+            "validated": bool(lookup.get("validated")),
+            "http_status": lookup.get("http_status"),
+            "content_type": lookup.get("content_type"),
             "video_url": video_url,
             "avatar_video_url": video_url,
             "avatar_gif_url": avatar_gif_url,
@@ -544,6 +568,9 @@ class MediaAutoFillImporter:
             gif_found=gif_found,
             image_found=image_found,
             can_use_avatar=can_use_avatar,
+            validated=result.get("validated"),
+            http_status=result.get("http_status"),
+            content_type=result.get("content_type"),
             video_url=result.get("video_url") or result.get("avatar_video_url"),
             avatar_gif_url=result.get("avatar_gif_url"),
             avatar_animation_url=result.get("avatar_animation_url"),
@@ -573,6 +600,9 @@ class MediaAutoFillImporter:
         gif_found: bool = False,
         image_found: bool = False,
         can_use_avatar: bool = False,
+        validated: bool | None = None,
+        http_status: int | None = None,
+        content_type: str | None = None,
         video_url: str | None = None,
         avatar_gif_url: str | None = None,
         avatar_animation_url: str | None = None,
@@ -593,6 +623,9 @@ class MediaAutoFillImporter:
                 "gif_found": gif_found,
                 "image_found": image_found,
                 "can_use_avatar": can_use_avatar,
+                "validated": validated,
+                "http_status": http_status,
+                "content_type": content_type,
                 "video_url": video_url,
                 "avatar_gif_url": avatar_gif_url,
                 "avatar_animation_url": avatar_animation_url,
@@ -692,6 +725,16 @@ class MediaAutoFillImporter:
         manifest = self._load_manifest(source)
         if not manifest:
             return None
+        return self._find_entry_in_manifest(word, manifest, default_detection_method="manifest")
+
+    def _find_manual_manifest_media(self, word: str) -> dict[str, Any] | None:
+        for manifest in self._load_manual_manifests():
+            entry = self._find_entry_in_manifest(word, manifest, default_detection_method="manifest")
+            if entry:
+                return {**entry, "source_used": entry.get("source_used") or "manual"}
+        return None
+
+    def _find_entry_in_manifest(self, word: str, manifest: dict[str, Any], *, default_detection_method: str) -> dict[str, Any] | None:
         normalized_word = self.normalizer.normalize_word(word)
         entries = manifest.get("entries", {})
         candidates: list[dict[str, Any]] = []
@@ -700,17 +743,33 @@ class MediaAutoFillImporter:
             if isinstance(direct, dict):
                 candidates.append(direct)
             candidates.extend(entry for key, entry in entries.items() if isinstance(entry, dict) and str(key).startswith(f"{normalized_word}#"))
+            candidates.extend(
+                entry
+                for entry in entries.values()
+                if isinstance(entry, dict)
+                and entry not in candidates
+                and self.normalizer.normalize_word(str(entry.get("normalized_word") or entry.get("word") or "")) == normalized_word
+            )
         elif isinstance(entries, list):
             candidates.extend(entry for entry in entries if isinstance(entry, dict) and self.normalizer.normalize_word(str(entry.get("word") or "")) == normalized_word)
         for entry in candidates:
-            media_type = str(entry.get("media_type") or "")
+            media_type = str(entry.get("media_type") or self._manifest_media_type(entry))
             if media_type == "video" and (entry.get("video_url") or entry.get("avatar_video_url")):
-                return {**entry, "found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or "manifest"}
+                return {**entry, "found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or default_detection_method}
             if media_type == "gif" and (entry.get("avatar_gif_url") or entry.get("gif_url")):
-                return {**entry, "found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or "manifest"}
+                return {**entry, "found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or default_detection_method}
             if media_type == "image" and entry.get("image_url"):
                 return {**entry, "found": False, "media_found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or "manifest_support_image"}
         return None
+
+    def _manifest_media_type(self, entry: dict[str, Any]) -> str:
+        if entry.get("video_url") or entry.get("avatar_video_url"):
+            return "video"
+        if entry.get("avatar_gif_url") or entry.get("gif_url"):
+            return "gif"
+        if entry.get("image_url"):
+            return "image"
+        return "none"
 
     def _load_manifest(self, source: str) -> dict[str, Any] | None:
         output_dir = Path(self.settings.crawler_output_dir)
@@ -725,6 +784,29 @@ class MediaAutoFillImporter:
             return json.loads(path.read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001
             return None
+
+    def _load_manual_manifests(self) -> list[dict[str, Any]]:
+        output_dir = Path(self.settings.crawler_output_dir)
+        filenames = [
+            "media_manifest.generated.json",
+            "manual_media_manifest.generated.json",
+            "authorized_media_manifest.json",
+        ]
+        manifests: list[dict[str, Any]] = []
+        for filename in filenames:
+            path = output_dir / filename
+            if not path.exists() and not output_dir.is_absolute():
+                cwd = Path.cwd()
+                path = (cwd / Path(*output_dir.parts[1:]) / filename) if cwd.name == "backend" and output_dir.parts and output_dir.parts[0] == "backend" else cwd / path
+            if not path.exists():
+                continue
+            try:
+                loaded = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                continue
+            if isinstance(loaded, dict):
+                manifests.append(loaded)
+        return manifests
 
     def _is_http_url(self, value: str) -> bool:
         normalized = value.lower()

@@ -273,7 +273,7 @@ function ReportPanel({ report }: { report: MediaAutoFillReport }) {
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1260px] border-separate border-spacing-y-2 text-left text-sm">
+        <table className="w-full min-w-[1420px] border-separate border-spacing-y-2 text-left text-sm">
           <thead className="uppercase tracking-normal text-ink/60 dark:text-white/60">
             <tr>
               <th className="px-3 py-2">Palavra</th>
@@ -285,6 +285,8 @@ function ReportPanel({ report }: { report: MediaAutoFillReport }) {
               <th className="px-3 py-2">GIF</th>
               <th className="px-3 py-2">Imagem</th>
               <th className="px-3 py-2">Avatar</th>
+              <th className="px-3 py-2">Validada</th>
+              <th className="px-3 py-2">HTTP</th>
               <th className="px-3 py-2">URL da mídia</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Motivo</th>
@@ -325,10 +327,17 @@ function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
       <td className="px-3 py-3">
         <StatusBadge ok={Boolean(item.can_use_avatar)} compact />
       </td>
+      <td className="px-3 py-3">
+        <StatusBadge ok={Boolean(item.validated)} compact />
+      </td>
+      <td className="px-3 py-3">
+        <div>{item.http_status ?? "-"}</div>
+        {item.content_type ? <p className="mt-1 text-xs text-ink/60 dark:text-white/60">{item.content_type}</p> : null}
+      </td>
       <td className="max-w-72 px-3 py-3">
         {mediaUrl ? (
           <a className="break-all text-ocean underline-offset-4 hover:underline dark:text-mint" href={mediaUrl} target="_blank" rel="noreferrer">
-            Abrir mídia
+            {mediaUrl}
           </a>
         ) : (
           <span className="text-ink/60 dark:text-white/60">Sem URL</span>
@@ -410,8 +419,12 @@ function mediaTypeLabel(type?: string) {
 
 function detectionMethodLabel(method?: string) {
   if (method === "html_video") return "HTML";
+  if (method === "site_crawl") return "Crawler/manifesto";
+  if (method === "manifest") return "Manifesto";
+  if (method === "manifest_support_image") return "Manifesto imagem";
   if (method === "probed_video_url") return "Probing de URL";
   if (method === "gif_lookup") return "GIF";
+  if (method === "gif_site_crawl") return "Crawler GIF";
   if (method === "support_image_only") return "Imagem de apoio";
   if (method === "manual") return "Manual";
   return "Nenhum";

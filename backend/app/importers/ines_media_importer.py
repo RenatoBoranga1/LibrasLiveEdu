@@ -822,7 +822,7 @@ class InesMediaImporter:
             return False
 
     def _is_valid_video_probe_response(self, response: Any, url: str) -> bool:
-        if getattr(response, "status_code", None) != 200:
+        if getattr(response, "status_code", None) not in {200, 206}:
             return False
         headers = getattr(response, "headers", {}) or {}
         content_type = str(headers.get("content-type", "")).split(";")[0].strip().lower()

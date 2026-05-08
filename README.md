@@ -480,6 +480,19 @@ POST /api/admin/import/media-manifest
 
 A tela `/admin/media-crawler` permite rodar lotes pequenos, visualizar relatório, revisar manifesto e importar as entradas como pendentes. Depois disso, `/admin/media-auto-fill` passa a consultar os manifestos gerados antes de fazer HTML/probing/IFPR ao vivo, aumentando a chance de preencher URLs sem cadastro palavra por palavra.
 
+O manifesto INES resolve casos em que o nome real do arquivo não segue o padrão `{palavra}Sm_Prog001.mp4`. Por exemplo, se `escolaSm_Prog001.mp4` retornar 404, o preenchimento automático não salva essa URL chutada. Ele primeiro consulta `backend/data/generated/ines_video_manifest.generated.json`; se a entrada `escola` existir ali com uma URL real validada, usa `video_url`/`avatar_video_url` do manifesto e só depois considera HTML/probing ao vivo.
+
+Ordem usada pelo preenchimento automático:
+
+1. Manifesto INES gerado por crawler.
+2. Manifesto manual/autorizado em `backend/data/generated`.
+3. HTML, scripts, JSON e probing controlado do INES.
+4. Manifesto/lookup de GIFs autorizados.
+5. Imagem de apoio.
+6. Nenhuma mídia.
+
+Arquivos JPG/PNG, inclusive `/public/media/mao/*.jpg`, continuam entrando apenas em `image_url` e nunca contam como Avatar Libras.
+
 ## Uso de GIFs como mídia complementar no Avatar Libras
 
 O LibrasLive Edu também aceita GIFs autorizados como mídia complementar para sinais em Libras. O GIF é um fallback leve quando ainda não houver vídeo aprovado, mas não substitui validação por especialista nem a atuação de intérprete humano.

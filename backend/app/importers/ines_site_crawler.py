@@ -51,8 +51,8 @@ class InesSiteCrawler(ControlledSiteCrawler):
                 html = self._fetch(client, url)
                 if html is None:
                     continue
-                entry = self._extract_entry(html, url)
-                if entry:
+                page_entries = self._extract_entries(html, url)
+                for entry in page_entries:
                     key = entry["normalized_word"]
                     if key in entries:
                         variant_key = f"{key}#{len([item for item in entries if item.startswith(key + '#')]) + 1}"
@@ -110,33 +110,70 @@ class InesSiteCrawler(ControlledSiteCrawler):
         return list(dict.fromkeys(urls))
 
     def _extract_entry(self, html: str, page_url: str) -> dict[str, Any] | None:
+        entries = self._extract_entries(html, page_url)
+        return entries[0] if entries else None
+
+    def _extract_entries(self, html: str, page_url: str) -> list[dict[str, Any]]:
         candidates = [absolute_url(candidate, page_url) for candidate in media_candidates(html)]
-        video_url = next((url for url in candidates if is_ines_sign_video(url)), None)
-        if not video_url:
-            video_url = next((url for url in candidates if path_has_extension(url, VIDEO_EXTENSIONS)), None)
+        video_urls = self._unique([url for url in candidates if is_ines_sign_video(url)])
+        video_urls.extend(url for url in self._unique([url for url in candidates if path_has_extension(url, VIDEO_EXTENSIONS)]) if url not in video_urls)
         image_url = next((url for url in candidates if is_handshape_image(url)), None)
         if not image_url:
             image_url = next((url for url in candidates if path_has_extension(url, IMAGE_EXTENSIONS)), None)
-        if not video_url and not image_url:
-            return None
 
-        word = extract_page_word(html, page_url) or word_from_media_url(video_url or image_url or "")
-        if not word:
-            return None
-        normalized_word = self.normalizer.normalize_word(word)
-        if not normalized_word:
-            return None
-
-        validation = {"valid": False, "http_status": None, "content_type": None}
-        if video_url:
+        page_word = extract_page_word(html, page_url)
+        entries: list[dict[str, Any]] = []
+        for video_url in video_urls:
             validation = validate_remote_media(
                 video_url,
                 "video",
                 timeout=self.timeout_seconds,
                 user_agent=self.settings.crawler_user_agent,
             )
-            if not validation.get("valid"):
+            word = (page_word if len(video_urls) == 1 else None) or word_from_media_url(video_url)
+            entry = self._entry_for_media(
+                word=word,
+                page_url=page_url,
+                video_url=video_url,
+                image_url=image_url,
+                validation=validation,
+                html=html,
+            )
+            if entry:
+                entries.append(entry)
+            elif not validation.get("valid"):
                 self.errors.append({"word": word, "url": video_url, "message": "Vídeo detectado, mas validação falhou.", "validation": validation})
+
+        if entries:
+            return entries
+        if not image_url:
+            return []
+
+        entry = self._entry_for_media(
+            word=page_word or word_from_media_url(image_url),
+            page_url=page_url,
+            video_url=None,
+            image_url=image_url,
+            validation={"valid": False, "http_status": None, "content_type": None},
+            html=html,
+        )
+        return [entry] if entry else []
+
+    def _entry_for_media(
+        self,
+        *,
+        word: str | None,
+        page_url: str,
+        video_url: str | None,
+        image_url: str | None,
+        validation: dict[str, Any],
+        html: str,
+    ) -> dict[str, Any] | None:
+        if not word:
+            return None
+        normalized_word = self.normalizer.normalize_word(word)
+        if not normalized_word:
+            return None
 
         can_use_avatar = bool(video_url and validation.get("valid"))
         return {
@@ -156,6 +193,13 @@ class InesSiteCrawler(ControlledSiteCrawler):
             "http_status": validation.get("http_status"),
             "content_type": validation.get("content_type"),
         }
+
+    def _unique(self, values: list[str]) -> list[str]:
+        unique: list[str] = []
+        for value in values:
+            if value not in unique:
+                unique.append(value)
+        return unique
 
     def _is_relevant_link(self, url: str) -> bool:
         text = url.lower()

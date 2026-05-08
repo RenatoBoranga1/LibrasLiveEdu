@@ -57,6 +57,15 @@ class Settings(BaseSettings):
     ifpr_gif_license_text: str = "Uso autorizado ou licença identificada para apoio educacional"
     ifpr_gif_license_notes: str = "GIF utilizado como apoio visual em Libras, com fonte registrada."
 
+    crawler_enabled: bool = False
+    crawler_max_pages: int = 500
+    crawler_delay_ms: int = 1000
+    crawler_timeout_seconds: int = 20
+    crawler_user_agent: str = "LibrasLiveEdu-authorized-crawler/1.0"
+    crawler_output_dir: str = "backend/data/generated"
+    crawler_respect_robots: bool = True
+    crawler_allow_external_domains: bool = False
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @property

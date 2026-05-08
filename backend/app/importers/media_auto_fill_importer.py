@@ -1,5 +1,7 @@
+import json
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
@@ -240,6 +242,9 @@ class MediaAutoFillImporter:
         fallback_image: dict[str, Any] | None = None
 
         for source in source_priority:
+            manifest_lookup = self._find_manifest_media(word, source)
+            if manifest_lookup:
+                return self._normalize_media_result(word, source, str(manifest_lookup.get("media_type") or "video"), manifest_lookup)
             if source == "ines":
                 if not self.settings.ines_import_enabled:
                     diagnostics.append(
@@ -351,8 +356,8 @@ class MediaAutoFillImporter:
             "license": self._clean(lookup.get("license")) or license_text,
             "license_notes": self._clean(lookup.get("license_notes")) or license_notes,
             "gloss": self._clean(lookup.get("gloss")),
-            "reason": self._clean(lookup.get("reason")) or ("Vídeo encontrado." if media_type == "video" else "Mídia encontrada."),
-            "recommended_action": "Revisar e aprovar manualmente",
+            "reason": self._clean(lookup.get("reason")) or ("Vídeo encontrado." if media_type == "video" else "Apenas imagem de apoio encontrada." if media_type == "image" else "Mídia encontrada."),
+            "recommended_action": self._clean(lookup.get("recommended_action")) or ("Precisa de vídeo/GIF/animação" if media_type == "image" else "Revisar e aprovar manualmente"),
             "warnings": lookup.get("warnings", []),
             "errors": lookup.get("errors", []),
             "diagnostics": [lookup],
@@ -682,6 +687,44 @@ class MediaAutoFillImporter:
                 if text and text not in messages:
                     messages.append(text)
         return messages
+
+    def _find_manifest_media(self, word: str, source: str) -> dict[str, Any] | None:
+        manifest = self._load_manifest(source)
+        if not manifest:
+            return None
+        normalized_word = self.normalizer.normalize_word(word)
+        entries = manifest.get("entries", {})
+        candidates: list[dict[str, Any]] = []
+        if isinstance(entries, dict):
+            direct = entries.get(normalized_word)
+            if isinstance(direct, dict):
+                candidates.append(direct)
+            candidates.extend(entry for key, entry in entries.items() if isinstance(entry, dict) and str(key).startswith(f"{normalized_word}#"))
+        elif isinstance(entries, list):
+            candidates.extend(entry for entry in entries if isinstance(entry, dict) and self.normalizer.normalize_word(str(entry.get("word") or "")) == normalized_word)
+        for entry in candidates:
+            media_type = str(entry.get("media_type") or "")
+            if media_type == "video" and (entry.get("video_url") or entry.get("avatar_video_url")):
+                return {**entry, "found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or "manifest"}
+            if media_type == "gif" and (entry.get("avatar_gif_url") or entry.get("gif_url")):
+                return {**entry, "found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or "manifest"}
+            if media_type == "image" and entry.get("image_url"):
+                return {**entry, "found": False, "media_found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or "manifest_support_image"}
+        return None
+
+    def _load_manifest(self, source: str) -> dict[str, Any] | None:
+        output_dir = Path(self.settings.crawler_output_dir)
+        filename = "ines_video_manifest.generated.json" if source == "ines" else "libras_gif_manifest.generated.json"
+        path = output_dir / filename
+        if not path.exists() and not output_dir.is_absolute():
+            cwd = Path.cwd()
+            path = (cwd / Path(*output_dir.parts[1:]) / filename) if cwd.name == "backend" and output_dir.parts and output_dir.parts[0] == "backend" else cwd / path
+        if not path.exists():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            return None
 
     def _is_http_url(self, value: str) -> bool:
         normalized = value.lower()

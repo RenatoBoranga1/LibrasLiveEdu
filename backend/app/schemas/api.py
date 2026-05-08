@@ -194,6 +194,8 @@ class InesMediaImportReport(BaseModel):
     skipped_count: int = 0
     error_count: int = 0
     video_found_count: int = 0
+    gif_found_count: int = 0
+    image_found_count: int = 0
     video_missing_count: int = 0
     errors: list[dict[str, Any]] = Field(default_factory=list)
     warnings: list[dict[str, Any]] = Field(default_factory=list)
@@ -320,6 +322,28 @@ class MediaAutoFillResponse(BaseModel):
     job_id: int | None = None
     status: str
     report: MediaAutoFillReport
+
+
+class CrawlStartRequest(BaseModel):
+    max_pages: int | None = 20
+    delay_ms: int | None = None
+    output: str | None = None
+    dry_run: bool = False
+    words: list[str] = Field(default_factory=list)
+
+
+class CrawlJobResponse(BaseModel):
+    job_id: int | None = None
+    status: str
+    report: dict[str, Any]
+    manifest: dict[str, Any] | None = None
+
+
+class MediaManifestImportRequest(BaseModel):
+    source: str = "combined"
+    manifest: dict[str, Any] = Field(default_factory=dict)
+    approve_authorized: bool = False
+    overwrite: bool = False
 
 
 class ImportJobRead(BaseModel):

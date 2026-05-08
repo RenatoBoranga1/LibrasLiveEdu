@@ -371,6 +371,8 @@ export type InesImportReport = {
   skipped_count: number;
   error_count: number;
   video_found_count?: number;
+  gif_found_count?: number;
+  image_found_count?: number;
   video_missing_count?: number;
   errors: Array<{ word?: string | null; message: string }>;
   warnings?: Array<{ word?: string | null; message: string }>;
@@ -531,6 +533,65 @@ export type MediaAutoFillResponse = {
   status: string;
   report: MediaAutoFillReport;
 };
+
+export type CrawlReport = {
+  status: string;
+  source: string;
+  pages_visited?: number;
+  entries_found?: number;
+  videos_found?: number;
+  support_images_found?: number;
+  entries_without_video?: number;
+  gifs_found?: number;
+  errors_count?: number;
+  duplicates_count?: number;
+  manifest_path?: string | null;
+  pages_without_gif?: number;
+};
+
+export type CrawlResponse = {
+  job_id?: number | null;
+  status: string;
+  report: CrawlReport;
+  manifest?: Record<string, unknown> | null;
+};
+
+export function startInesCrawler(payload: {
+  max_pages?: number;
+  delay_ms?: number;
+  output?: string;
+  dry_run?: boolean;
+  words?: string[];
+}): Promise<CrawlResponse> {
+  return request<CrawlResponse>("/api/admin/crawl/ines-media/start", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function startLibrasGifCrawler(payload: {
+  max_pages?: number;
+  delay_ms?: number;
+  output?: string;
+  dry_run?: boolean;
+}): Promise<CrawlResponse> {
+  return request<CrawlResponse>("/api/admin/crawl/libras-gifs/start", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function importMediaManifest(payload: {
+  source: "ines" | "ifpr" | "combined";
+  manifest: Record<string, unknown>;
+  approve_authorized?: boolean;
+  overwrite?: boolean;
+}): Promise<InesImportJobResponse> {
+  return request<InesImportJobResponse>("/api/admin/import/media-manifest", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
 
 export function diagnoseMediaAutoFill(payload: {
   words: string[];

@@ -220,6 +220,9 @@ export default function AdminPage() {
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-amber px-4 py-3 text-base font-bold text-ink" href="/admin/media-auto-fill">
               Preencher URLs automaticamente
             </Link>
+            <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-base font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin/media-crawler">
+              Catálogo de mídias
+            </Link>
             <ActionButton tone="secondary" onClick={runSampleImport}>
               <FileJson className="h-5 w-5" aria-hidden="true" />
               Importar JSON
@@ -261,6 +264,9 @@ export default function AdminPage() {
               </p>
               <Link className="focus-ring mt-3 inline-flex min-h-12 items-center rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white" href="/admin/media-auto-fill">
                 Preencher URLs automaticamente
+              </Link>
+              <Link className="focus-ring ml-2 mt-3 inline-flex min-h-12 items-center rounded-lg bg-white px-4 py-3 text-sm font-bold text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint" href="/admin/media-crawler">
+                Gerar catálogos
               </Link>
             </div>
             <div className="flex flex-wrap items-end gap-3 border-b border-ink/10 pb-4 dark:border-white/10">

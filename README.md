@@ -431,6 +431,55 @@ O relatório mostra `detection_method` para explicar como a mídia foi detectada
 - `support_image_only`: apenas imagem estática foi encontrada.
 - `none`: nenhuma mídia detectável.
 
+## Catálogo automático de mídias Libras
+
+O projeto possui crawlers administrativos e controlados para gerar manifestos JSON a partir de fontes autorizadas, sem baixar vídeos/GIFs e sem alterar o banco automaticamente.
+
+Regras:
+
+- o crawler não roda em build, deploy, startup, seed ou migration;
+- os endpoints ficam bloqueados por padrão com `CRAWLER_ENABLED=false`;
+- scripts locais são executados manualmente por admin/desenvolvedor;
+- o crawler respeita limite de páginas, delay, timeout, domínio permitido e user-agent identificável;
+- os manifestos devem ser revisados antes de importar;
+- a importação de manifesto mantém sinais como `pending`;
+- `image_url` continua sendo apoio visual;
+- o Avatar exige `video_url`, `avatar_video_url`, `avatar_gif_url` ou `avatar_animation_url`.
+
+Variáveis:
+
+```env
+CRAWLER_ENABLED=false
+CRAWLER_MAX_PAGES=500
+CRAWLER_DELAY_MS=1000
+CRAWLER_TIMEOUT_SECONDS=20
+CRAWLER_USER_AGENT=LibrasLiveEdu-authorized-crawler/1.0
+CRAWLER_OUTPUT_DIR=backend/data/generated
+CRAWLER_RESPECT_ROBOTS=true
+CRAWLER_ALLOW_EXTERNAL_DOMAINS=false
+```
+
+Scripts locais:
+
+```bash
+cd backend
+python scripts/crawl_ines_media.py --max-pages 100 --output data/generated/ines_video_manifest.generated.json
+python scripts/crawl_libras_gifs.py --max-pages 100 --output data/generated/libras_gif_manifest.generated.json
+python scripts/crawl_ines_media.py --only-word aprender --dry-run
+python scripts/crawl_ines_media.py --words-from-db --limit 50
+```
+
+Endpoints administrativos opcionais:
+
+```bash
+POST /api/admin/crawl/ines-media/start
+POST /api/admin/crawl/libras-gifs/start
+GET /api/admin/crawl/{job_id}
+POST /api/admin/import/media-manifest
+```
+
+A tela `/admin/media-crawler` permite rodar lotes pequenos, visualizar relatório, revisar manifesto e importar as entradas como pendentes. Depois disso, `/admin/media-auto-fill` passa a consultar os manifestos gerados antes de fazer HTML/probing/IFPR ao vivo, aumentando a chance de preencher URLs sem cadastro palavra por palavra.
+
 ## Uso de GIFs como mídia complementar no Avatar Libras
 
 O LibrasLive Edu também aceita GIFs autorizados como mídia complementar para sinais em Libras. O GIF é um fallback leve quando ainda não houver vídeo aprovado, mas não substitui validação por especialista nem a atuação de intérprete humano.

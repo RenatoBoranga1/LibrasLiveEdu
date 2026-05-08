@@ -8,12 +8,17 @@ from app.core.database import get_db
 from app.core.security import hash_password, utc_now
 from app.importers.ines_authorized_media_importer import InesAuthorizedMediaImporter
 from app.importers.ines_media_importer import InesMediaImporter
+from app.importers.ines_site_crawler import InesSiteCrawler
+from app.importers.libras_gif_site_crawler import LibrasGifSiteCrawler
 from app.importers.libras_dictionary_importer import LibrasDictionaryImporter
+from app.importers.media_manifest_importer import MediaManifestImporter
 from app.importers.media_auto_fill_importer import MediaAutoFillImporter
 from app.models import ClassSession, ImportJob, SavedWord, Sign, SignAuditLog, User, UserRole
 from app.repositories.sign_repository import SignRepository
 from app.schemas.api import (
     AdminStats,
+    CrawlJobResponse,
+    CrawlStartRequest,
     InesMediaAutoPendingRequest,
     InesMediaAutoSelectedRequest,
     InesMediaDiagnoseRequest,
@@ -29,6 +34,7 @@ from app.schemas.api import (
     MediaAutoFillPendingRequest,
     MediaAutoFillResponse,
     MediaAutoFillSelectedRequest,
+    MediaManifestImportRequest,
     RejectSignRequest,
     SavedWordCreate,
     SignCurationRequest,
@@ -541,6 +547,66 @@ def start_media_auto_fill_selected(
     return {"job_id": job.id, "status": job.status, "report": report}
 
 
+@router.post("/admin/crawl/ines-media/start", response_model=CrawlJobResponse)
+def crawl_ines_media(
+    payload: CrawlStartRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.crawler_enabled:
+        raise HTTPException(status_code=403, detail="Crawler de midias desativado neste ambiente.")
+    output = payload.output or f"{settings.crawler_output_dir.rstrip('/')}/ines_video_manifest.generated.json"
+    crawler = InesSiteCrawler(max_pages=payload.max_pages, delay_ms=payload.delay_ms)
+    manifest = crawler.crawl(words=payload.words, output=output, dry_run=payload.dry_run)
+    report = manifest.get("report", {})
+    report["manifest_path"] = None if payload.dry_run else output
+    job = _create_crawl_job(db, source_name="INES site crawler", report=report, manifest=manifest)
+    return {"job_id": job.id, "status": job.status, "report": report, "manifest": manifest if payload.dry_run else None}
+
+
+@router.post("/admin/crawl/libras-gifs/start", response_model=CrawlJobResponse)
+def crawl_libras_gifs(
+    payload: CrawlStartRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.crawler_enabled:
+        raise HTTPException(status_code=403, detail="Crawler de midias desativado neste ambiente.")
+    output = payload.output or f"{settings.crawler_output_dir.rstrip('/')}/libras_gif_manifest.generated.json"
+    crawler = LibrasGifSiteCrawler(max_pages=payload.max_pages, delay_ms=payload.delay_ms)
+    manifest = crawler.crawl(output=output, dry_run=payload.dry_run)
+    report = manifest.get("report", {})
+    report["manifest_path"] = None if payload.dry_run else output
+    job = _create_crawl_job(db, source_name="Libras GIF site crawler", report=report, manifest=manifest)
+    return {"job_id": job.id, "status": job.status, "report": report, "manifest": manifest if payload.dry_run else None}
+
+
+@router.get("/admin/crawl/{job_id}", response_model=ImportJobRead)
+def get_crawl_job(job_id: int, db: Session = Depends(get_db), _: User = Depends(require_role(["admin"]))):
+    job = db.get(ImportJob, job_id)
+    if not job or "crawler" not in str(job.source_name).lower():
+        raise HTTPException(status_code=404, detail="Job de crawler nao encontrado.")
+    return job
+
+
+@router.post("/admin/import/media-manifest", response_model=InesMediaImportJobResponse)
+def import_media_manifest(
+    payload: MediaManifestImportRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    job, report = MediaManifestImporter(db).import_manifest(
+        manifest=payload.manifest,
+        source=payload.source,
+        user=user,
+        approve_authorized=payload.approve_authorized,
+        overwrite=payload.overwrite,
+    )
+    return {"job_id": job.id, "status": job.status, "report": report}
+
+
 @router.get("/admin/import/ines-media/{job_id}", response_model=InesMediaImportJobResponse)
 def get_ines_media_import_job(
     job_id: int,
@@ -721,7 +787,7 @@ def import_libras_gif_media(
                 )
             )
             report["processed_items"] += 1
-            report["video_found_count"] += 1
+            report["gif_found_count"] += 1
             report["pending_count"] += 1
             if created:
                 report["created_count"] += 1
@@ -803,6 +869,32 @@ def save_word(
     db.add(saved)
     db.commit()
     return {"id": saved.id, "word": sign.word, "status": "saved"}
+
+
+def _create_crawl_job(db: Session, *, source_name: str, report: dict, manifest: dict) -> ImportJob:
+    job = ImportJob(
+        source_type="crawler",
+        source_name=source_name,
+        status="completed",
+        total_records=int(report.get("pages_visited") or 0),
+        imported_records=int(report.get("entries_found") or 0),
+        updated_records=0,
+        failed_records=int(report.get("errors_count") or 0),
+        logs=[
+            {
+                "level": "report",
+                "row": None,
+                "message": "Crawler administrativo executado sob demanda.",
+                "report": report,
+                "generated_at": manifest.get("generated_at"),
+            }
+        ],
+        finished_at=utc_now(),
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    return job
 
 
 def _set_if_present(sign: Sign, field: str, value: str | None) -> None:

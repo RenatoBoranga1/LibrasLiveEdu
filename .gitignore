@@ -9,6 +9,7 @@ __pycache__/
 *.py[cod]
 *.log
 backend/data/import_report_*.json
+backend/data/generated/*.generated.json
 postgres_data/
 android/.gradle/
 android/.gradle-user/

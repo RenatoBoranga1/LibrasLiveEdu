@@ -178,6 +178,18 @@ def test_find_ines_entry_detects_video_urls_in_data_attributes(monkeypatch):
             return FakeResponse()
 
     monkeypatch.setattr("app.importers.ines_media_importer.httpx.Client", FakeClient)
+    monkeypatch.setattr(
+        "app.importers.ines_media_importer.validate_remote_media_url",
+        lambda url, expected_type, timeout_seconds=15, user_agent="": {
+            "valid": True,
+            "final_url": url,
+            "status_code": 200,
+            "content_type": "video/mp4",
+            "content_length": 123,
+            "media_type": "video",
+            "reason": "Mídia validada com sucesso.",
+        },
+    )
 
     result = importer.find_ines_entry_for_word("professor")
 
@@ -218,6 +230,18 @@ def test_find_ines_entry_prioritizes_ines_sign_video_over_handshape_image(monkey
             return FakeResponse()
 
     monkeypatch.setattr("app.importers.ines_media_importer.httpx.Client", FakeClient)
+    monkeypatch.setattr(
+        "app.importers.ines_media_importer.validate_remote_media_url",
+        lambda url, expected_type, timeout_seconds=15, user_agent="": {
+            "valid": True,
+            "final_url": url,
+            "status_code": 200,
+            "content_type": "video/mp4",
+            "content_length": 123,
+            "media_type": "video",
+            "reason": "Mídia validada com sucesso.",
+        },
+    )
 
     result = importer.find_ines_entry_for_word("aprender")
 
@@ -264,6 +288,18 @@ def test_probe_ines_video_candidates_finds_aprender_video(monkeypatch):
             return FakeProbeResponse(404)
 
     monkeypatch.setattr("app.importers.ines_media_importer.httpx.Client", FakeClient)
+    monkeypatch.setattr(
+        "app.importers.ines_media_importer.validate_remote_media_url",
+        lambda url, expected_type, timeout_seconds=15, user_agent="": {
+            "valid": True,
+            "final_url": url,
+            "status_code": 200,
+            "content_type": "video/mp4",
+            "content_length": 123,
+            "media_type": "video",
+            "reason": "Mídia validada com sucesso.",
+        },
+    )
 
     result = importer.find_ines_entry_for_word("aprender")
 
@@ -381,6 +417,18 @@ def test_ifpr_gif_importer_detects_authorized_gif_by_alt_text(monkeypatch):
             return FakeResponse()
 
     monkeypatch.setattr("app.importers.ifpr_gif_importer.httpx.Client", FakeClient)
+    monkeypatch.setattr(
+        "app.importers.ifpr_gif_importer.validate_remote_media_url",
+        lambda url, expected_type, timeout_seconds=15, user_agent="": {
+            "valid": True,
+            "final_url": url,
+            "status_code": 200,
+            "content_type": "image/gif",
+            "content_length": 123,
+            "media_type": "gif",
+            "reason": "MÃ­dia validada com sucesso.",
+        },
+    )
     try:
         result = importer.find_gif_for_word("professor")
     finally:
@@ -424,6 +472,18 @@ def test_media_auto_fill_diagnose_uses_ifpr_after_ines_miss(monkeypatch):
             "reason": "GIF encontrado na fonte IFPR.",
             "warnings": [],
             "errors": [],
+        },
+    )
+    monkeypatch.setattr(
+        "app.importers.media_auto_fill_importer.validate_remote_media_url",
+        lambda url, expected_type, timeout_seconds=15, user_agent="": {
+            "valid": True,
+            "final_url": url,
+            "status_code": 200,
+            "content_type": "image/gif",
+            "content_length": 123,
+            "media_type": "gif",
+            "reason": "Mídia validada com sucesso.",
         },
     )
 

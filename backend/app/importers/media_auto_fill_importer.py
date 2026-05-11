@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.models import ImportJob, ImportStatus, Sign, SignAuditLog, SignStatus, User
 from app.importers.ifpr_gif_importer import IfprGifImporter
 from app.importers.ines_media_importer import InesMediaImporter
+from app.services.media_validation import validate_remote_media_url
 from app.services.text_normalizer import TextNormalizerService
 
 
@@ -247,6 +248,7 @@ class MediaAutoFillImporter:
                 manifest_result = self._normalize_media_result(word, "ines", str(manifest_lookup.get("media_type") or "video"), manifest_lookup)
                 if manifest_result.get("can_use_avatar"):
                     return manifest_result
+                diagnostics.append(manifest_result)
                 if manifest_result.get("image_url"):
                     fallback_image = manifest_result
 
@@ -255,6 +257,7 @@ class MediaAutoFillImporter:
             manual_result = self._normalize_media_result(word, str(manual_lookup.get("source_used") or "manual"), str(manual_lookup.get("media_type") or "video"), manual_lookup)
             if manual_result.get("can_use_avatar"):
                 return manual_result
+            diagnostics.append(manual_result)
             if manual_result.get("image_url") and not fallback_image:
                 fallback_image = manual_result
 
@@ -283,6 +286,7 @@ class MediaAutoFillImporter:
                     manifest_result = self._normalize_media_result(word, "ifpr", str(manifest_lookup.get("media_type") or "gif"), manifest_lookup)
                     if manifest_result.get("can_use_avatar"):
                         return manifest_result
+                    diagnostics.append(manifest_result)
                     if manifest_result.get("image_url") and not fallback_image:
                         fallback_image = manifest_result
                 lookup = self.ifpr.find_gif_for_word(word)
@@ -303,6 +307,14 @@ class MediaAutoFillImporter:
         reasons = [str(item.get("reason")) for item in diagnostics if item.get("reason")]
         warnings = self._flatten_messages(diagnostics, "warnings")
         errors = self._flatten_messages(diagnostics, "errors")
+        validation_diagnostic = next(
+            (
+                item
+                for item in diagnostics
+                if item.get("validation_reason") or item.get("validation_status_code") or item.get("candidate_video_url")
+            ),
+            {},
+        )
         return {
             "word": word,
             "normalized_word": self.normalizer.normalize_word(word),
@@ -317,11 +329,20 @@ class MediaAutoFillImporter:
             "avatar_video_url": None,
             "avatar_gif_url": None,
             "image_url": None,
+            "candidate_video_url": validation_diagnostic.get("candidate_video_url"),
             "source_name": None,
             "source_url": None,
             "source_reference_url": None,
             "license": None,
             "license_notes": None,
+            "validated": False,
+            "http_status": validation_diagnostic.get("http_status"),
+            "content_type": validation_diagnostic.get("content_type"),
+            "validation_status_code": validation_diagnostic.get("validation_status_code"),
+            "validation_content_type": validation_diagnostic.get("validation_content_type"),
+            "validation_final_url": validation_diagnostic.get("validation_final_url"),
+            "validation_content_length": validation_diagnostic.get("validation_content_length"),
+            "validation_reason": validation_diagnostic.get("validation_reason"),
             "reason": "Nenhuma mídia foi localizada automaticamente." if not reasons else " | ".join(reasons[:3]),
             "recommended_action": "Importar manualmente por JSON/CSV autorizado",
             "detection_method": "none",
@@ -344,14 +365,55 @@ class MediaAutoFillImporter:
 
         video_url = self._clean(lookup.get("avatar_video_url")) or self._clean(lookup.get("video_url"))
         avatar_gif_url = self._clean(lookup.get("avatar_gif_url")) or self._clean(lookup.get("gif_url"))
+        avatar_animation_url = self._clean(lookup.get("avatar_animation_url"))
         explicit_image_url = self._clean(lookup.get("image_url"))
+        warnings = list(lookup.get("warnings", []) or [])
+        errors = list(lookup.get("errors", []) or [])
+        validation: dict[str, Any] | None = None
+        valid_validation: dict[str, Any] | None = None
+        if video_url:
+            validation = validate_remote_media_url(video_url, "video", timeout_seconds=self.settings.media_auto_fill_timeout_seconds)
+            if validation.get("valid"):
+                video_url = self._clean(validation.get("final_url")) or video_url
+                valid_validation = valid_validation or validation
+            else:
+                warnings.append(str(validation.get("reason") or "Vídeo não validado."))
+                video_url = None
+        if avatar_gif_url:
+            validation = validate_remote_media_url(avatar_gif_url, "gif", timeout_seconds=self.settings.media_auto_fill_timeout_seconds)
+            if validation.get("valid"):
+                avatar_gif_url = self._clean(validation.get("final_url")) or avatar_gif_url
+                valid_validation = valid_validation or validation
+            else:
+                warnings.append(str(validation.get("reason") or "GIF não validado."))
+                avatar_gif_url = None
+        if avatar_animation_url:
+            validation = validate_remote_media_url(avatar_animation_url, "animation", timeout_seconds=self.settings.media_auto_fill_timeout_seconds)
+            if validation.get("valid"):
+                avatar_animation_url = self._clean(validation.get("final_url")) or avatar_animation_url
+                valid_validation = valid_validation or validation
+            else:
+                warnings.append(str(validation.get("reason") or "Animação não validada."))
+                avatar_animation_url = None
+        validation = valid_validation or validation
         image_url = explicit_image_url
         if media_type == "gif" and not image_url:
             image_url = avatar_gif_url
         video_found = bool(video_url)
         gif_found = bool(avatar_gif_url)
         image_found = bool(explicit_image_url)
-        can_use_avatar = video_found or gif_found or media_type == "animation"
+        animation_found = bool(avatar_animation_url)
+        if video_found:
+            media_type = "video"
+        elif gif_found:
+            media_type = "gif"
+        elif animation_found:
+            media_type = "animation"
+        elif image_url:
+            media_type = "image"
+        else:
+            media_type = "none"
+        can_use_avatar = video_found or gif_found or animation_found
         detection_method = self._clean(lookup.get("detection_method"))
         if not detection_method:
             detection_method = "gif_lookup" if media_type == "gif" else "support_image_only" if media_type == "image" else "html_video" if media_type == "video" else "none"
@@ -362,17 +424,23 @@ class MediaAutoFillImporter:
             "source_used": source,
             "media_type": media_type,
             "detection_method": detection_method,
-            "media_found": True,
+            "media_found": bool(can_use_avatar or image_url),
             "video_found": video_found,
             "gif_found": gif_found,
             "image_found": image_found,
             "can_use_avatar": can_use_avatar,
-            "validated": bool(lookup.get("validated")),
-            "http_status": lookup.get("http_status"),
-            "content_type": lookup.get("content_type"),
+            "validated": bool(validation.get("valid")) if validation else False,
+            "http_status": (validation or {}).get("status_code") or lookup.get("http_status"),
+            "content_type": (validation or {}).get("content_type") or lookup.get("content_type"),
+            "validation_status_code": (validation or {}).get("status_code"),
+            "validation_content_type": (validation or {}).get("content_type"),
+            "validation_final_url": (validation or {}).get("final_url"),
+            "validation_content_length": (validation or {}).get("content_length"),
+            "validation_reason": (validation or {}).get("reason") or ("Imagem estática é apenas apoio visual e não serve para Avatar Libras." if media_type == "image" else None),
             "video_url": video_url,
             "avatar_video_url": video_url,
             "avatar_gif_url": avatar_gif_url,
+            "avatar_animation_url": avatar_animation_url,
             "image_url": image_url,
             "source_name": self._clean(lookup.get("source_name")) or source_name,
             "source_url": self._clean(lookup.get("source_url")) or source_url,
@@ -380,10 +448,12 @@ class MediaAutoFillImporter:
             "license": self._clean(lookup.get("license")) or license_text,
             "license_notes": self._clean(lookup.get("license_notes")) or license_notes,
             "gloss": self._clean(lookup.get("gloss")),
-            "reason": self._clean(lookup.get("reason")) or ("Vídeo encontrado." if media_type == "video" else "Apenas imagem de apoio encontrada." if media_type == "image" else "Mídia encontrada."),
+            "reason": self._clean(lookup.get("reason"))
+            or ((validation or {}).get("reason") if media_type == "none" else None)
+            or ("Vídeo encontrado." if media_type == "video" else "Apenas imagem de apoio encontrada." if media_type == "image" else "Mídia encontrada."),
             "recommended_action": self._clean(lookup.get("recommended_action")) or ("Precisa de vídeo/GIF/animação" if media_type == "image" else "Revisar e aprovar manualmente"),
-            "warnings": lookup.get("warnings", []),
-            "errors": lookup.get("errors", []),
+            "warnings": warnings,
+            "errors": errors,
             "diagnostics": [lookup],
         }
 
@@ -415,6 +485,8 @@ class MediaAutoFillImporter:
                 raise ValueError(f"{key} deve começar com http:// ou https://.")
         if result.get("media_type") in {"video", "gif"} and not (result.get("source_name") and result.get("source_url") and result.get("license") and result.get("license_notes")):
             raise ValueError("Mídia autorizada exige fonte, URL da fonte, licença e observações de licença.")
+        if result.get("media_type") in {"video", "gif", "animation"} and not result.get("validated"):
+            raise ValueError("Mídia de Avatar precisa passar na validação remota antes de ser salva.")
 
         sign.word = word
         sign.normalized_word = self.normalizer.normalize_word(word)
@@ -423,6 +495,8 @@ class MediaAutoFillImporter:
             sign.video_url = self._clean(result.get("avatar_video_url")) or self._clean(result.get("video_url")) or sign.video_url
         if overwrite or not sign.avatar_gif_url:
             sign.avatar_gif_url = self._clean(result.get("avatar_gif_url")) or sign.avatar_gif_url
+        if overwrite or not sign.avatar_animation_url:
+            sign.avatar_animation_url = self._clean(result.get("avatar_animation_url")) or sign.avatar_animation_url
         if overwrite or not sign.image_url:
             sign.image_url = self._clean(result.get("image_url")) or sign.image_url
         sign.source_name = self._clean(result.get("source_name")) or sign.source_name
@@ -538,11 +612,15 @@ class MediaAutoFillImporter:
         video_found = bool(result.get("video_found") or result.get("video_url") or result.get("avatar_video_url"))
         gif_found = bool(result.get("gif_found") or result.get("avatar_gif_url"))
         image_found = bool(result.get("image_found") or (media_type == "image" and result.get("image_url")))
+        validated = bool(result.get("validated"))
         can_use_avatar = bool(
-            result.get("can_use_avatar")
-            or (media_type == "video" and video_found)
-            or (media_type == "gif" and gif_found)
-            or (media_type == "animation" and result.get("avatar_animation_url"))
+            validated
+            and (
+                result.get("can_use_avatar")
+                or (media_type == "video" and video_found)
+                or (media_type == "gif" and gif_found)
+                or (media_type == "animation" and result.get("avatar_animation_url"))
+            )
         )
         if media_found:
             report["media_found_count"] += 1
@@ -568,9 +646,14 @@ class MediaAutoFillImporter:
             gif_found=gif_found,
             image_found=image_found,
             can_use_avatar=can_use_avatar,
-            validated=result.get("validated"),
+            validated=validated,
             http_status=result.get("http_status"),
             content_type=result.get("content_type"),
+            validation_status_code=result.get("validation_status_code"),
+            validation_content_type=result.get("validation_content_type"),
+            validation_final_url=result.get("validation_final_url"),
+            validation_content_length=result.get("validation_content_length"),
+            validation_reason=result.get("validation_reason"),
             video_url=result.get("video_url") or result.get("avatar_video_url"),
             avatar_gif_url=result.get("avatar_gif_url"),
             avatar_animation_url=result.get("avatar_animation_url"),
@@ -603,6 +686,11 @@ class MediaAutoFillImporter:
         validated: bool | None = None,
         http_status: int | None = None,
         content_type: str | None = None,
+        validation_status_code: int | None = None,
+        validation_content_type: str | None = None,
+        validation_final_url: str | None = None,
+        validation_content_length: int | None = None,
+        validation_reason: str | None = None,
         video_url: str | None = None,
         avatar_gif_url: str | None = None,
         avatar_animation_url: str | None = None,
@@ -626,6 +714,11 @@ class MediaAutoFillImporter:
                 "validated": validated,
                 "http_status": http_status,
                 "content_type": content_type,
+                "validation_status_code": validation_status_code,
+                "validation_content_type": validation_content_type,
+                "validation_final_url": validation_final_url,
+                "validation_content_length": validation_content_length,
+                "validation_reason": validation_reason,
                 "video_url": video_url,
                 "avatar_gif_url": avatar_gif_url,
                 "avatar_animation_url": avatar_animation_url,

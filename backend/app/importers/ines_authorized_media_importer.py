@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import ImportJob, ImportStatus, Sign, SignAuditLog, SignStatus, User
+from app.services.media_validation import validate_remote_media_url
 from app.services.text_normalizer import TextNormalizerService
 
 
@@ -209,6 +210,16 @@ class InesAuthorizedMediaImporter:
             for media_url in [image_url, video_url, animation_url]:
                 if media_url and not self._is_http_url(media_url):
                     raise ValueError(f"URL de mídia inválida para importação sem download: {media_url}")
+            if video_url:
+                validation = validate_remote_media_url(video_url, "video")
+                if not validation.get("valid"):
+                    raise ValueError(f"URL de vídeo inválida ou inacessível. A mídia não foi salva. {validation.get('reason')}")
+                video_url = str(validation.get("final_url") or video_url)
+            if animation_url:
+                validation = validate_remote_media_url(animation_url, "animation")
+                if not validation.get("valid"):
+                    raise ValueError(f"URL de animação inválida ou inacessível. A mídia não foi salva. {validation.get('reason')}")
+                animation_url = str(validation.get("final_url") or animation_url)
 
         if download_media:
             image_url = self._download_media(image_url, normalized_word, "image", overwrite_files) if image_url else None

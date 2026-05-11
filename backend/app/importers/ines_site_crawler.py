@@ -176,13 +176,14 @@ class InesSiteCrawler(ControlledSiteCrawler):
             return None
 
         can_use_avatar = bool(video_url and validation.get("valid"))
+        final_video_url = str(validation.get("final_url") or video_url) if can_use_avatar else None
         return {
             "word": word,
             "normalized_word": normalized_word,
             "gloss": word.upper(),
             "source_reference_url": page_url,
-            "video_url": video_url if can_use_avatar else None,
-            "avatar_video_url": video_url if can_use_avatar else None,
+            "video_url": final_video_url,
+            "avatar_video_url": final_video_url,
             "image_url": image_url,
             "meaning": extract_labeled_text(html, ["Acepção", "Significado"]) or "",
             "grammatical_class": extract_labeled_text(html, ["Classe Gramatical"]) or "",
@@ -192,6 +193,11 @@ class InesSiteCrawler(ControlledSiteCrawler):
             "validated": bool(validation.get("valid")) if video_url else False,
             "http_status": validation.get("http_status"),
             "content_type": validation.get("content_type"),
+            "validation_status_code": validation.get("status_code") or validation.get("http_status"),
+            "validation_content_type": validation.get("content_type"),
+            "validation_final_url": validation.get("final_url"),
+            "validation_content_length": validation.get("content_length"),
+            "validation_reason": validation.get("reason"),
         }
 
     def _unique(self, values: list[str]) -> list[str]:

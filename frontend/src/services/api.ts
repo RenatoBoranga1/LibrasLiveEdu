@@ -221,6 +221,7 @@ export type SignMediaPayload = {
   video_url?: string | null;
   avatar_video_url?: string | null;
   avatar_gif_url?: string | null;
+  avatar_animation_url?: string | null;
   image_url?: string | null;
   curator_notes?: string | null;
 };
@@ -500,6 +501,11 @@ export type MediaAutoFillReportItem = {
   validated?: boolean | null;
   http_status?: number | null;
   content_type?: string | null;
+  validation_status_code?: number | null;
+  validation_content_type?: string | null;
+  validation_final_url?: string | null;
+  validation_content_length?: number | null;
+  validation_reason?: string | null;
   video_url?: string | null;
   avatar_gif_url?: string | null;
   avatar_animation_url?: string | null;
@@ -511,6 +517,29 @@ export type MediaAutoFillReportItem = {
   warnings?: string[];
   errors?: string[];
 };
+
+export type MediaValidationExpectedType = "video" | "gif" | "animation";
+
+export type MediaValidationResult = {
+  valid: boolean;
+  url: string;
+  final_url?: string | null;
+  status_code?: number | null;
+  content_type?: string | null;
+  content_length?: number | null;
+  media_type: string;
+  reason: string;
+};
+
+export function validateMediaUrl(payload: {
+  url: string;
+  expected_type: MediaValidationExpectedType;
+}): Promise<MediaValidationResult> {
+  return request<MediaValidationResult>("/api/admin/media/validate-url", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
 
 export type MediaAutoFillReport = {
   status: string;

@@ -19,7 +19,9 @@ import {
   listSigns,
   listSubjects,
   rejectSign,
-  updateSignMedia
+  updateSignMedia,
+  validateMediaUrl,
+  type MediaValidationResult
 } from "@/services/api";
 import type { AdminStats, SignCategory, SignRecord, Subject } from "@/types/live";
 
@@ -65,6 +67,7 @@ export default function AdminPage() {
   const [selected, setSelected] = useState<SignRecord | null>(fallbackSigns[0]);
   const [auditLog, setAuditLog] = useState<Array<{ id: number; action: string; created_at: string }>>([]);
   const [message, setMessage] = useState("Modo demo ativo: dados locais aparecem se a API estiver offline.");
+  const [mediaValidation, setMediaValidation] = useState<MediaValidationResult | null>(null);
 
   const params = useMemo(() => {
     const search = new URLSearchParams();
@@ -119,6 +122,7 @@ export default function AdminPage() {
 
   function selectSign(sign: SignRecord) {
     setSelected(sign);
+    setMediaValidation(null);
     listSignAudit(sign.id).then(setAuditLog).catch(() => setAuditLog([]));
   }
 
@@ -159,6 +163,7 @@ export default function AdminPage() {
       video_url: selected.video_url,
       avatar_video_url: selected.avatar_video_url,
       avatar_gif_url: selected.avatar_gif_url,
+      avatar_animation_url: selected.avatar_animation_url,
       image_url: selected.image_url,
       curator_notes: selected.curator_notes,
     }).catch(() => null);
@@ -169,6 +174,24 @@ export default function AdminPage() {
     setSelected(updated);
     setSigns((current) => current.map((sign) => (sign.id === updated.id ? updated : sign)));
     setMessage("Mídia e curadoria salvas. O sinal permanece no status atual até aprovação por admin/curador.");
+  }
+
+  async function testSelectedMedia() {
+    if (!selected) return;
+    const videoUrl = selected.avatar_video_url || selected.video_url;
+    const url = videoUrl || selected.avatar_gif_url || selected.avatar_animation_url;
+    if (!url) {
+      setMessage("Informe uma URL de vídeo, GIF ou animação antes de testar.");
+      return;
+    }
+    const expected_type = videoUrl ? "video" : selected.avatar_gif_url ? "gif" : "animation";
+    const result = await validateMediaUrl({ url, expected_type }).catch(() => null);
+    if (!result) {
+      setMessage("Não foi possível testar a mídia agora.");
+      return;
+    }
+    setMediaValidation(result);
+    setMessage(result.valid ? "Mídia validada. Revise fonte/licença antes de aprovar." : "Esta mídia não carregou corretamente. Não aprove como Avatar.");
   }
 
   async function runSampleImport() {
@@ -222,6 +245,9 @@ export default function AdminPage() {
             </Link>
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-base font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin/media-crawler">
               Catálogo de mídias
+            </Link>
+            <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-base font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin/media-validate">
+              Testar URL de mídia
             </Link>
             <ActionButton tone="secondary" onClick={runSampleImport}>
               <FileJson className="h-5 w-5" aria-hidden="true" />
@@ -574,6 +600,26 @@ export default function AdminPage() {
                         : "Sem video/GIF/animacao cadastrado. Aprovar este sinal sem midia animada fara o Avatar Libras manter fallback visual."}
                     </div>
                   )}
+                  <div className="rounded-lg border border-ink/10 bg-teal-50 p-3 dark:border-white/10 dark:bg-zinc-800">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-black text-ink dark:text-white">Validação da mídia animada</p>
+                      <ActionButton tone="quiet" onClick={testSelectedMedia}>
+                        Testar mídia
+                      </ActionButton>
+                    </div>
+                    {mediaValidation ? (
+                      <div className={`mt-3 rounded-lg p-3 text-sm font-bold ${mediaValidation.valid ? "bg-mint/40 text-ink" : "bg-red-100 text-red-950"}`}>
+                        <p>Validada: {mediaValidation.valid ? "Sim" : "Não"}</p>
+                        <p>Status HTTP: {mediaValidation.status_code ?? "-"}</p>
+                        <p>Content-Type: {mediaValidation.content_type ?? "-"}</p>
+                        <p className="break-all">URL final: {mediaValidation.final_url || mediaValidation.url}</p>
+                        <p>{mediaValidation.reason}</p>
+                        {!mediaValidation.valid ? <p className="mt-2 font-black">Esta mídia não carregou corretamente. Não aprove como Avatar.</p> : null}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm font-bold text-ink/70 dark:text-white/70">Teste antes de salvar/aprovar URLs novas de vídeo, GIF ou animação.</p>
+                    )}
+                  </div>
                   <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
                     Notas do curador
                     <textarea

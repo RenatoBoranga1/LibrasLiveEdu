@@ -11,6 +11,7 @@ from urllib.robotparser import RobotFileParser
 import httpx
 
 from app.core.config import get_settings
+from app.services.media_validation import validate_remote_media_url
 from app.services.text_normalizer import TextNormalizerService
 
 
@@ -86,28 +87,19 @@ def is_ines_sign_video(url: str) -> bool:
 
 
 def validate_remote_media(url: str, expected: str, *, timeout: int, user_agent: str) -> dict[str, Any]:
-    headers = {"User-Agent": user_agent}
-    result = {"url": url, "valid": False, "http_status": None, "content_type": None, "media_type": expected}
-    try:
-        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-            response = client.head(url, headers=headers)
-            if response.status_code in {403, 405, 501}:
-                response = client.get(url, headers={**headers, "Range": "bytes=0-0"})
-            result["http_status"] = response.status_code
-            result["content_type"] = response.headers.get("content-type", "").split(";")[0].strip().lower() or None
-    except Exception as exc:  # noqa: BLE001
-        result["error"] = str(exc)
-        return result
-
-    if result["http_status"] not in {200, 206}:
-        return result
-    content_type = str(result["content_type"] or "")
-    path = urlparse(url).path.lower()
-    if expected == "video":
-        result["valid"] = content_type in {"video/mp4", "video/webm", "video/quicktime", "application/octet-stream"} or path.endswith((".mp4", ".webm", ".mov"))
-    elif expected == "gif":
-        result["valid"] = content_type == "image/gif" or path.endswith(".gif")
-    return result
+    validation = validate_remote_media_url(
+        url,
+        expected_type="gif" if expected == "gif" else "video",
+        timeout_seconds=timeout,
+        user_agent=user_agent,
+    )
+    return {
+        **validation,
+        "http_status": validation.get("status_code"),
+        "content_type": validation.get("content_type"),
+        "valid": validation.get("valid", False),
+        "media_type": validation.get("media_type") or expected,
+    }
 
 
 def extract_internal_links(html: str, page_url: str, allowed_host: str, *, allow_external: bool = False) -> list[str]:

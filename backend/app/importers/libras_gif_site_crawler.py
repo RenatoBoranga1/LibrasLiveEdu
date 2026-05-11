@@ -110,12 +110,13 @@ class LibrasGifSiteCrawler(ControlledSiteCrawler):
             if not validation.get("valid"):
                 self.errors.append({"word": word, "url": gif_url, "message": "GIF detectado, mas validação falhou.", "validation": validation})
                 continue
+            final_gif_url = str(validation.get("final_url") or gif_url)
             entries.append(
                 {
                     "word": word,
                     "normalized_word": self.normalizer.normalize_word(word),
                     "gloss": word.upper(),
-                    "avatar_gif_url": gif_url,
+                    "avatar_gif_url": final_gif_url,
                     "source_reference_url": page_url,
                     "media_type": "gif",
                     "can_use_avatar": True,
@@ -123,6 +124,11 @@ class LibrasGifSiteCrawler(ControlledSiteCrawler):
                     "validated": True,
                     "http_status": validation.get("http_status"),
                     "content_type": validation.get("content_type"),
+                    "validation_status_code": validation.get("status_code") or validation.get("http_status"),
+                    "validation_content_type": validation.get("content_type"),
+                    "validation_final_url": validation.get("final_url"),
+                    "validation_content_length": validation.get("content_length"),
+                    "validation_reason": validation.get("reason"),
                 }
             )
         return entries

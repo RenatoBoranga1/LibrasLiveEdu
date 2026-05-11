@@ -35,6 +35,8 @@ from app.schemas.api import (
     MediaAutoFillResponse,
     MediaAutoFillSelectedRequest,
     MediaManifestImportRequest,
+    MediaValidateUrlRequest,
+    MediaValidateUrlResponse,
     RejectSignRequest,
     SavedWordCreate,
     SignCurationRequest,
@@ -42,6 +44,7 @@ from app.schemas.api import (
     SignRead,
     SignUpdate,
 )
+from app.services.media_validation import validate_remote_media_url
 from app.services.text_normalizer import TextNormalizerService
 
 router = APIRouter(tags=["signs"])
@@ -102,6 +105,9 @@ def create_manual_sign(
     sign.word = payload.word or sign.word
     sign.normalized_word = normalized_word
     sign.status = "pending"
+    validated_video = _validated_media_url(payload.avatar_video_url or payload.video_url, "video") if (payload.avatar_video_url or payload.video_url) else None
+    validated_gif = _validated_media_url(payload.avatar_gif_url, "gif") if payload.avatar_gif_url else None
+    validated_animation = _validated_media_url(payload.animation_payload_url, "animation") if payload.animation_payload_url else None
     _set_if_present(sign, "gloss", payload.gloss)
     _set_if_present(sign, "example_sentence", payload.example_sentence)
     _set_if_present(sign, "hand_configuration", payload.handshape)
@@ -111,9 +117,9 @@ def create_manual_sign(
     _set_if_present(sign, "source_url", payload.source_url)
     _set_if_present(sign, "license", payload.license)
     _set_if_present(sign, "image_url", payload.image_url)
-    _set_if_present(sign, "video_url", payload.avatar_video_url or payload.video_url)
-    _set_if_present(sign, "avatar_gif_url", payload.avatar_gif_url)
-    _set_if_present(sign, "avatar_animation_url", payload.animation_payload_url)
+    _set_if_present(sign, "video_url", validated_video)
+    _set_if_present(sign, "avatar_gif_url", validated_gif)
+    _set_if_present(sign, "avatar_animation_url", validated_animation)
     description = _manual_description(payload)
     if description:
         sign.description = description
@@ -156,6 +162,7 @@ def update_sign_media(
         payload.video_url if "video_url" in fields else None,
         payload.avatar_video_url if "avatar_video_url" in fields else None,
         payload.avatar_gif_url if "avatar_gif_url" in fields else None,
+        payload.avatar_animation_url if "avatar_animation_url" in fields else None,
         payload.image_url if "image_url" in fields else None,
     ]
     for media_url in media_values:
@@ -174,26 +181,37 @@ def update_sign_media(
         if "avatar_gif_url" in fields and payload.avatar_gif_url
         else sign.avatar_gif_url
     )
+    effective_animation = (
+        payload.avatar_animation_url
+        if "avatar_animation_url" in fields and payload.avatar_animation_url
+        else sign.avatar_animation_url
+    )
     effective_source_name = payload.source_name if "source_name" in fields and payload.source_name else sign.source_name
     effective_source_url = payload.source_url if "source_url" in fields and payload.source_url else sign.source_url
     effective_license = payload.license if "license" in fields and payload.license else sign.license
     effective_license_notes = payload.license_notes if "license_notes" in fields and payload.license_notes else _license_notes(sign)
-    if (effective_video or effective_gif) and not (effective_source_name and effective_source_url and effective_license):
+    if (effective_video or effective_gif or effective_animation) and not (effective_source_name and effective_source_url and effective_license):
         raise HTTPException(status_code=422, detail="Midia autorizada exige fonte, URL da fonte e licenca.")
-    if effective_gif and not effective_license_notes:
-        raise HTTPException(status_code=422, detail="GIF autorizado exige observacao de autorizacao/licenca.")
+    if (effective_video or effective_gif or effective_animation) and not effective_license_notes:
+        raise HTTPException(status_code=422, detail="Midia autorizada exige observacao de autorizacao/licenca.")
 
     old_value = _sign_snapshot(sign)
+    validated_video = None
+    if "avatar_video_url" in fields and payload.avatar_video_url:
+        validated_video = _validated_media_url(payload.avatar_video_url, "video")
+    elif "video_url" in fields and payload.video_url:
+        validated_video = _validated_media_url(payload.video_url, "video")
+    validated_gif = _validated_media_url(payload.avatar_gif_url, "gif") if "avatar_gif_url" in fields and payload.avatar_gif_url else None
+    validated_animation = _validated_media_url(payload.avatar_animation_url, "animation") if "avatar_animation_url" in fields and payload.avatar_animation_url else None
     _set_if_provided(sign, "gloss", payload.gloss, "gloss" in fields)
     _set_if_provided(sign, "source_name", payload.source_name, "source_name" in fields)
     _set_if_provided(sign, "source_url", payload.source_url, "source_url" in fields)
     _set_if_provided(sign, "license", payload.license, "license" in fields)
     _set_if_provided(sign, "image_url", payload.image_url, "image_url" in fields)
-    if "video_url" in fields:
-        _set_if_provided(sign, "video_url", payload.video_url, True)
-    if "avatar_video_url" in fields and payload.avatar_video_url:
-        sign.video_url = payload.avatar_video_url
-    _set_if_provided(sign, "avatar_gif_url", payload.avatar_gif_url, "avatar_gif_url" in fields)
+    if validated_video:
+        sign.video_url = validated_video
+    _set_if_provided(sign, "avatar_gif_url", validated_gif, bool(validated_gif))
+    _set_if_provided(sign, "avatar_animation_url", validated_animation, bool(validated_animation))
     _set_if_provided(sign, "curator_notes", payload.curator_notes, "curator_notes" in fields)
     sign.educational_notes = _merge_educational_metadata(
         sign.educational_notes,
@@ -216,6 +234,19 @@ def update_sign_media(
     return sign
 
 
+@router.post("/admin/media/validate-url", response_model=MediaValidateUrlResponse)
+def validate_media_url(
+    payload: MediaValidateUrlRequest,
+    _: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    return validate_remote_media_url(
+        payload.url,
+        expected_type=payload.expected_type,  # type: ignore[arg-type]
+        timeout_seconds=settings.media_auto_fill_timeout_seconds,
+    )
+
+
 @router.patch("/signs/{sign_id}/curation", response_model=SignRead)
 def curate_sign(
     sign_id: int,
@@ -229,7 +260,7 @@ def curate_sign(
     if payload.status == "approved":
         if not sign.source_name or not sign.source_url or not sign.license:
             raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem fonte, URL e licenca.")
-        if (sign.video_url or sign.avatar_gif_url) and not _license_notes(sign):
+        if (sign.video_url or sign.avatar_gif_url or sign.avatar_animation_url) and not _license_notes(sign):
             raise HTTPException(status_code=422, detail="Nao e permitido aprovar midia sem observacao de autorizacao/licenca.")
         if not sign.gloss and not sign.video_url and not sign.avatar_gif_url and not sign.avatar_animation_url:
             raise HTTPException(status_code=422, detail="Nao e permitido aprovar sinal sem video, GIF, animacao ou glosa.")
@@ -743,6 +774,10 @@ def import_libras_gif_media(
                     raise ValueError(f"{key} deve comecar com http:// ou https://.")
             if not (source_name and source_url and license_text and license_notes):
                 raise ValueError("GIF autorizado exige fonte, URL da fonte, licenca e observacoes de licenca.")
+            validation = validate_remote_media_url(gif_url, "gif")
+            if not validation.get("valid"):
+                raise ValueError(f"URL de GIF inválida ou inacessível. A mídia não foi salva. {validation.get('reason')}")
+            gif_url = str(validation.get("final_url") or gif_url)
 
             sign = db.scalar(select(Sign).where(Sign.normalized_word == normalized_word).order_by(Sign.updated_at.desc()).limit(1))
             if sign and sign.status == "approved" and not payload.overwrite:
@@ -800,6 +835,12 @@ def import_libras_gif_media(
                     "word": sign.word,
                     "status": sign.status,
                     "video_found": False,
+                    "validated": True,
+                    "validation_status_code": validation.get("status_code"),
+                    "validation_content_type": validation.get("content_type"),
+                    "validation_final_url": validation.get("final_url"),
+                    "validation_content_length": validation.get("content_length"),
+                    "validation_reason": validation.get("reason"),
                     "avatar_gif_url": sign.avatar_gif_url,
                     "source_reference_url": source_reference_url,
                     "image_url": sign.image_url,
@@ -909,6 +950,19 @@ def _set_if_provided(sign: Sign, field: str, value: str | None, provided: bool) 
 
 def _is_http_url(value: str) -> bool:
     return value.startswith("http://") or value.startswith("https://")
+
+
+def _validated_media_url(value: str | None, expected_type: str) -> str | None:
+    if not value:
+        return None
+    validation = validate_remote_media_url(value, expected_type=expected_type)  # type: ignore[arg-type]
+    if not validation.get("valid"):
+        label = "vídeo" if expected_type == "video" else "GIF" if expected_type == "gif" else "animação"
+        raise HTTPException(
+            status_code=400,
+            detail=f"URL de {label} inválida ou inacessível. A mídia não foi salva. {validation.get('reason')}",
+        )
+    return str(validation.get("final_url") or value)
 
 
 def _manual_description(payload: ManualSignCreate) -> str:

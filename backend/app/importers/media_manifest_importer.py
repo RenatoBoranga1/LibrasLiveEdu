@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import utc_now
 from app.models import ImportJob, Sign, SignAuditLog, User
+from app.services.media_validation import validate_remote_media_url
 from app.services.text_normalizer import TextNormalizerService
 
 
@@ -57,13 +58,38 @@ class MediaManifestImporter:
                 media_type = self._clean(entry.get("media_type")) or self._infer_media_type(entry)
                 video_url = self._clean(entry.get("avatar_video_url")) or self._clean(entry.get("video_url"))
                 gif_url = self._clean(entry.get("avatar_gif_url")) or self._clean(entry.get("gif_url"))
+                animation_url = self._clean(entry.get("avatar_animation_url"))
                 image_url = self._clean(entry.get("image_url"))
-                if media_type == "image" and not (video_url or gif_url):
-                    can_use_avatar = False
-                else:
-                    can_use_avatar = bool(video_url or gif_url or entry.get("avatar_animation_url"))
-                if not (video_url or gif_url or image_url):
-                    self._record_error(job, report, index, word, "Entrada sem URL de midia.")
+                validations: list[dict[str, Any]] = []
+                if video_url:
+                    validation = validate_remote_media_url(video_url, "video")
+                    validations.append(validation)
+                    if validation.get("valid"):
+                        video_url = self._clean(validation.get("final_url")) or video_url
+                    else:
+                        report["warnings"].append({"word": word, "message": str(validation.get("reason") or "Vídeo inválido; salvo apenas apoio visual se houver image_url.")})
+                        video_url = None
+                if gif_url:
+                    validation = validate_remote_media_url(gif_url, "gif")
+                    validations.append(validation)
+                    if validation.get("valid"):
+                        gif_url = self._clean(validation.get("final_url")) or gif_url
+                    else:
+                        report["warnings"].append({"word": word, "message": str(validation.get("reason") or "GIF inválido; salvo apenas apoio visual se houver image_url.")})
+                        gif_url = None
+                if animation_url:
+                    validation = validate_remote_media_url(animation_url, "animation")
+                    validations.append(validation)
+                    if validation.get("valid"):
+                        animation_url = self._clean(validation.get("final_url")) or animation_url
+                    else:
+                        report["warnings"].append({"word": word, "message": str(validation.get("reason") or "Animação inválida; salvo apenas apoio visual se houver image_url.")})
+                        animation_url = None
+                validation = next((item for item in validations if item.get("valid")), None) or (validations[0] if validations else self._support_image_validation())
+                can_use_avatar = bool(video_url or gif_url or animation_url)
+                media_type = "video" if video_url else "gif" if gif_url else "animation" if animation_url else "image" if image_url else "none"
+                if not (video_url or gif_url or animation_url or image_url):
+                    self._record_error(job, report, index, word, str(validation.get("reason") or "Entrada sem URL de midia validada."))
                     continue
 
                 sign = self.db.scalar(select(Sign).where(Sign.normalized_word == normalized_word).order_by(Sign.updated_at.desc()).limit(1))
@@ -88,6 +114,8 @@ class MediaManifestImporter:
                     sign.video_url = video_url or sign.video_url
                 if overwrite or not sign.avatar_gif_url:
                     sign.avatar_gif_url = gif_url or sign.avatar_gif_url
+                if overwrite or not sign.avatar_animation_url:
+                    sign.avatar_animation_url = animation_url or sign.avatar_animation_url
                 if overwrite or not sign.image_url:
                     sign.image_url = image_url or sign.image_url
                 sign.source_name = self._clean(entry.get("source_name")) or self._clean(manifest.get("source_name")) or sign.source_name
@@ -124,8 +152,15 @@ class MediaManifestImporter:
                         "status": "pending",
                         "media_type": media_type,
                         "can_use_avatar": can_use_avatar,
+                        "validated": bool(validation.get("valid")),
+                        "validation_status_code": validation.get("status_code"),
+                        "validation_content_type": validation.get("content_type"),
+                        "validation_final_url": validation.get("final_url"),
+                        "validation_content_length": validation.get("content_length"),
+                        "validation_reason": validation.get("reason") or ("Imagem estática é apenas apoio visual e não serve para Avatar Libras." if media_type == "image" else None),
                         "video_url": video_url,
                         "avatar_gif_url": gif_url,
+                        "avatar_animation_url": animation_url,
                         "image_url": image_url,
                         "source_reference_url": entry.get("source_reference_url"),
                         "detection_method": entry.get("detection_method"),
@@ -160,9 +195,23 @@ class MediaManifestImporter:
             return "video"
         if entry.get("avatar_gif_url") or entry.get("gif_url"):
             return "gif"
+        if entry.get("avatar_animation_url"):
+            return "animation"
         if entry.get("image_url"):
             return "image"
         return "none"
+
+    def _support_image_validation(self) -> dict[str, Any]:
+        return {
+            "valid": False,
+            "url": None,
+            "final_url": None,
+            "status_code": None,
+            "content_type": None,
+            "content_length": None,
+            "media_type": "none",
+            "reason": "Imagem estática é apenas apoio visual e não serve para Avatar Libras.",
+        }
 
     def _empty_report(self, *, total_items: int) -> dict[str, Any]:
         return {

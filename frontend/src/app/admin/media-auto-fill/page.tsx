@@ -305,7 +305,9 @@ function ReportPanel({ report }: { report: MediaAutoFillReport }) {
 }
 
 function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
-  const mediaUrl = item.video_url || item.avatar_gif_url || item.avatar_animation_url || item.image_url;
+  const avatarMediaUrl = item.video_url || item.avatar_gif_url || item.avatar_animation_url;
+  const mediaUrl = avatarMediaUrl || item.image_url;
+  const finalUrl = item.validation_final_url || mediaUrl;
   return (
     <tr className="bg-teal-50 font-semibold text-ink dark:bg-zinc-800 dark:text-white">
       <td className="rounded-l-lg px-3 py-3 text-base font-black">{item.word}</td>
@@ -331,14 +333,24 @@ function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
         <StatusBadge ok={Boolean(item.validated)} compact />
       </td>
       <td className="px-3 py-3">
-        <div>{item.http_status ?? "-"}</div>
-        {item.content_type ? <p className="mt-1 text-xs text-ink/60 dark:text-white/60">{item.content_type}</p> : null}
+        <div>{item.validation_status_code ?? item.http_status ?? "-"}</div>
+        {item.validation_content_type || item.content_type ? <p className="mt-1 text-xs text-ink/60 dark:text-white/60">{item.validation_content_type || item.content_type}</p> : null}
+        {item.validation_content_length ? <p className="mt-1 text-xs text-ink/60 dark:text-white/60">{item.validation_content_length} bytes</p> : null}
       </td>
       <td className="max-w-72 px-3 py-3">
         {mediaUrl ? (
-          <a className="break-all text-ocean underline-offset-4 hover:underline dark:text-mint" href={mediaUrl} target="_blank" rel="noreferrer">
-            {mediaUrl}
-          </a>
+          <div className="space-y-2">
+            <a className="break-all text-ocean underline-offset-4 hover:underline dark:text-mint" href={finalUrl || mediaUrl} target="_blank" rel="noreferrer">
+              {finalUrl || mediaUrl}
+            </a>
+            {item.validated && item.video_url ? (
+              <video className="h-24 w-36 rounded bg-black object-contain" src={finalUrl || item.video_url} controls muted playsInline preload="metadata" controlsList="nodownload" />
+            ) : null}
+            {item.validated && item.avatar_gif_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="h-24 w-36 rounded bg-zinc-100 object-contain dark:bg-zinc-950" src={finalUrl || item.avatar_gif_url} alt={`Prévia do GIF para ${item.word}`} loading="lazy" decoding="async" />
+            ) : null}
+          </div>
         ) : (
           <span className="text-ink/60 dark:text-white/60">Sem URL</span>
         )}
@@ -351,6 +363,8 @@ function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
             Apenas imagem de apoio. Não há movimento em Libras.
           </p>
         ) : null}
+        {item.validation_reason ? <p className="mt-2 text-xs font-bold text-ink/60 dark:text-white/60">{item.validation_reason}</p> : null}
+        {!item.validated && avatarMediaUrl ? <p className="mt-2 rounded-lg bg-red-100 px-2 py-1 text-xs font-black text-red-950">Não será salvo como mídia do Avatar.</p> : null}
         {(item.warnings?.length || item.errors?.length) ? (
           <div className="mt-2 space-y-1 text-xs">
             {item.warnings?.map((warning) => (
@@ -370,7 +384,7 @@ function ReportRow({ item }: { item: MediaAutoFillReportItem }) {
       </td>
       <td className="rounded-r-lg px-3 py-3">
         <div>{item.recommended_action || "Revisar"}</div>
-        {item.can_use_avatar ? (
+        {item.can_use_avatar && item.validated ? (
           <p className="mt-2 rounded-lg bg-mint px-2 py-1 text-xs font-black text-ink">Pronto para Avatar após aprovação</p>
         ) : null}
       </td>

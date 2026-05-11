@@ -269,6 +269,12 @@ class InesMediaDiagnoseResult(BaseModel):
     video_host_allowed: bool = False
     can_import: bool = False
     can_use_avatar: bool = False
+    validated: bool = False
+    validation_status_code: int | None = None
+    validation_content_type: str | None = None
+    validation_final_url: str | None = None
+    validation_content_length: int | None = None
+    validation_reason: str | None = None
     reason: str
     warnings: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
@@ -512,5 +518,22 @@ class SignMediaUpdate(BaseModel):
     video_url: str | None = None
     avatar_video_url: str | None = None
     avatar_gif_url: str | None = None
+    avatar_animation_url: str | None = None
     image_url: str | None = None
     curator_notes: str | None = None
+
+
+class MediaValidateUrlRequest(BaseModel):
+    url: str
+    expected_type: str = Field(pattern="^(video|gif|animation)$")
+
+
+class MediaValidateUrlResponse(BaseModel):
+    valid: bool
+    url: str
+    final_url: str | None = None
+    status_code: int | None = None
+    content_type: str | None = None
+    content_length: int | None = None
+    media_type: str
+    reason: str

@@ -6,6 +6,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 
 from app.core.config import get_settings
+from app.services.media_validation import validate_remote_media_url
 from app.services.text_normalizer import TextNormalizerService
 
 
@@ -42,6 +43,12 @@ class IfprGifImporter:
             "license": self.settings.ifpr_gif_license_text,
             "license_notes": self.settings.ifpr_gif_license_notes,
             "reason": "Diagnóstico IFPR não executado.",
+            "validated": False,
+            "validation_status_code": None,
+            "validation_content_type": None,
+            "validation_final_url": None,
+            "validation_content_length": None,
+            "validation_reason": None,
             "warnings": [],
             "errors": [],
         }
@@ -86,9 +93,31 @@ class IfprGifImporter:
             result["warnings"].append("Use importação manual por JSON/CSV quando a URL autorizada estiver disponível.")
             return result
 
+        validation = validate_remote_media_url(
+            gif_url,
+            "gif",
+            timeout_seconds=self.settings.media_auto_fill_timeout_seconds,
+            user_agent="LibrasLiveEdu-admin-gif-validator/1.0",
+        )
+        result.update(
+            {
+                "validated": bool(validation.get("valid")),
+                "validation_status_code": validation.get("status_code"),
+                "validation_content_type": validation.get("content_type"),
+                "validation_final_url": validation.get("final_url"),
+                "validation_content_length": validation.get("content_length"),
+                "validation_reason": validation.get("reason"),
+                "http_status": validation.get("status_code"),
+            }
+        )
+        if not validation.get("valid"):
+            result["reason"] = "GIF encontrado, mas a URL não passou na validação remota."
+            result["errors"].append(str(validation.get("reason") or "GIF inválido."))
+            return result
+
         result["found"] = True
-        result["avatar_gif_url"] = gif_url
-        result["image_url"] = gif_url
+        result["avatar_gif_url"] = str(validation.get("final_url") or gif_url)
+        result["image_url"] = result["avatar_gif_url"]
         result["reason"] = "GIF encontrado na fonte IFPR."
         return result
 

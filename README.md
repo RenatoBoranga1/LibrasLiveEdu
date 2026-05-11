@@ -431,6 +431,37 @@ O relatório mostra `detection_method` para explicar como a mídia foi detectada
 - `support_image_only`: apenas imagem estática foi encontrada.
 - `none`: nenhuma mídia detectável.
 
+## Validação obrigatória de mídia
+
+Toda URL que pode virar mídia animada do Avatar Libras é validada antes de ser salva em `video_url`, `avatar_video_url`, `avatar_gif_url` ou `avatar_animation_url`. A validação faz `HEAD` e, quando necessário, `GET` com `Range: bytes=0-0`, segue redirects e nunca baixa o arquivo inteiro.
+
+Regras:
+
+- status aceitos: `200` ou `206`;
+- vídeo precisa retornar `video/mp4`, `video/webm`, `video/quicktime` ou `application/octet-stream` com extensão `.mp4`, `.webm` ou `.mov`;
+- GIF precisa retornar `image/gif` ou `application/octet-stream` com extensão `.gif`;
+- HTML, `404`, `500`, JPG, PNG, WebP e `/public/media/mao/` são rejeitados como Avatar;
+- `image_url` continua permitido apenas como apoio visual;
+- manifesto, autofill, importadores e edição manual validam novamente antes de persistir;
+- mesmo validada, a mídia fica `pending` até curadoria.
+
+Endpoint administrativo para diagnosticar uma URL sem alterar o banco:
+
+```bash
+POST /api/admin/media/validate-url
+```
+
+Payload:
+
+```json
+{
+  "url": "https://dicionario.ines.gov.br/public/media/palavras/videos/aprenderSm_Prog001.mp4",
+  "expected_type": "video"
+}
+```
+
+A tela `/admin/media-validate` mostra status HTTP, `Content-Type`, `Content-Length`, URL final, motivo e prévia visual quando o vídeo/GIF realmente carrega. URLs quebradas, HTML disfarçado de MP4 e imagens estáticas não são salvas como Avatar Libras.
+
 ## Catálogo automático de mídias Libras
 
 O projeto possui crawlers administrativos e controlados para gerar manifestos JSON a partir de fontes autorizadas, sem baixar vídeos/GIFs e sem alterar o banco automaticamente.

@@ -28,6 +28,12 @@ const report = {
       gif_found: true,
       image_found: false,
       can_use_avatar: true,
+      validated: true,
+      validation_status_code: 200,
+      validation_content_type: "image/gif",
+      validation_final_url: "https://ifpr.edu.br/umuarama/libras-gifs/aluno.gif",
+      validation_content_length: 123,
+      validation_reason: "Mídia validada com sucesso.",
       avatar_gif_url: "https://ifpr.edu.br/umuarama/libras-gifs/aluno.gif",
       status: "pending",
       reason: "GIF encontrado na fonte IFPR.",
@@ -74,7 +80,8 @@ describe("media auto fill admin page", () => {
 
     await waitFor(() => expect(diagnoseMediaAutoFill).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/gif encontrado na fonte ifpr/i)).toBeInTheDocument();
-    expect(screen.getByText(/abrir mídia/i)).toBeInTheDocument();
+    expect(screen.getByText(/image\/gif/i)).toBeInTheDocument();
+    expect(screen.getByText(/pronto para avatar/i)).toBeInTheDocument();
   });
 
   it("starts selected word fill from the page", async () => {

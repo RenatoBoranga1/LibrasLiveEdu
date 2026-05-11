@@ -145,6 +145,18 @@ def test_media_auto_fill_uses_manifest_before_live_lookup(tmp_path, monkeypatch)
     old_output_dir = importer.settings.crawler_output_dir
     importer.settings.crawler_output_dir = str(tmp_path)
     monkeypatch.setattr(importer.ines, "find_ines_entry_for_word", lambda word: (_ for _ in ()).throw(AssertionError("live INES lookup should not run")))
+    monkeypatch.setattr(
+        "app.importers.media_auto_fill_importer.validate_remote_media_url",
+        lambda url, expected_type, timeout_seconds=15, user_agent="": {
+            "valid": True,
+            "final_url": url,
+            "status_code": 200,
+            "content_type": "video/mp4",
+            "content_length": 123,
+            "media_type": "video",
+            "reason": "Mídia validada com sucesso.",
+        },
+    )
 
     try:
         result = importer._find_media("professor", ["ines"])
@@ -186,6 +198,18 @@ def test_media_auto_fill_uses_escola_manifest_url_when_probe_would_fail(tmp_path
     old_output_dir = importer.settings.crawler_output_dir
     importer.settings.crawler_output_dir = str(tmp_path)
     monkeypatch.setattr(importer.ines, "find_ines_entry_for_word", lambda word: (_ for _ in ()).throw(AssertionError("probing should not run when manifest has escola")))
+    monkeypatch.setattr(
+        "app.importers.media_auto_fill_importer.validate_remote_media_url",
+        lambda url, expected_type, timeout_seconds=15, user_agent="": {
+            "valid": True,
+            "final_url": url,
+            "status_code": 200,
+            "content_type": "video/mp4",
+            "content_length": 123,
+            "media_type": "video",
+            "reason": "Mídia validada com sucesso.",
+        },
+    )
 
     try:
         result = importer._find_media("escola", ["ines", "ifpr"])
@@ -200,3 +224,51 @@ def test_media_auto_fill_uses_escola_manifest_url_when_probe_would_fail(tmp_path
     assert result["http_status"] == 200
     assert result["content_type"] == "video/mp4"
     assert result["can_use_avatar"] is True
+
+
+def test_media_auto_fill_rejects_invalid_manifest_video(tmp_path, monkeypatch):
+    manifest = {
+        "source_name": "Dicionário da Língua Brasileira de Sinais - INES",
+        "source_url": "https://dicionario.ines.gov.br/",
+        "license": "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu",
+        "license_notes": "Mídia autorizada para uso educacional.",
+        "entries": {
+            "escola": {
+                "word": "escola",
+                "normalized_word": "escola",
+                "video_url": "https://dicionario.ines.gov.br/public/media/palavras/videos/escolaSm_Prog001.mp4",
+                "avatar_video_url": "https://dicionario.ines.gov.br/public/media/palavras/videos/escolaSm_Prog001.mp4",
+                "media_type": "video",
+            }
+        },
+    }
+    (tmp_path / "ines_video_manifest.generated.json").write_text(json.dumps(manifest), encoding="utf-8")
+    importer = MediaAutoFillImporter(db=None)  # type: ignore[arg-type]
+    old_output_dir = importer.settings.crawler_output_dir
+    old_ines_enabled = importer.settings.ines_import_enabled
+    importer.settings.crawler_output_dir = str(tmp_path)
+    importer.settings.ines_import_enabled = False
+    monkeypatch.setattr(
+        "app.importers.media_auto_fill_importer.validate_remote_media_url",
+        lambda url, expected_type, timeout_seconds=15, user_agent="": {
+            "valid": False,
+            "final_url": url,
+            "status_code": 404,
+            "content_type": "text/html",
+            "content_length": None,
+            "media_type": "none",
+            "reason": "URL não retornou vídeo válido.",
+        },
+    )
+
+    try:
+        result = importer._find_media("escola", ["ines"])
+    finally:
+        importer.settings.crawler_output_dir = old_output_dir
+        importer.settings.ines_import_enabled = old_ines_enabled
+
+    assert result["can_use_avatar"] is False
+    assert result["media_type"] == "none"
+    assert result["video_url"] is None
+    assert result["validation_status_code"] == 404
+    assert result["validation_content_type"] == "text/html"

@@ -15,6 +15,7 @@ from app.core.config import get_settings
 from app.core.security import utc_now
 from app.models import ImportJob, ImportStatus, Sign, SignAuditLog, SignStatus, User
 from app.schemas.api import InesMediaImportStartRequest
+from app.services.media_validation import validate_remote_media_url
 from app.services.text_normalizer import TextNormalizerService
 
 
@@ -243,8 +244,15 @@ class InesMediaImporter:
                 "detection_method": diagnosis.get("detection_method"),
                 "video_found": diagnosis.get("video_found"),
                 "video_url": diagnosis.get("video_url"),
+                "candidate_video_url": diagnosis.get("candidate_video_url"),
                 "video_host_allowed": diagnosis.get("video_host_allowed"),
                 "can_use_avatar": diagnosis.get("can_use_avatar"),
+                "validated": diagnosis.get("validated"),
+                "validation_status_code": diagnosis.get("validation_status_code"),
+                "validation_content_type": diagnosis.get("validation_content_type"),
+                "validation_final_url": diagnosis.get("validation_final_url"),
+                "validation_content_length": diagnosis.get("validation_content_length"),
+                "validation_reason": diagnosis.get("validation_reason"),
                 "reason": diagnosis.get("reason"),
                 "warnings": diagnosis.get("warnings", []),
                 "errors": diagnosis.get("errors", []),
@@ -272,6 +280,12 @@ class InesMediaImporter:
             "video_found": diagnosis.get("video_found"),
             "video_host_allowed": diagnosis.get("video_host_allowed"),
             "can_use_avatar": diagnosis.get("can_use_avatar"),
+            "validated": diagnosis.get("validated"),
+            "validation_status_code": diagnosis.get("validation_status_code"),
+            "validation_content_type": diagnosis.get("validation_content_type"),
+            "validation_final_url": diagnosis.get("validation_final_url"),
+            "validation_content_length": diagnosis.get("validation_content_length"),
+            "validation_reason": diagnosis.get("validation_reason"),
             "meaning": diagnosis.get("meaning"),
             "grammatical_class": diagnosis.get("grammatical_class"),
             "reason": diagnosis.get("reason") or "Vídeo encontrado.",
@@ -314,6 +328,7 @@ class InesMediaImporter:
             "image_url": None,
             "video_found": False,
             "video_url": None,
+            "candidate_video_url": None,
             "gif_found": False,
             "gif_url": None,
             "media_type": "none",
@@ -321,6 +336,12 @@ class InesMediaImporter:
             "video_host_allowed": False,
             "can_import": False,
             "can_use_avatar": False,
+            "validated": False,
+            "validation_status_code": None,
+            "validation_content_type": None,
+            "validation_final_url": None,
+            "validation_content_length": None,
+            "validation_reason": None,
             "reason": "Diagnóstico não executado.",
             "warnings": [],
             "errors": [],
@@ -360,24 +381,63 @@ class InesMediaImporter:
             video_url = self._probe_ines_video_candidates(word, html, str(response.url))
             if video_url:
                 detection_method = "probed_video_url"
+        candidate_video_url = video_url
+        validation: dict[str, Any] | None = None
+        if video_url:
+            validation = validate_remote_media_url(
+                video_url,
+                "video",
+                timeout_seconds=self.settings.ines_import_timeout_seconds,
+                user_agent="LibrasLiveEdu-admin-ines-validator/1.0",
+            )
+            result["validated"] = bool(validation.get("valid"))
+            result["validation_status_code"] = validation.get("status_code")
+            result["validation_content_type"] = validation.get("content_type")
+            result["validation_final_url"] = validation.get("final_url")
+            result["validation_content_length"] = validation.get("content_length")
+            result["validation_reason"] = validation.get("reason")
+            if validation.get("valid"):
+                video_url = str(validation.get("final_url") or video_url)
+            else:
+                result["warnings"].append(str(validation.get("reason") or "Vídeo detectado, mas a URL não passou na validação."))
+                video_url = None
         gif_url = self._first_media_url(html, str(response.url), self.gif_extensions, require_allowed=False)
         if not video_url and gif_url:
             detection_method = "gif_lookup"
+            validation = validate_remote_media_url(
+                gif_url,
+                "gif",
+                timeout_seconds=self.settings.ines_import_timeout_seconds,
+                user_agent="LibrasLiveEdu-admin-ines-validator/1.0",
+            )
+            result["validated"] = bool(validation.get("valid"))
+            result["validation_status_code"] = validation.get("status_code")
+            result["validation_content_type"] = validation.get("content_type")
+            result["validation_final_url"] = validation.get("final_url")
+            result["validation_content_length"] = validation.get("content_length")
+            result["validation_reason"] = validation.get("reason")
+            if validation.get("valid"):
+                gif_url = str(validation.get("final_url") or gif_url)
+            else:
+                result["warnings"].append(str(validation.get("reason") or "GIF detectado, mas a URL não passou na validação."))
+                gif_url = None
         image_url = self._first_support_image_url(html, str(response.url))
         if not video_url and not gif_url and image_url:
             detection_method = "support_image_only"
+            result["validation_reason"] = "Imagem estática é apenas apoio visual e não serve para Avatar Libras."
         result["image_url"] = image_url
         result["image_found"] = bool(image_url)
         result["gif_url"] = gif_url
         result["gif_found"] = bool(gif_url)
         result["video_url"] = video_url
+        result["candidate_video_url"] = candidate_video_url
         result["video_found"] = bool(video_url)
         result["media_type"] = "video" if result["video_found"] else "gif" if result["gif_found"] else "image" if result["image_found"] else "none"
         result["detection_method"] = detection_method
         result["video_host_allowed"] = bool(video_url and self._is_allowed_media_url(video_url))
-        has_valid_video = bool(result["video_found"] and result["video_host_allowed"] and self._is_http_url(video_url or ""))
+        has_valid_video = bool(result["video_found"] and result["video_host_allowed"] and self._is_http_url(video_url or "") and result["validated"])
         result["can_import"] = bool(result["page_loaded"] and result["word_found_in_page"] and has_valid_video)
-        result["can_use_avatar"] = bool(has_valid_video or (result["gif_found"] and self._is_http_url(gif_url or "")))
+        result["can_use_avatar"] = bool(has_valid_video or (result["gif_found"] and self._is_http_url(gif_url or "") and result["validated"]))
         result["meaning"] = self._extract_labeled_text(html, ["Acepção", "Significado"])
         result["grammatical_class"] = self._extract_labeled_text(html, ["Classe Gramatical"])
 
@@ -673,6 +733,26 @@ class InesMediaImporter:
         video = avatar_video or self._clean(item.get("video_url"))
         avatar_gif = self._clean(item.get("avatar_gif_url")) or self._clean(item.get("gif_url"))
         image_url = self._clean(item.get("image_url"))
+        if video:
+            validation = validate_remote_media_url(
+                video,
+                "video",
+                timeout_seconds=self.settings.ines_import_timeout_seconds,
+                user_agent="LibrasLiveEdu-admin-ines-validator/1.0",
+            )
+            if not validation.get("valid"):
+                raise ValueError(f"URL de vídeo inválida ou inacessível. A mídia não foi salva. {validation.get('reason')}")
+            video = str(validation.get("final_url") or video)
+        if avatar_gif:
+            validation = validate_remote_media_url(
+                avatar_gif,
+                "gif",
+                timeout_seconds=self.settings.ines_import_timeout_seconds,
+                user_agent="LibrasLiveEdu-admin-ines-validator/1.0",
+            )
+            if not validation.get("valid"):
+                raise ValueError(f"URL de GIF inválida ou inacessível. A mídia não foi salva. {validation.get('reason')}")
+            avatar_gif = str(validation.get("final_url") or avatar_gif)
 
         sign.word = word
         sign.normalized_word = normalized_word

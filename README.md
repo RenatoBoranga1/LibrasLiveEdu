@@ -462,6 +462,16 @@ Payload:
 
 A tela `/admin/media-validate` mostra status HTTP, `Content-Type`, `Content-Length`, URL final, motivo e prévia visual quando o vídeo/GIF realmente carrega. URLs quebradas, HTML disfarçado de MP4 e imagens estáticas não são salvas como Avatar Libras.
 
+## Como adicionar novas palavras
+
+A entrada principal para cadastrar vocabulário novo fica em `/admin/add-words`. O painel `/admin` também mostra o botão destacado **Adicionar novas palavras**, com três caminhos simples:
+
+1. **Adicionar pelo padrão INES**: abre `/admin/ines-standard-video`, gera URLs no padrão `{palavraNormalizada}Sm_Prog001.mp4`, valida cada vídeo e salva somente URLs válidas.
+2. **Cadastrar manualmente**: use quando já tiver a URL correta do vídeo, GIF ou imagem de apoio. O formulário testa vídeo/GIF antes de salvar e envia para `POST /api/signs/manual`.
+3. **Importar lista**: use manifestos autorizados, `/admin/media-auto-fill`, `/admin/media-crawler` ou `/admin/import/ines-media` para trabalhar em lote.
+
+Toda palavra nova fica `pending`. Vídeo/GIF/animação precisa passar pela validação remota antes de ser salvo como mídia de Avatar, imagem estática fica apenas em `image_url` como apoio visual, e a aprovação final continua manual por admin/curador.
+
 ## Preenchimento por padrão de vídeo INES
 
 A tela `/admin/ines-standard-video` gera URLs prováveis do Dicionário INES pelo padrão:

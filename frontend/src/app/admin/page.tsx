@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Database, FileJson, Filter, Pencil, RefreshCcw, Upload } from "lucide-react";
+import { Check, Database, FileJson, Filter, Pencil, PlusCircle, RefreshCcw, Upload } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
@@ -228,8 +228,20 @@ export default function AdminPage() {
           <div>
             <ModeBadge />
             <h1 className="mt-3 text-3xl font-black text-ink dark:text-white">Administração de sinais</h1>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
+              Quer cadastrar novas palavras? Escolha entre cadastro manual, preenchimento automático pelo INES ou importação em lote.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Link
+              aria-label="Adicionar novas palavras: cadastrar manualmente ou gerar vídeos automaticamente pelo padrão INES"
+              className="focus-ring inline-flex min-h-14 items-center justify-center gap-2 rounded-lg bg-amber px-5 py-4 text-base font-black text-ink shadow-soft"
+              href="/admin/add-words"
+              title="Cadastre palavras manualmente ou gere vídeos automaticamente pelo padrão INES."
+            >
+              <PlusCircle className="h-6 w-6" aria-hidden="true" />
+              Adicionar novas palavras
+            </Link>
             <ActionButton tone="quiet" onClick={refresh}>
               <RefreshCcw className="h-5 w-5" aria-hidden="true" />
               Atualizar
@@ -266,6 +278,24 @@ export default function AdminPage() {
             </ActionButton>
           </div>
         </div>
+
+        <section className="rounded-lg border border-amber/40 bg-amber/15 p-4 shadow-soft dark:border-amber/30" aria-labelledby="add-words-callout">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 id="add-words-callout" className="text-xl font-black text-ink dark:text-white">Quer cadastrar novas palavras?</h2>
+              <p className="mt-1 text-sm font-semibold leading-relaxed text-ink/75 dark:text-white/75">
+                Use uma entrada simples para cadastrar manualmente, preencher vídeos pelo padrão INES ou importar listas autorizadas.
+              </p>
+            </div>
+            <Link
+              className="focus-ring inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-ocean px-4 py-3 text-sm font-black text-white"
+              href="/admin/add-words"
+            >
+              <PlusCircle className="h-5 w-5" aria-hidden="true" />
+              Adicionar novas palavras
+            </Link>
+          </div>
+        </section>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           {[

@@ -462,6 +462,46 @@ Payload:
 
 A tela `/admin/media-validate` mostra status HTTP, `Content-Type`, `Content-Length`, URL final, motivo e prévia visual quando o vídeo/GIF realmente carrega. URLs quebradas, HTML disfarçado de MP4 e imagens estáticas não são salvas como Avatar Libras.
 
+## Preenchimento por padrão de vídeo INES
+
+A tela `/admin/ines-standard-video` gera URLs prováveis do Dicionário INES pelo padrão:
+
+```text
+https://dicionario.ines.gov.br/public/media/palavras/videos/{palavraNormalizada}Sm_Prog001.mp4
+```
+
+Exemplos:
+
+```text
+abacate -> abacateSm_Prog001.mp4
+abafar -> abafarSm_Prog001.mp4
+abaixo -> abaixoSm_Prog001.mp4
+ação -> acaoSm_Prog001.mp4
+bom dia -> bomdiaSm_Prog001.mp4
+```
+
+Essa rotina é administrativa, protegida por `admin` e bloqueada por padrão com:
+
+```env
+INES_STANDARD_VIDEO_FILL_ENABLED=false
+INES_STANDARD_VIDEO_BASE_URL=https://dicionario.ines.gov.br/public/media/palavras/videos/
+INES_STANDARD_VIDEO_SUFFIX=Sm_Prog001.mp4
+INES_STANDARD_VIDEO_MAX_ITEMS=20
+INES_STANDARD_VIDEO_TIMEOUT_SECONDS=15
+```
+
+Antes de salvar, o backend valida cada URL com a rotina de mídia remota. Apenas respostas `200` ou `206` com `Content-Type` de vídeo compatível são gravadas em `video_url`; URLs quebradas, HTML, JSON de erro, JPG, PNG e WebP não são salvos como Avatar. Os sinais continuam `pending`, com fonte, URL de referência, licença e observações registradas para curadoria manual.
+
+Endpoints:
+
+```bash
+POST /api/admin/ines-standard-video/diagnose
+POST /api/admin/ines-standard-video/fill-selected
+POST /api/admin/ines-standard-video/fill-pending
+```
+
+O `MediaAutoFill` também usa essa estratégia depois dos manifestos e antes do HTML/probing ao vivo. Se a URL padrão não validar, a ação recomendada é verificar manualmente no INES ou adicionar a URL real ao manifesto autorizado.
+
 ## Catálogo automático de mídias Libras
 
 O projeto possui crawlers administrativos e controlados para gerar manifestos JSON a partir de fontes autorizadas, sem baixar vídeos/GIFs e sem alterar o banco automaticamente.

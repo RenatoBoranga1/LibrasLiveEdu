@@ -243,6 +243,9 @@ export default function AdminPage() {
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-amber px-4 py-3 text-base font-bold text-ink" href="/admin/media-auto-fill">
               Preencher URLs automaticamente
             </Link>
+            <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-base font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin/ines-standard-video">
+              Preencher vídeos INES por padrão
+            </Link>
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-base font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin/media-crawler">
               Catálogo de mídias
             </Link>

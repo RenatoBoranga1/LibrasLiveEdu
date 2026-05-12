@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models import ImportJob, ImportStatus, Sign, SignAuditLog, SignStatus, User
 from app.importers.ifpr_gif_importer import IfprGifImporter
+from app.importers.ines_bulk_video_url_filler import InesBulkVideoUrlFiller
 from app.importers.ines_media_importer import InesMediaImporter
 from app.services.media_validation import validate_remote_media_url
 from app.services.text_normalizer import TextNormalizerService
@@ -29,6 +30,7 @@ class MediaAutoFillImporter:
         self.settings = get_settings()
         self.normalizer = TextNormalizerService()
         self.ines = InesMediaImporter(db)
+        self.ines_standard = InesBulkVideoUrlFiller(db)
         self.ifpr = IfprGifImporter()
 
     def auto_fill_pending_media(
@@ -260,6 +262,23 @@ class MediaAutoFillImporter:
             diagnostics.append(manual_result)
             if manual_result.get("image_url") and not fallback_image:
                 fallback_image = manual_result
+
+        if "ines" in source_priority:
+            if self.settings.ines_standard_video_fill_enabled:
+                standard_lookup = self.ines_standard.diagnose_word(word)
+                if standard_lookup.get("validated") and standard_lookup.get("video_url"):
+                    return self._normalize_media_result(word, "ines", "video", standard_lookup)
+                diagnostics.append(standard_lookup)
+            else:
+                diagnostics.append(
+                    {
+                        "source": "ines_standard",
+                        "found": False,
+                        "reason": "INES_STANDARD_VIDEO_FILL_ENABLED=false; padrão INES desativado.",
+                        "warnings": ["Ative INES_STANDARD_VIDEO_FILL_ENABLED=true somente no ambiente administrativo."],
+                        "errors": [],
+                    }
+                )
 
         for source in source_priority:
             if source == "ines":

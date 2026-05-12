@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     ines_import_timeout_seconds: int = 15
     ines_import_use_browser: bool = False
     ines_import_authorization_text: str = "Uso autorizado pelo INES/Governo para o projeto LibrasLive Edu"
+    ines_standard_video_fill_enabled: bool = False
+    ines_standard_video_base_url: str = "https://dicionario.ines.gov.br/public/media/palavras/videos/"
+    ines_standard_video_suffix: str = "Sm_Prog001.mp4"
+    ines_standard_video_max_items: int = 20
+    ines_standard_video_timeout_seconds: int = 15
     media_auto_fill_enabled: bool = False
     media_auto_fill_max_items: int = 10
     media_auto_fill_delay_ms: int = 1000

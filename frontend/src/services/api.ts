@@ -566,6 +566,80 @@ export type MediaAutoFillResponse = {
   report: MediaAutoFillReport;
 };
 
+export type InesStandardVideoReportItem = {
+  word: string;
+  normalized_word?: string;
+  generated_url: string;
+  video_url?: string | null;
+  avatar_video_url?: string | null;
+  validated?: boolean;
+  http_status?: number | null;
+  content_type?: string | null;
+  validation_final_url?: string | null;
+  validation_content_length?: number | null;
+  validation_reason?: string | null;
+  can_use_avatar?: boolean;
+  detection_method?: string;
+  status?: string;
+  reason?: string;
+  recommended_action?: string;
+  warnings?: string[];
+  errors?: string[];
+};
+
+export type InesStandardVideoReport = {
+  status: string;
+  total_items: number;
+  processed_items: number;
+  valid_videos: number;
+  invalid_videos: number;
+  updated_count: number;
+  created_count?: number;
+  pending_count?: number;
+  skipped_count: number;
+  error_count: number;
+  items: InesStandardVideoReportItem[];
+  warnings: Array<{ word?: string | null; message: string }>;
+  errors: Array<{ word?: string | null; message: string }>;
+};
+
+export type InesStandardVideoResponse = {
+  job_id?: number | null;
+  status: string;
+  report: InesStandardVideoReport;
+};
+
+export function diagnoseInesStandardVideo(payload: {
+  words: string[];
+  max_items?: number;
+}): Promise<InesStandardVideoResponse> {
+  return request<InesStandardVideoResponse>("/api/admin/ines-standard-video/diagnose", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fillSelectedInesStandardVideo(payload: {
+  words: string[];
+  max_items?: number;
+  overwrite?: boolean;
+}): Promise<InesStandardVideoResponse> {
+  return request<InesStandardVideoResponse>("/api/admin/ines-standard-video/fill-selected", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fillPendingInesStandardVideo(payload: {
+  max_items?: number;
+  overwrite?: boolean;
+}): Promise<InesStandardVideoResponse> {
+  return request<InesStandardVideoResponse>("/api/admin/ines-standard-video/fill-pending", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export type CrawlReport = {
   status: string;
   source: string;

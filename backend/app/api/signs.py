@@ -7,6 +7,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import hash_password, utc_now
 from app.importers.ines_authorized_media_importer import InesAuthorizedMediaImporter
+from app.importers.ines_bulk_video_url_filler import InesBulkVideoUrlFiller
 from app.importers.ines_media_importer import InesMediaImporter
 from app.importers.ines_site_crawler import InesSiteCrawler
 from app.importers.libras_gif_site_crawler import LibrasGifSiteCrawler
@@ -26,6 +27,10 @@ from app.schemas.api import (
     InesMediaImportJobResponse,
     InesMediaImportRequest,
     InesMediaImportStartRequest,
+    InesStandardVideoDiagnoseRequest,
+    InesStandardVideoFillPendingRequest,
+    InesStandardVideoFillSelectedRequest,
+    InesStandardVideoResponse,
     ImportJobRead,
     ImportRequest,
     LibrasGifMediaImportRequest,
@@ -532,7 +537,7 @@ def diagnose_media_auto_fill(
         max_items=payload.max_items,
         source_priority=payload.source_priority,
     )
-    return {"job_id": None, "status": "completed", "report": report}
+    return {"job_id": report.get("job_id"), "status": "completed", "report": report}
 
 
 @router.post("/admin/media-auto-fill/pending", response_model=MediaAutoFillResponse)
@@ -576,6 +581,60 @@ def start_media_auto_fill_selected(
     except RuntimeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"job_id": job.id, "status": job.status, "report": report}
+
+
+@router.post("/admin/ines-standard-video/diagnose", response_model=InesStandardVideoResponse)
+def diagnose_ines_standard_video(
+    payload: InesStandardVideoDiagnoseRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_standard_video_fill_enabled:
+        raise HTTPException(status_code=403, detail="Preenchimento por padrão INES desativado neste ambiente.")
+    report = InesBulkVideoUrlFiller(db).diagnose_selected_words(payload.words, max_items=payload.max_items or 20)
+    return {"job_id": report.get("job_id"), "status": "completed", "report": report}
+
+
+@router.post("/admin/ines-standard-video/fill-selected", response_model=InesStandardVideoResponse)
+def fill_selected_ines_standard_video(
+    payload: InesStandardVideoFillSelectedRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_standard_video_fill_enabled:
+        raise HTTPException(status_code=403, detail="Preenchimento por padrão INES desativado neste ambiente.")
+    try:
+        report = InesBulkVideoUrlFiller(db).fill_selected_words(
+            payload.words,
+            max_items=payload.max_items or 20,
+            overwrite=payload.overwrite,
+            user=user,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"job_id": report.get("job_id"), "status": "completed", "report": report}
+
+
+@router.post("/admin/ines-standard-video/fill-pending", response_model=InesStandardVideoResponse)
+def fill_pending_ines_standard_video(
+    payload: InesStandardVideoFillPendingRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_standard_video_fill_enabled:
+        raise HTTPException(status_code=403, detail="Preenchimento por padrão INES desativado neste ambiente.")
+    try:
+        report = InesBulkVideoUrlFiller(db).fill_pending_words(
+            max_items=payload.max_items or 20,
+            overwrite=payload.overwrite,
+            user=user,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"job_id": report.get("job_id"), "status": "completed", "report": report}
 
 
 @router.post("/admin/crawl/ines-media/start", response_model=CrawlJobResponse)

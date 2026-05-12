@@ -330,6 +330,28 @@ class MediaAutoFillResponse(BaseModel):
     report: MediaAutoFillReport
 
 
+class InesStandardVideoDiagnoseRequest(BaseModel):
+    words: list[str] = Field(default_factory=list)
+    max_items: int | None = 20
+
+
+class InesStandardVideoFillSelectedRequest(BaseModel):
+    words: list[str] = Field(default_factory=list)
+    max_items: int | None = 20
+    overwrite: bool = False
+
+
+class InesStandardVideoFillPendingRequest(BaseModel):
+    max_items: int | None = 20
+    overwrite: bool = False
+
+
+class InesStandardVideoResponse(BaseModel):
+    job_id: int | None = None
+    status: str
+    report: dict[str, Any]
+
+
 class CrawlStartRequest(BaseModel):
     max_pages: int | None = 20
     delay_ms: int | None = None

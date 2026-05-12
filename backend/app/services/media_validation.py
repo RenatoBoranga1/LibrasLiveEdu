@@ -103,7 +103,8 @@ def _head_then_range_get(client: httpx.Client, url: str, headers: dict[str, str]
 
 
 def _content_type(response: httpx.Response) -> str | None:
-    value = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    headers = getattr(response, "headers", {}) or {}
+    value = headers.get("content-type", "").split(";", 1)[0].strip().lower()
     return value or None
 
 

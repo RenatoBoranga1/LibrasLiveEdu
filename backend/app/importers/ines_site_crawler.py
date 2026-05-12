@@ -41,6 +41,7 @@ class InesSiteCrawler(ControlledSiteCrawler):
         dry_run: bool = False,
     ) -> dict[str, Any]:
         entries: dict[str, Any] = {}
+        seen_video_urls: dict[str, str] = {}
         pages_without_video: list[dict[str, Any]] = []
         queue = self._seed_urls(words or [])
         allowed_host = urlparse(self.source_url).hostname or "dicionario.ines.gov.br"
@@ -54,6 +55,11 @@ class InesSiteCrawler(ControlledSiteCrawler):
                 page_entries = self._extract_entries(html, url)
                 for entry in page_entries:
                     key = entry["normalized_word"]
+                    video_url = entry.get("video_url")
+                    if video_url and video_url in seen_video_urls:
+                        self.duplicates.append({"word": entry["word"], "existing_key": seen_video_urls[video_url], "variant_key": key, "video_url": video_url})
+                    elif video_url:
+                        seen_video_urls[video_url] = key
                     if key in entries:
                         variant_key = f"{key}#{len([item for item in entries if item.startswith(key + '#')]) + 1}"
                         self.duplicates.append({"word": entry["word"], "existing_key": key, "variant_key": variant_key})

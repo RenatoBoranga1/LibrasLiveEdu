@@ -243,10 +243,12 @@ class MediaAutoFillImporter:
     def _find_media(self, word: str, source_priority: list[str]) -> dict[str, Any]:
         diagnostics: list[dict[str, Any]] = []
         fallback_image: dict[str, Any] | None = None
+        ines_manifest_attempted = False
 
         if "ines" in source_priority:
             manifest_lookup = self._find_manifest_media(word, "ines")
             if manifest_lookup:
+                ines_manifest_attempted = True
                 manifest_result = self._normalize_media_result(word, "ines", str(manifest_lookup.get("media_type") or "video"), manifest_lookup)
                 if manifest_result.get("can_use_avatar"):
                     return manifest_result
@@ -282,13 +284,13 @@ class MediaAutoFillImporter:
 
         for source in source_priority:
             if source == "ines":
-                if not self.settings.ines_import_enabled:
+                if not self.settings.ines_import_enabled and ines_manifest_attempted:
                     diagnostics.append(
                         {
                             "source": "ines",
                             "found": False,
-                            "reason": "INES_IMPORT_ENABLED=false; fonte INES desativada.",
-                            "warnings": ["Ative INES_IMPORT_ENABLED=true somente no ambiente administrativo."],
+                            "reason": "INES_IMPORT_ENABLED=false; lookup ao vivo ignorado após manifesto INES inválido.",
+                            "warnings": ["Revise o manifesto autorizado ou habilite INES_IMPORT_ENABLED no ambiente administrativo."],
                             "errors": [],
                         }
                     )

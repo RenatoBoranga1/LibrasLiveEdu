@@ -904,7 +904,9 @@ class InesMediaImporter:
     def _is_valid_video_probe_response(self, response: Any, url: str) -> bool:
         if getattr(response, "status_code", None) not in {200, 206}:
             return False
-        headers = getattr(response, "headers", {}) or {}
+        headers = getattr(response, "headers", None)
+        if headers is None:
+            return False
         content_type = str(headers.get("content-type", "")).split(";")[0].strip().lower()
         allowed_types = {"video/mp4", "video/webm", "video/quicktime", "application/octet-stream"}
         path = urlparse(url).path.lower()

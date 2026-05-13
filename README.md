@@ -126,13 +126,13 @@ O sistema não inventa sinais oficiais de Libras. Sinais pendentes exibem aviso 
 
 ## Identidade visual e mascote LibrasLive Edu
 
-O LibrasLive Edu possui uma mascote original chamada **Liva**. Ela foi criada em SVG vetorial para representar acolhimento, Libras, acessibilidade, educação inclusiva e tecnologia ao vivo sem usar marcas oficiais do INES, Governo, IFPR, VLibras ou imagens de terceiros.
+O LibrasLive Edu possui uma mascote original chamada **Liva**. Ela foi redesenhada como ilustração vetorial flat premium para representar acolhimento, Libras, acessibilidade, educação inclusiva e tecnologia ao vivo sem usar marcas oficiais do INES, Governo, IFPR, VLibras ou imagens de terceiros.
 
 A Liva aparece no header, na tela inicial, em chamadas administrativas e como fallback visual do Avatar quando não há vídeo, GIF ou animação aprovada. Ela não substitui mídia real de Libras e não deve ser apresentada como tradução linguística. Os sinais reais continuam dependendo de `avatar_video_url`, `video_url`, `avatar_gif_url` ou `avatar_animation_url` validados e aprovados por curadoria.
 
 Arquivos principais:
 
-- `frontend/src/components/LibrasLiveMascot.tsx`: componente SVG inline com variantes `default`, `compact`, `avatar` e `empty`.
+- `frontend/src/components/LibrasLiveMascot.tsx`: componente SVG inline com variantes `hero`, `compact`, `welcome`, `avatar` e `empty`.
 - `frontend/src/components/LibrasLiveLogo.tsx`: marca do produto com a mascote e o nome LibrasLive Edu.
 - `frontend/public/icons/libraslive-mascot.svg`: asset SVG público da mascote.
 - `frontend/public/icons/libraslive-icon.svg`: ícone PWA/favicons com a identidade da Liva.

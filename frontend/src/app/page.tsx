@@ -41,7 +41,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-paper text-ink dark:bg-zinc-950 dark:text-white">
       <header className="border-b border-ink/10 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-zinc-950/90">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <Link href="/" className="focus-ring flex items-center gap-3 rounded-lg" aria-label="Início do LibrasLive Edu">
+          <Link href="/" className="focus-ring flex items-center gap-3 rounded-xl" aria-label="Início do LibrasLive Edu">
             <LibrasLiveLogo />
           </Link>
           <nav className="flex items-center gap-1 text-sm font-bold text-ink/70 dark:text-white/75" aria-label="Navegação principal">
@@ -62,13 +62,12 @@ export default function HomePage() {
         <div className="space-y-7">
           <div className="inline-flex items-center gap-2 rounded-full bg-ocean/10 px-4 py-2 text-sm font-black text-ocean dark:bg-mint/10 dark:text-mint">
             <Smartphone className="h-4 w-4" aria-hidden="true" />
-            feito para acompanhar a aula pelo celular
+            legenda ao vivo + suporte visual em Libras
           </div>
           <div>
             <h1 className="text-5xl font-black leading-tight sm:text-6xl">LibrasLive Edu</h1>
             <p className="mt-5 max-w-2xl text-lg font-semibold leading-relaxed text-ink/72 dark:text-white/72">
-              Plataforma educacional inclusiva para apoiar alunos surdos com legenda ao vivo, avatar em Libras, cards
-              visuais e resumo da aula.
+              Plataforma educacional inclusiva com legenda ao vivo e suporte visual em Libras.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -89,13 +88,13 @@ export default function HomePage() {
 
         <div className="space-y-4">
           <div className="overflow-hidden rounded-lg border border-ocean/15 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-            <div className="grid gap-4 sm:grid-cols-[180px_1fr] sm:items-center">
-              <LibrasLiveMascot size={190} variant="default" ariaLabel="Liva, mascote do LibrasLive Edu sinalizando em Libras" />
+            <div className="grid gap-5 sm:grid-cols-[190px_1fr] sm:items-center">
+              <LibrasLiveMascot size={220} variant="welcome" ariaLabel="Liva, mascote do LibrasLive Edu sinalizando em Libras" />
               <div>
-                <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Conheca a Liva</p>
-                <p className="mt-2 text-2xl font-black leading-tight">uma mascote digital para acolher o aluno sem substituir videos reais de Libras</p>
+                <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Identidade visual inclusiva</p>
+                <p className="mt-2 text-2xl font-black leading-tight">Liva orienta a experiência sem substituir sinais reais de Libras</p>
                 <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/65 dark:text-white/65">
-                  A Liva aparece como identidade visual e fallback. Os sinais reais continuam dependendo de video, GIF ou animacao aprovada por curadoria.
+                  A mascote é original, vetorial e usada como apoio institucional. Vídeos, GIFs e animações aprovadas continuam sendo a mídia real do Avatar Libras.
                 </p>
               </div>
             </div>

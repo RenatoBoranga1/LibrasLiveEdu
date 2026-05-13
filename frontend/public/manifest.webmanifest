@@ -1,7 +1,7 @@
 {
   "name": "LibrasLive Edu",
   "short_name": "LibrasLive",
-  "description": "Plataforma educacional inclusiva com legenda ao vivo e Avatar Libras.",
+  "description": "Plataforma educacional inclusiva com legenda ao vivo e suporte visual em Libras.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

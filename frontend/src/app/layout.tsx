@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "LibrasLive Edu",
-  description: "Plataforma educacional inclusiva com legenda ao vivo e Avatar Libras.",
+  description: "Plataforma educacional inclusiva com legenda ao vivo e suporte visual em Libras.",
   manifest: "/manifest.json",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],

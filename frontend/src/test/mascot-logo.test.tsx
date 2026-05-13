@@ -14,7 +14,7 @@ describe("LibrasLive visual identity", () => {
   it("renders the product logo text", () => {
     render(<LibrasLiveLogo />);
     expect(screen.getByText("LibrasLive Edu")).toBeInTheDocument();
-    expect(screen.getByText(/educacao inclusiva ao vivo/i)).toBeInTheDocument();
+    expect(screen.getByText(/educa[cç][aã]o inclusiva ao vivo/i)).toBeInTheDocument();
   });
 
   it("shows the new logo in the app header", () => {

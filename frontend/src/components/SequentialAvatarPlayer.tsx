@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BadgeCheck, Hand, Image as ImageIcon, Info, Pause, Play, RotateCcw, SkipForward, Sparkles } from "lucide-react";
+import { BadgeCheck, Image as ImageIcon, Info, Pause, Play, RotateCcw, SkipForward, Sparkles } from "lucide-react";
+import { LibrasLiveMascot } from "@/components/LibrasLiveMascot";
 import type { SignCard } from "@/types/live";
 
 const DEFAULT_MAX_QUEUE = 20;
@@ -150,7 +151,10 @@ export function SequentialAvatarPlayer({
     <section className="overflow-hidden rounded-lg border border-ocean/20 bg-white shadow-soft dark:border-white/10 dark:bg-zinc-900" aria-label="Avatar Libras">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 dark:border-white/10">
         <div>
-          <h2 className="text-lg font-black text-ink dark:text-white">Avatar Libras</h2>
+          <div className="flex items-center gap-2">
+            <LibrasLiveMascot size={42} variant="compact" decorative />
+            <h2 className="text-lg font-black text-ink dark:text-white">Avatar Libras</h2>
+          </div>
           <p className="text-xs font-bold text-ink/60 dark:text-white/60">fila automatica de sinais aprovados</p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-full bg-ocean/10 px-3 py-1 text-xs font-black text-ocean dark:bg-mint/10 dark:text-mint" aria-live="polite">
@@ -206,10 +210,13 @@ export function SequentialAvatarPlayer({
             </div>
           ) : (
             <div className="flex max-w-md flex-col items-center gap-4 px-5 py-10 text-center">
-              <div className="grid h-24 w-24 place-items-center rounded-full bg-mint text-ink shadow-soft">
-                <Hand className="h-12 w-12" aria-hidden="true" />
-              </div>
-              <p className="text-base font-black leading-relaxed">Sem sinal animado aprovado para esta palavra.</p>
+              <LibrasLiveMascot
+                size={150}
+                variant="empty"
+                ariaLabel="Liva, mascote do LibrasLive Edu aguardando sinal em Libras"
+                className="drop-shadow-lg"
+              />
+              <p className="text-base font-black leading-relaxed">Aguardando sinal em Libras</p>
               <p className="text-sm font-semibold leading-relaxed text-white/75">A legenda continua ativa; o Avatar tocara quando houver video, GIF ou animacao aprovada.</p>
             </div>
           )}

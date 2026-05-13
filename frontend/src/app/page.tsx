@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { Accessibility, Captions, GraduationCap, MonitorUp, QrCode, Smartphone, UserRound } from "lucide-react";
+import { Captions, GraduationCap, MonitorUp, QrCode, Smartphone, UserRound } from "lucide-react";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
+import { LibrasLiveLogo } from "@/components/LibrasLiveLogo";
+import { LibrasLiveMascot } from "@/components/LibrasLiveMascot";
 
 const profileCards = [
   {
@@ -40,15 +42,7 @@ export default function HomePage() {
       <header className="border-b border-ink/10 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-zinc-950/90">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link href="/" className="focus-ring flex items-center gap-3 rounded-lg" aria-label="Início do LibrasLive Edu">
-            <span className="grid h-11 w-11 place-items-center rounded-lg bg-ocean text-white">
-              <Accessibility className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <span>
-              <span className="block text-lg font-black">LibrasLive Edu</span>
-              <span className="hidden text-xs font-semibold uppercase tracking-normal text-ocean dark:text-mint sm:block">
-                acessibilidade educacional
-              </span>
-            </span>
+            <LibrasLiveLogo />
           </Link>
           <nav className="flex items-center gap-1 text-sm font-bold text-ink/70 dark:text-white/75" aria-label="Navegação principal">
             <Link className="focus-ring rounded-lg px-3 py-2 hover:text-ocean dark:hover:text-mint" href="/aluno">
@@ -94,6 +88,18 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-4">
+          <div className="overflow-hidden rounded-lg border border-ocean/15 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+            <div className="grid gap-4 sm:grid-cols-[180px_1fr] sm:items-center">
+              <LibrasLiveMascot size={190} variant="default" ariaLabel="Liva, mascote do LibrasLive Edu sinalizando em Libras" />
+              <div>
+                <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Conheca a Liva</p>
+                <p className="mt-2 text-2xl font-black leading-tight">uma mascote digital para acolher o aluno sem substituir videos reais de Libras</p>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/65 dark:text-white/65">
+                  A Liva aparece como identidade visual e fallback. Os sinais reais continuam dependendo de video, GIF ou animacao aprovada por curadoria.
+                </p>
+              </div>
+            </div>
+          </div>
           <div className="rounded-lg bg-teal-50 p-5 dark:bg-zinc-900">
             <p className="text-sm font-bold uppercase tracking-normal text-ocean dark:text-mint">Acesso rápido</p>
             <p className="mt-2 text-2xl font-black leading-tight">professor cria a aula, aluno entra com código ou QR Code</p>

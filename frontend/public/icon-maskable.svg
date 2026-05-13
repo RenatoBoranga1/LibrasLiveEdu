@@ -1,21 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">LibrasLive Edu</title>
-  <desc id="desc">Icone maskable original com mao em Libras, balao de fala e ondas de aula ao vivo.</desc>
+  <title id="title">LibrasLive Edu</title><desc id="desc">Icone maskable original com a mascote Liva.</desc>
   <rect width="512" height="512" rx="112" fill="#ecfdf5"/>
-  <defs>
-    <linearGradient id="bubble" x1="78" x2="438" y1="70" y2="430" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0f766e"/>
-      <stop offset="1" stop-color="#14b8a6"/>
-    </linearGradient>
-    <linearGradient id="hand" x1="162" x2="350" y1="142" y2="370" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#a7f3d0"/>
-    </linearGradient>
-  </defs>
-  <path fill="url(#bubble)" d="M96 106c0-31 25-56 56-56h208c31 0 56 25 56 56v186c0 31-25 56-56 56h-76l-90 82c-15 14-39 3-39-18v-64h-3c-31 0-56-25-56-56V106Z"/>
-  <path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-width="22" d="M384 134c27 16 43 42 43 73M410 96c43 28 68 69 68 116"/>
-  <path fill="url(#hand)" stroke="#064e3b" stroke-linejoin="round" stroke-width="12" d="M214 280V154c0-18 15-33 33-33s33 15 33 33v83l15-45c6-17 25-26 42-20s26 25 20 42l-34 103c-9 28-35 47-65 47h-34c-38 0-70-31-70-70v-44c0-18 15-33 33-33s33 15 33 33v30h-6Z"/>
-  <path fill="none" stroke="#064e3b" stroke-linecap="round" stroke-width="22" d="M184 249v-79M246 153v-42M286 236v-94M324 194l10-31"/>
-  <path fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="20" d="M150 395h132M150 430h86"/>
-  <circle cx="354" cy="398" r="18" fill="#fbbf24"/>
+  <defs><linearGradient id="bg" x1="64" x2="448" y1="52" y2="460" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0f766e"/><stop offset="1" stop-color="#14b8a6"/></linearGradient><linearGradient id="skin" x1="140" x2="365" y1="130" y2="412" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#99f6e4"/></linearGradient></defs>
+  <path fill="url(#bg)" d="M86 116c0-39 32-71 71-71h198c39 0 71 32 71 71v168c0 39-32 71-71 71h-57l-91 78c-17 14-42 2-42-20v-58h-8c-39 0-71-32-71-71V116Z"/><path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-width="24" d="M395 114c28 17 45 46 45 80M430 74c44 29 70 73 70 127"/><path fill="#0f172a" opacity=".14" d="M139 407c0-33 51-60 114-60s114 27 114 60c0 17-51 30-114 30s-114-13-114-30Z"/><path fill="url(#skin)" stroke="#064e3b" stroke-linejoin="round" stroke-width="14" d="M158 317c0-60 41-108 94-108s94 48 94 108v50c0 26-21 47-47 47h-94c-26 0-47-21-47-47v-50Z"/><circle cx="252" cy="168" r="64" fill="#ecfdf5" stroke="#064e3b" stroke-width="14"/><path fill="#0f766e" d="M191 164c5-43 34-74 72-74 43 0 68 31 72 75-28 1-55-8-77-27-16 15-38 24-67 26Z"/><circle cx="226" cy="176" r="8" fill="#064e3b"/><circle cx="278" cy="176" r="8" fill="#064e3b"/><path fill="none" stroke="#064e3b" stroke-linecap="round" stroke-width="9" d="M233 204c13 10 27 10 39 0"/><path fill="none" stroke="#f59e0b" stroke-linecap="round" stroke-width="14" d="M202 270h101"/><path fill="#ecfdf5" stroke="#064e3b" stroke-linejoin="round" stroke-width="13" d="M111 314v-78c0-20 16-36 36-36s36 16 36 36v48l15-27c9-17 30-23 47-14s23 30 14 47l-36 70c-14 27-42 44-72 44h-11c-30 0-55-25-55-55v-26c0-18 15-33 33-33 6 0 12 2 17 5Z"/><path fill="none" stroke="#064e3b" stroke-linecap="round" stroke-width="14" d="M146 291v-80M181 285v-59M218 256l14-28"/><path fill="#ecfdf5" stroke="#064e3b" stroke-linejoin="round" stroke-width="13" d="M401 314v-70c0-20-16-36-36-36s-36 16-36 36v48l-16-27c-10-16-31-22-47-12s-22 31-12 47l42 66c15 24 42 39 70 39h6c33 0 60-27 60-60v-19c0-19-15-34-34-34-6 0-12 2-17 5Z"/><path fill="none" stroke="#064e3b" stroke-linecap="round" stroke-width="14" d="M365 291v-74M330 285v-54M291 256l-15-26"/>
 </svg>

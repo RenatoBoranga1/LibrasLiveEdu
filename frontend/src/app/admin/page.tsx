@@ -6,6 +6,7 @@ import { Check, Database, FileJson, Filter, Pencil, PlusCircle, RefreshCcw, Uplo
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
+import { LibrasLiveMascot } from "@/components/LibrasLiveMascot";
 import { ModeBadge } from "@/components/ModeBadge";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
@@ -281,11 +282,14 @@ export default function AdminPage() {
 
         <section className="rounded-lg border border-amber/40 bg-amber/15 p-4 shadow-soft dark:border-amber/30" aria-labelledby="add-words-callout">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
+            <div className="flex items-start gap-3">
+              <LibrasLiveMascot size={82} variant="compact" decorative className="hidden shrink-0 sm:block" />
+              <div>
               <h2 id="add-words-callout" className="text-xl font-black text-ink dark:text-white">Quer cadastrar novas palavras?</h2>
               <p className="mt-1 text-sm font-semibold leading-relaxed text-ink/75 dark:text-white/75">
-                Use uma entrada simples para cadastrar manualmente, preencher vídeos pelo padrão INES ou importar listas autorizadas.
+                Use uma entrada simples para cadastrar manualmente, preencher vídeos pelo padrão INES ou importar listas autorizadas. A Liva identifica recursos visuais; sinais reais seguem dependendo de vídeo, GIF ou animação aprovada.
               </p>
+              </div>
             </div>
             <Link
               className="focus-ring inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-ocean px-4 py-3 text-sm font-black text-white"

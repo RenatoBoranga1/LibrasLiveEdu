@@ -1,7 +1,20 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LibrasLive Edu">
-  <rect width="512" height="512" rx="92" fill="#0f766e"/>
-  <circle cx="158" cy="164" r="54" fill="#d9f99d"/>
-  <path d="M129 244h58c54 0 98 44 98 98v20H31v-20c0-54 44-98 98-98Z" fill="#f8faf7"/>
-  <path d="M302 145h113c26 0 47 21 47 47v81c0 26-21 47-47 47h-48l-57 51v-51h-8c-26 0-47-21-47-47v-81c0-26 21-47 47-47Z" fill="#f59e0b"/>
-  <path d="M312 208h90M312 250h65" stroke="#10201c" stroke-width="24" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">LibrasLive Edu</title>
+  <desc id="desc">Icone original com mao em Libras, balao de fala e ondas de aula ao vivo.</desc>
+  <defs>
+    <linearGradient id="bubble" x1="78" x2="438" y1="70" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#14b8a6"/>
+    </linearGradient>
+    <linearGradient id="hand" x1="162" x2="350" y1="142" y2="370" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ecfdf5"/>
+      <stop offset="1" stop-color="#a7f3d0"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#bubble)" d="M96 106c0-31 25-56 56-56h208c31 0 56 25 56 56v186c0 31-25 56-56 56h-76l-90 82c-15 14-39 3-39-18v-64h-3c-31 0-56-25-56-56V106Z"/>
+  <path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-width="22" d="M384 134c27 16 43 42 43 73M410 96c43 28 68 69 68 116"/>
+  <path fill="url(#hand)" stroke="#064e3b" stroke-linejoin="round" stroke-width="12" d="M214 280V154c0-18 15-33 33-33s33 15 33 33v83l15-45c6-17 25-26 42-20s26 25 20 42l-34 103c-9 28-35 47-65 47h-34c-38 0-70-31-70-70v-44c0-18 15-33 33-33s33 15 33 33v30h-6Z"/>
+  <path fill="none" stroke="#064e3b" stroke-linecap="round" stroke-width="22" d="M184 249v-79M246 153v-42M286 236v-94M324 194l10-31"/>
+  <path fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="20" d="M150 395h132M150 430h86"/>
+  <circle cx="354" cy="398" r="18" fill="#fbbf24"/>
 </svg>

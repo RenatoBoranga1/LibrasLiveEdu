@@ -202,6 +202,10 @@ class Sign(TimestampMixin, Base):
     def avatar_video_url(self) -> str | None:
         return self.video_url
 
+    @avatar_video_url.setter
+    def avatar_video_url(self, value: str | None) -> None:
+        self.video_url = value
+
     @property
     def source_reference_url(self) -> str | None:
         return _sign_note_value(self.educational_notes, "URL consultada") or self.source_url

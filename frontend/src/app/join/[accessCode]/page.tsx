@@ -5,13 +5,13 @@ import Link from "next/link";
 import { BookmarkPlus, CaptionsOff, History, Image as ImageIcon, Maximize2, Minimize2, RotateCcw, Trash2, Video, X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { AccessibleModeToggle } from "@/components/AccessibleModeToggle";
-import { AvatarPanel } from "@/components/AvatarPanel";
 import { ConnectionStatusBanner } from "@/components/ConnectionStatusBanner";
 import { HelpButton } from "@/components/HelpButton";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 import { LiveCaption } from "@/components/LiveCaption";
 import { LiveModeSelector, type LiveViewMode } from "@/components/LiveModeSelector";
 import { LiveSummaryPanel } from "@/components/LiveSummaryPanel";
+import { SequentialAvatarPlayer } from "@/components/SequentialAvatarPlayer";
 import { getClassByAccessCode, getLiveSummaryByAccessCode, joinClass, saveWord } from "@/services/api";
 import type { ClassSession, LiveSummary, SignCard } from "@/types/live";
 import { useLiveClass } from "@/hooks/useLiveClass";
@@ -90,10 +90,6 @@ export default function JoinClassPage() {
   }, [accessCode, classSession]);
 
   const cards = useMemo(() => live.cards.slice(0, 10), [live.cards]);
-  const approvedMediaCard = useMemo(() => {
-    const animatedCard = cards.find((card) => card.status === "approved" && hasAvatarMedia(card));
-    return animatedCard ?? cards.find((card) => card.status === "approved" && (card.imageUrl || card.gloss));
-  }, [cards]);
   const showAvatar = viewMode === "full" || viewMode === "focus";
   const showCaption = viewMode === "full" || viewMode === "focus" || viewMode === "caption";
   const showCards = viewMode === "full" || viewMode === "cards";
@@ -170,25 +166,7 @@ export default function JoinClassPage() {
 
         {showAvatar && (
           <div className="sticky top-[73px] z-10">
-            <AvatarPanel
-              large
-              status={live.translation.status}
-              word={approvedMediaCard?.word}
-              glossText={live.translation.glossText || approvedMediaCard?.gloss}
-              avatarVideoUrl={live.translation.avatarVideoUrl || approvedMediaCard?.avatarVideoUrl}
-              videoUrl={approvedMediaCard?.videoUrl}
-              avatarGifUrl={live.translation.avatarGifUrl || approvedMediaCard?.avatarGifUrl}
-              imageUrl={approvedMediaCard?.imageUrl}
-              animationPayloadUrl={live.translation.animationPayloadUrl || approvedMediaCard?.avatarAnimationUrl}
-              sourceName={approvedMediaCard?.sourceName}
-              sourceUrl={approvedMediaCard?.sourceUrl}
-              sourceReferenceUrl={approvedMediaCard?.sourceReferenceUrl}
-              license={approvedMediaCard?.license}
-              licenseNotes={approvedMediaCard?.licenseNotes}
-              providerConfigured={live.translation.providerConfigured}
-              warningMessage={live.translation.warningMessage}
-              cards={cards}
-            />
+            <SequentialAvatarPlayer items={live.avatarItems} />
           </div>
         )}
 
@@ -427,8 +405,4 @@ function getCardMedia(card?: SignCard | null): { type: "video" | "gif" | "image"
   if (card.avatarGifUrl) return { type: "gif", url: card.avatarGifUrl };
   if (card.imageUrl) return { type: "image", url: card.imageUrl };
   return null;
-}
-
-function hasAvatarMedia(card: SignCard) {
-  return Boolean(card.avatarVideoUrl || card.videoUrl || card.avatarGifUrl || card.avatarAnimationUrl);
 }

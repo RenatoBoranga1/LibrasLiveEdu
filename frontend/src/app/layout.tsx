@@ -6,8 +6,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "LibrasLive Edu",
-  description: "Plataforma educacional inclusiva com legenda ao vivo, avatar em Libras e cards visuais.",
+  description: "Plataforma educacional inclusiva com legenda ao vivo e Avatar Libras.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon-192.svg", type: "image/svg+xml" }],
+  },
 };
 
 export const viewport: Viewport = {

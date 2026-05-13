@@ -197,6 +197,7 @@ class InesBulkVideoUrlFiller:
         sign.word = word
         sign.normalized_word = item["normalized_word"]
         sign.video_url = item["video_url"]
+        sign.avatar_video_url = item.get("avatar_video_url") or item["video_url"]
         sign.source_name = item["source_name"]
         sign.source_url = item["source_url"]
         sign.license = item["license"]

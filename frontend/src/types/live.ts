@@ -39,7 +39,9 @@ export type LiveSummary = {
 
 export type SignCard = {
   id?: number;
+  queueKey?: string;
   word: string;
+  normalizedWord?: string | null;
   status: "approved" | "pending" | "review" | "rejected" | "missing" | "unavailable" | string;
   title?: string;
   gloss?: string | null;

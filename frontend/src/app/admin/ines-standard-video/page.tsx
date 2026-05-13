@@ -98,6 +98,9 @@ export default function InesStandardVideoPage() {
             <p className="mt-2 text-base font-semibold leading-relaxed text-ink/70 dark:text-white/70">
               Gera URLs no padrão {"{palavraNormalizada}"}Sm_Prog001.mp4, testa se o vídeo realmente existe e só salva URLs válidas.
             </p>
+            <p className="mt-2 text-sm font-bold leading-relaxed text-ocean dark:text-mint">
+              Ao preencher, a palavra é criada ou atualizada como pending. Volte para /admin para revisar e aprovar; o Avatar só exibirá depois da aprovação.
+            </p>
           </div>
           <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin">
             Voltar para curadoria
@@ -105,7 +108,7 @@ export default function InesStandardVideoPage() {
         </div>
 
         <section className="rounded-lg border border-amber/40 bg-amber/15 p-4 text-sm font-bold leading-relaxed text-ink dark:border-amber/30 dark:text-white" role="note">
-          Esta rotina não roda no build/deploy/startup, não baixa vídeos e não aprova sinais. URLs quebradas ou imagens estáticas não serão salvas como Avatar Libras.
+          Esta rotina não roda no build/deploy/startup, não baixa vídeos e não aprova sinais. URLs quebradas ou imagens estáticas não serão salvas como Avatar Libras. Todo sinal preenchido fica pending até curadoria em /admin.
         </section>
 
         <div className="grid gap-5 lg:grid-cols-[420px_1fr]">
@@ -167,7 +170,7 @@ export default function InesStandardVideoPage() {
           <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
             <h2 className="text-xl font-black text-ink dark:text-white">Relatório</h2>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-              O sistema só salva `video_url` quando a URL gerada passa na validação remota. Tudo permanece `pending`.
+              O sistema só salva `video_url` e `avatar_video_url` quando a URL gerada passa na validação remota. Tudo permanece `pending`; revise e aprove em /admin para liberar no Avatar.
             </p>
             {message ? <div className="mt-4 rounded-lg bg-teal-50 p-3 text-sm font-bold text-ink dark:bg-zinc-800 dark:text-white">{message}</div> : null}
             {result ? <ReportPanel report={result.report} /> : <p className="mt-6 text-sm font-bold text-ink/60 dark:text-white/60">Execute um diagnóstico ou preenchimento para ver os resultados.</p>}

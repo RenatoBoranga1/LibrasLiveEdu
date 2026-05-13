@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { WS_BASE } from "@/services/api";
 import { mapLiveSummary } from "@/services/api";
 import type { SignCard, LiveSummary, LiveTranscriptSegment } from "@/types/live";
@@ -36,10 +36,12 @@ export function useLiveClass(accessCode: string | null, token?: string | null, r
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [segments, setSegments] = useState<LiveTranscriptSegment[]>([]);
   const [cards, setCards] = useState<SignCard[]>([]);
+  const [avatarItems, setAvatarItems] = useState<SignCard[]>([]);
   const [translation, setTranslation] = useState<TranslationState>({ status: "waiting" });
   const [summary, setSummary] = useState<{ text: string; keywords: string[] } | null>(null);
   const [liveSummary, setLiveSummary] = useState<LiveSummary | null>(null);
   const [demoStep, setDemoStep] = useState(0);
+  const avatarSequenceRef = useRef(0);
 
   useEffect(() => {
     if (!accessCode) return;
@@ -101,6 +103,14 @@ export function useLiveClass(accessCode: string | null, token?: string | null, r
         }
         if (liveEvent.event === "sign.card.created") {
           const items = (liveEvent.payload.items ?? []) as SignCard[];
+          const sequencedItems = items.map((item, index) => {
+            avatarSequenceRef.current += 1;
+            return {
+              ...item,
+              queueKey: `${Date.now()}-${avatarSequenceRef.current}-${index}`,
+            };
+          });
+          setAvatarItems((current) => [...current, ...sequencedItems].slice(-60));
           setCards((current) => dedupeCards([...items, ...current]).slice(0, 12));
         }
         if (liveEvent.event === "summary.updated" || liveEvent.event === "summary.created") {
@@ -113,6 +123,7 @@ export function useLiveClass(accessCode: string | null, token?: string | null, r
         }
         if (liveEvent.event === "class.finished") {
           classFinished = true;
+          setAvatarItems([]);
           setReconnecting(false);
           setConnectionError("Esta aula foi encerrada.");
           socket?.close();
@@ -152,6 +163,13 @@ export function useLiveClass(accessCode: string | null, token?: string | null, r
     const segment = demoSegments[demoStep % demoSegments.length];
     setSegments((current) => [segment, ...current.filter((item) => item.id !== segment.id)].slice(0, 12));
     setCards(demoCards);
+    setAvatarItems((current) => [
+      ...current,
+      ...demoCards.map((item, index) => {
+        avatarSequenceRef.current += 1;
+        return { ...item, queueKey: `demo-${Date.now()}-${avatarSequenceRef.current}-${index}` };
+      }),
+    ].slice(-60));
     setTranslation({
       status: "pending",
       glossText: "TECNOLOGIA DADOS SISTEMA",
@@ -176,6 +194,7 @@ export function useLiveClass(accessCode: string | null, token?: string | null, r
     connectionError,
     segments,
     cards,
+    avatarItems,
     currentCaption,
     translation,
     summary,

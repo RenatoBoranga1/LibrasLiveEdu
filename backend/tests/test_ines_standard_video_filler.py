@@ -1,5 +1,6 @@
 from app.importers.ines_bulk_video_url_filler import InesBulkVideoUrlFiller, build_ines_video_url_from_word
 from app.importers.media_auto_fill_importer import MediaAutoFillImporter
+from app.models import Sign
 
 
 def test_build_ines_video_url_from_word_abacate():
@@ -40,6 +41,14 @@ def test_diagnose_standard_video_accepts_200_mp4(monkeypatch):
     assert item["video_url"].endswith("abacateSm_Prog001.mp4")
     assert item["can_use_avatar"] is True
     assert item["detection_method"] == "ines_standard_pattern"
+
+
+def test_sign_avatar_video_url_setter_updates_video_url():
+    sign = Sign(word="abacate", normalized_word="abacate")
+
+    sign.avatar_video_url = "https://dicionario.ines.gov.br/public/media/palavras/videos/abacateSm_Prog001.mp4"
+
+    assert sign.video_url == sign.avatar_video_url
 
 
 def test_diagnose_standard_video_accepts_206_mp4(monkeypatch):

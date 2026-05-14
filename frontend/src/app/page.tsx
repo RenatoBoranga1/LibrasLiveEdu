@@ -88,8 +88,13 @@ export default function HomePage() {
 
         <div className="space-y-4">
           <div className="overflow-hidden rounded-lg border border-ocean/15 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-            <div className="grid gap-5 sm:grid-cols-[190px_1fr] sm:items-center">
-              <LibrasLiveMascot size={220} variant="welcome" ariaLabel="Liva, mascote do LibrasLive Edu sinalizando em Libras" />
+            <div className="grid gap-5">
+              <LibrasLiveMascot
+                size={520}
+                variant="welcome"
+                ariaLabel="Liva, mascote do LibrasLive Edu sinalizando em Libras"
+                className="h-auto w-full"
+              />
               <div>
                 <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Boas-vindas</p>
                 <p className="mt-2 text-2xl font-black leading-tight">Seja bem-vindo ao LibrasLive Edu</p>

@@ -91,8 +91,8 @@ export default function HomePage() {
             <div className="grid gap-5 sm:grid-cols-[190px_1fr] sm:items-center">
               <LibrasLiveMascot size={220} variant="welcome" ariaLabel="Liva, mascote do LibrasLive Edu sinalizando em Libras" />
               <div>
-                <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Identidade visual inclusiva</p>
-                <p className="mt-2 text-2xl font-black leading-tight">Liva orienta a experiência sem substituir sinais reais de Libras</p>
+                <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Boas-vindas</p>
+                <p className="mt-2 text-2xl font-black leading-tight">Seja bem-vindo ao LibrasLive Edu</p>
                 <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/65 dark:text-white/65">
                   A mascote é original, vetorial e usada como apoio institucional. Vídeos, GIFs e animações aprovadas continuam sendo a mídia real do Avatar Libras.
                 </p>

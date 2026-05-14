@@ -132,7 +132,7 @@ A Liva aparece no header, na tela inicial, em chamadas administrativas e como fa
 
 Arquivos principais:
 
-- `frontend/src/components/LibrasLiveMascot.tsx`: componente SVG inline com variantes `hero`, `compact`, `welcome`, `avatar` e `empty`.
+- `frontend/src/components/LibrasLiveMascot.tsx`: componente SVG inline com variantes `hero`, `compact`, `welcome`, `learning`, `communication`, `inclusion`, `live`, `avatar` e `empty`.
 - `frontend/src/components/LibrasLiveLogo.tsx`: marca do produto com a mascote e o nome LibrasLive Edu.
 - `frontend/public/icons/libraslive-mascot.svg`: asset SVG público da mascote.
 - `frontend/public/icons/libraslive-icon.svg`: ícone PWA/favicons com a identidade da Liva.

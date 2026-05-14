@@ -69,48 +69,49 @@ export function LibrasLiveMascot({
         )}
         <defs>
           <linearGradient id={`${id}-icon-bg`} x1="82" x2="430" y1="70" y2="448" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#183a68" />
-            <stop offset=".58" stopColor="#0b2a52" />
-            <stop offset="1" stopColor="#061a35" />
+            <stop stopColor="#1d3e70" />
+            <stop offset=".56" stopColor="#0a2a52" />
+            <stop offset="1" stopColor="#061a34" />
           </linearGradient>
-          <linearGradient id={`${id}-icon-teal`} x1="104" x2="398" y1="104" y2="366" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#7cf8e9" />
-            <stop offset="1" stopColor="#13b8aa" />
+          <linearGradient id={`${id}-icon-teal`} x1="130" x2="383" y1="115" y2="333" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#81fff0" />
+            <stop offset="1" stopColor="#10b9ad" />
           </linearGradient>
           <filter id={`${id}-icon-shadow`} x="-15%" y="-15%" width="130%" height="140%">
             <feDropShadow dx="0" dy="18" stdDeviation="18" floodColor="#020817" floodOpacity=".24" />
           </filter>
         </defs>
-        <rect x="52" y="52" width="408" height="408" rx="96" fill={`url(#${id}-icon-bg)`} />
+        <rect x="58" y="58" width="396" height="396" rx="88" fill={`url(#${id}-icon-bg)`} />
+        <rect x="65" y="65" width="382" height="382" rx="80" fill="none" stroke="#ffffff" strokeOpacity=".10" strokeWidth="4" />
         <g filter={`url(#${id}-icon-shadow)`}>
           <path
-            d="M143 255c0-73 59-132 132-132 26 0 51 8 72 22"
+            d="M140 255c0-71 58-129 129-129 26 0 50 8 70 21"
             fill="none"
             stroke={`url(#${id}-icon-teal)`}
             strokeLinecap="round"
-            strokeWidth="28"
+            strokeWidth="25"
           />
           <path
-            d="M372 247c23 37 18 85-12 119-31 36-82 50-129 36h-39l-62 44 17-65c-29-31-44-73-38-116"
+            d="M357 236c25 39 20 89-12 124-32 36-83 49-129 35h-30l-67 48 19-68c-25-31-38-70-33-111"
             fill="none"
             stroke="#ffffff"
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth="28"
+            strokeWidth="25"
           />
           <path
             fill="#ffffff"
             stroke="#e5edf7"
             strokeWidth="4"
-            d="M174 257v-78c0-15 12-27 27-27s27 12 27 27v57-76c0-15 12-27 27-27s27 12 27 27v78-61c0-15 12-27 27-27s27 12 27 27v92c0 58-47 105-105 105h-14c-44 0-80-36-80-80v-27c0-15 12-27 27-27 5 0 9 1 13 3Z"
+            d="M172 258v-82c0-14 11-25 25-25s25 11 25 25v61-84c0-14 11-25 25-25s25 11 25 25v85-67c0-14 11-25 25-25s25 11 25 25v98c0 57-46 103-103 103h-10c-44 0-79-35-79-79v-30c0-14 11-25 25-25 6 0 12 2 17 6Z"
           />
-          <path d="M202 255v-95M255 237v-91M309 244v-77" stroke="#cbd5e1" strokeLinecap="round" strokeWidth="7" />
+          <path d="M197 256v-98M247 238v-96M297 246v-82" stroke="#d8e1ec" strokeLinecap="round" strokeWidth="6" />
           <path
-            d="M360 123c28 19 44 49 44 84M323 148c17 12 27 31 27 53"
+            d="M356 124c27 18 43 48 43 82M321 149c16 12 26 30 26 51"
             fill="none"
             stroke={`url(#${id}-icon-teal)`}
             strokeLinecap="round"
-            strokeWidth="19"
+            strokeWidth="18"
           />
         </g>
       </svg>

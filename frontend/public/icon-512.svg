@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="82" x2="430" y1="70" y2="448" gradientUnits="userSpaceOnUse"><stop stop-color="#183a68"/><stop offset=".58" stop-color="#0b2a52"/><stop offset="1" stop-color="#061a35"/></linearGradient>
-    <linearGradient id="mint" x1="104" x2="398" y1="104" y2="366" gradientUnits="userSpaceOnUse"><stop stop-color="#7cf8e9"/><stop offset="1" stop-color="#13b8aa"/></linearGradient>
+    <linearGradient id="bg" x1="87" x2="425" y1="70" y2="452" gradientUnits="userSpaceOnUse"><stop stop-color="#1d3e70"/><stop offset=".56" stop-color="#0a2a52"/><stop offset="1" stop-color="#061a34"/></linearGradient>
+    <linearGradient id="mint" x1="130" x2="383" y1="115" y2="333" gradientUnits="userSpaceOnUse"><stop stop-color="#81fff0"/><stop offset="1" stop-color="#10b9ad"/></linearGradient>
   </defs>
-  <rect x="52" y="52" width="408" height="408" rx="96" fill="url(#bg)"/>
-  <path d="M143 255c0-73 59-132 132-132 26 0 51 8 72 22" fill="none" stroke="url(#mint)" stroke-linecap="round" stroke-width="28"/>
-  <path d="M372 247c23 37 18 85-12 119-31 36-82 50-129 36h-39l-62 44 17-65c-29-31-44-73-38-116" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
-  <path fill="#fff" stroke="#e5edf7" stroke-width="4" d="M174 257v-78c0-15 12-27 27-27s27 12 27 27v57-76c0-15 12-27 27-27s27 12 27 27v78-61c0-15 12-27 27-27s27 12 27 27v92c0 58-47 105-105 105h-14c-44 0-80-36-80-80v-27c0-15 12-27 27-27 5 0 9 1 13 3Z"/>
-  <path d="M202 255v-95M255 237v-91M309 244v-77" stroke="#cbd5e1" stroke-linecap="round" stroke-width="7"/>
-  <path d="M360 123c28 19 44 49 44 84M323 148c17 12 27 31 27 53" fill="none" stroke="url(#mint)" stroke-linecap="round" stroke-width="19"/>
+  <rect x="58" y="58" width="396" height="396" rx="88" fill="url(#bg)"/>
+  <path d="M140 255c0-71 58-129 129-129 26 0 50 8 70 21" fill="none" stroke="url(#mint)" stroke-linecap="round" stroke-width="25"/>
+  <path d="M357 236c25 39 20 89-12 124-32 36-83 49-129 35h-30l-67 48 19-68c-25-31-38-70-33-111" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="25"/>
+  <path fill="#fff" stroke="#e7eef7" stroke-width="3" d="M172 258v-82c0-14 11-25 25-25s25 11 25 25v61-84c0-14 11-25 25-25s25 11 25 25v85-67c0-14 11-25 25-25s25 11 25 25v98c0 57-46 103-103 103h-10c-44 0-79-35-79-79v-30c0-14 11-25 25-25 6 0 12 2 17 6Z"/>
+  <path d="M197 256v-98M247 238v-96M297 246v-82" stroke="#d8e1ec" stroke-linecap="round" stroke-width="6"/>
+  <path d="M356 124c27 18 43 48 43 82M321 149c16 12 26 30 26 51" fill="none" stroke="url(#mint)" stroke-linecap="round" stroke-width="18"/>
 </svg>

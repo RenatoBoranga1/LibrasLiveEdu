@@ -662,6 +662,96 @@ export type CrawlResponse = {
   manifest?: Record<string, unknown> | null;
 };
 
+export type InesCatalogReportItem = {
+  word?: string | null;
+  letter?: string | null;
+  media_type?: string | null;
+  video_url?: string | null;
+  avatar_video_url?: string | null;
+  image_url?: string | null;
+  handshape_image_url?: string | null;
+  http_status?: number | null;
+  content_type?: string | null;
+  can_use_avatar?: boolean;
+  validated?: boolean;
+  image_validated?: boolean;
+  status?: string | null;
+  detection_method?: string | null;
+  reason?: string | null;
+  recommended_action?: string | null;
+};
+
+export type InesCatalogReport = {
+  status: string;
+  source?: string;
+  letters_scanned?: number;
+  entries_found?: number;
+  videos_found?: number;
+  images_found?: number;
+  without_video?: number;
+  imported_count?: number;
+  skipped_count?: number;
+  errors_count?: number;
+  total_items?: number;
+  processed_items?: number;
+  created_count?: number;
+  updated_count?: number;
+  pending_count?: number;
+  error_count?: number;
+  video_found_count?: number;
+  image_found_count?: number;
+  video_missing_count?: number;
+  manifest_path?: string | null;
+  items?: InesCatalogReportItem[];
+  warnings?: Array<{ word?: string | null; message: string }>;
+  errors?: Array<{ word?: string | null; message: string }>;
+};
+
+export type InesCatalogResponse = {
+  job_id?: number | null;
+  status: string;
+  report: InesCatalogReport;
+  manifest?: Record<string, unknown> | null;
+};
+
+export function scanInesCatalog(payload: {
+  letters?: string[];
+  max_items?: number;
+  delay_ms?: number;
+  dry_run?: boolean;
+  use_browser?: boolean;
+  overwrite_manifest?: boolean;
+}): Promise<InesCatalogResponse> {
+  return request<InesCatalogResponse>("/api/admin/ines-catalog/scan", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function validateInesCatalogManifest(payload: {
+  manifest_path?: string;
+  manifest?: Record<string, unknown>;
+  max_items?: number;
+}): Promise<InesCatalogResponse> {
+  return request<InesCatalogResponse>("/api/admin/ines-catalog/validate-manifest", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function importInesCatalog(payload: {
+  manifest_path?: string;
+  manifest?: Record<string, unknown>;
+  overwrite?: boolean;
+  max_items?: number;
+  status?: "pending" | "review" | "needs_specialist_review";
+}): Promise<InesCatalogResponse> {
+  return request<InesCatalogResponse>("/api/admin/ines-catalog/import", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function startInesCrawler(payload: {
   max_pages?: number;
   delay_ms?: number;

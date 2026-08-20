@@ -11,6 +11,7 @@ __pycache__/
 *.log
 backend/data/import_report_*.json
 backend/data/generated/*.generated.json
+backend/app/importers/manifests/*.generated.json
 postgres_data/
 android/.gradle/
 android/.gradle-user/

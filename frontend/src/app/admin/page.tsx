@@ -262,6 +262,9 @@ export default function AdminPage() {
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-base font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin/media-crawler">
               Catálogo de mídias
             </Link>
+            <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-base font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin/ines-catalog">
+              Catálogo completo INES
+            </Link>
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-base font-bold text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin/media-validate">
               Testar URL de mídia
             </Link>
@@ -327,6 +330,9 @@ export default function AdminPage() {
               </p>
               <Link className="focus-ring mt-3 inline-flex min-h-12 items-center rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white" href="/admin/media-auto-fill">
                 Preencher URLs automaticamente
+              </Link>
+              <Link className="focus-ring ml-2 mt-3 inline-flex min-h-12 items-center rounded-lg bg-mint px-4 py-3 text-sm font-bold text-ink shadow-soft" href="/admin/ines-catalog">
+                Abrir catálogo INES
               </Link>
               <Link className="focus-ring ml-2 mt-3 inline-flex min-h-12 items-center rounded-lg bg-white px-4 py-3 text-sm font-bold text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint" href="/admin/media-crawler">
                 Gerar catálogos

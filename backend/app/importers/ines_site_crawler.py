@@ -37,13 +37,17 @@ class InesSiteCrawler(ControlledSiteCrawler):
         self,
         *,
         words: list[str] | None = None,
+        letters: list[str] | None = None,
         output: str | Path | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
         entries: dict[str, Any] = {}
         seen_video_urls: dict[str, str] = {}
         pages_without_video: list[dict[str, Any]] = []
-        queue = self._seed_urls(words or [])
+        try:
+            queue = self._seed_urls(words or [], letters=letters)
+        except TypeError:
+            queue = self._seed_urls(words or [])
         allowed_host = urlparse(self.source_url).hostname or "dicionario.ines.gov.br"
 
         with self._client() as client:
@@ -105,13 +109,17 @@ class InesSiteCrawler(ControlledSiteCrawler):
             "manifest_path": manifest_path,
         }
 
-    def _seed_urls(self, words: list[str]) -> list[str]:
+    def _seed_urls(self, words: list[str], letters: list[str] | None = None) -> list[str]:
         if words:
             return list(dict.fromkeys(ines_search_url(self.source_url, word) for word in words if word.strip()))
         urls = [self.source_url]
         sitemap_url = urljoin(self.source_url, "/sitemap.xml")
         urls.append(sitemap_url)
-        for letter in "abcdefghijklmnopqrstuvwxyz":
+        selected_letters = letters or list("abcdefghijklmnopqrstuvwxyz")
+        for letter in selected_letters:
+            letter = str(letter or "").strip().lower()
+            if len(letter) != 1 or not letter.isalpha():
+                continue
             urls.append(urljoin(self.source_url, f"/?letra={letter}"))
         return list(dict.fromkeys(urls))
 

@@ -118,9 +118,10 @@ class MediaManifestImporter:
                     sign.avatar_animation_url = animation_url or sign.avatar_animation_url
                 if overwrite or not sign.image_url:
                     sign.image_url = image_url or sign.image_url
-                sign.source_name = self._clean(entry.get("source_name")) or self._clean(manifest.get("source_name")) or sign.source_name
-                sign.source_url = self._clean(entry.get("source_url")) or self._clean(manifest.get("source_url")) or sign.source_url
-                sign.license = self._clean(entry.get("license")) or self._clean(manifest.get("license")) or sign.license
+                source_metadata = manifest.get("source", {}) if isinstance(manifest.get("source"), dict) else {}
+                sign.source_name = self._clean(entry.get("source_name")) or self._clean(source_metadata.get("name")) or self._clean(manifest.get("source_name")) or sign.source_name
+                sign.source_url = self._clean(entry.get("source_url")) or self._clean(source_metadata.get("base_url")) or self._clean(manifest.get("source_url")) or sign.source_url
+                sign.license = self._clean(entry.get("license")) or self._clean(entry.get("license_text")) or self._clean(source_metadata.get("authorization")) or self._clean(manifest.get("license")) or sign.license
                 sign.educational_notes = self._merge_notes(
                     sign.educational_notes,
                     source_reference_url=self._clean(entry.get("source_reference_url")),
@@ -159,6 +160,7 @@ class MediaManifestImporter:
                         "validation_content_length": validation.get("content_length"),
                         "validation_reason": validation.get("reason") or ("Imagem estática é apenas apoio visual e não serve para Avatar Libras." if media_type == "image" else None),
                         "video_url": video_url,
+                        "avatar_video_url": video_url,
                         "avatar_gif_url": gif_url,
                         "avatar_animation_url": animation_url,
                         "image_url": image_url,
@@ -259,6 +261,7 @@ class MediaManifestImporter:
             "source_url": sign.source_url,
             "license": sign.license,
             "video_url": sign.video_url,
+            "avatar_video_url": sign.avatar_video_url,
             "avatar_gif_url": sign.avatar_gif_url,
             "avatar_animation_url": sign.avatar_animation_url,
             "image_url": sign.image_url,

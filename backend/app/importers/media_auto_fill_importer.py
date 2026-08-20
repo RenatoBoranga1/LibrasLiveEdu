@@ -466,7 +466,7 @@ class MediaAutoFillImporter:
             "source_name": self._clean(lookup.get("source_name")) or source_name,
             "source_url": self._clean(lookup.get("source_url")) or source_url,
             "source_reference_url": self._clean(lookup.get("source_reference_url")) or self._clean(lookup.get("search_url")) or source_url,
-            "license": self._clean(lookup.get("license")) or license_text,
+            "license": self._clean(lookup.get("license")) or self._clean(lookup.get("license_text")) or license_text,
             "license_notes": self._clean(lookup.get("license_notes")) or license_notes,
             "gloss": self._clean(lookup.get("gloss")),
             "reason": self._clean(lookup.get("reason"))
@@ -869,11 +869,48 @@ class MediaAutoFillImporter:
         for entry in candidates:
             media_type = str(entry.get("media_type") or self._manifest_media_type(entry))
             if media_type == "video" and (entry.get("video_url") or entry.get("avatar_video_url")):
-                return {**entry, "found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or default_detection_method}
+                return {
+                    **entry,
+                    "found": True,
+                    "source_name": entry.get("source_name") or self._manifest_source_value(manifest, "source_name"),
+                    "source_url": entry.get("source_url") or self._manifest_source_value(manifest, "source_url"),
+                    "license": entry.get("license") or entry.get("license_text") or self._manifest_source_value(manifest, "license"),
+                    "license_notes": entry.get("license_notes") or self._manifest_source_value(manifest, "license_notes"),
+                    "detection_method": entry.get("detection_method") or default_detection_method,
+                }
             if media_type == "gif" and (entry.get("avatar_gif_url") or entry.get("gif_url")):
-                return {**entry, "found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or default_detection_method}
+                return {
+                    **entry,
+                    "found": True,
+                    "source_name": entry.get("source_name") or self._manifest_source_value(manifest, "source_name"),
+                    "source_url": entry.get("source_url") or self._manifest_source_value(manifest, "source_url"),
+                    "license": entry.get("license") or entry.get("license_text") or self._manifest_source_value(manifest, "license"),
+                    "license_notes": entry.get("license_notes") or self._manifest_source_value(manifest, "license_notes"),
+                    "detection_method": entry.get("detection_method") or default_detection_method,
+                }
             if media_type == "image" and entry.get("image_url"):
-                return {**entry, "found": False, "media_found": True, "source_name": entry.get("source_name") or manifest.get("source_name"), "source_url": entry.get("source_url") or manifest.get("source_url"), "license": entry.get("license") or manifest.get("license"), "license_notes": entry.get("license_notes") or manifest.get("license_notes"), "detection_method": entry.get("detection_method") or "manifest_support_image"}
+                return {
+                    **entry,
+                    "found": False,
+                    "media_found": True,
+                    "source_name": entry.get("source_name") or self._manifest_source_value(manifest, "source_name"),
+                    "source_url": entry.get("source_url") or self._manifest_source_value(manifest, "source_url"),
+                    "license": entry.get("license") or entry.get("license_text") or self._manifest_source_value(manifest, "license"),
+                    "license_notes": entry.get("license_notes") or self._manifest_source_value(manifest, "license_notes"),
+                    "detection_method": entry.get("detection_method") or "manifest_support_image",
+                }
+        return None
+
+    def _manifest_source_value(self, manifest: dict[str, Any], key: str) -> str | None:
+        source = manifest.get("source", {}) if isinstance(manifest.get("source"), dict) else {}
+        if key == "source_name":
+            return self._clean(source.get("name")) or self._clean(manifest.get("source_name"))
+        if key == "source_url":
+            return self._clean(source.get("base_url")) or self._clean(manifest.get("source_url"))
+        if key == "license":
+            return self._clean(source.get("authorization")) or self._clean(manifest.get("license"))
+        if key == "license_notes":
+            return self._clean(manifest.get("license_notes"))
         return None
 
     def _manifest_media_type(self, entry: dict[str, Any]) -> str:
@@ -886,18 +923,31 @@ class MediaAutoFillImporter:
         return "none"
 
     def _load_manifest(self, source: str) -> dict[str, Any] | None:
+        paths = self._manifest_paths(source)
+        for path in paths:
+            if not path.exists():
+                continue
+            try:
+                loaded = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                continue
+            if isinstance(loaded, dict):
+                return loaded
+        return None
+
+    def _manifest_paths(self, source: str) -> list[Path]:
         output_dir = Path(self.settings.crawler_output_dir)
-        filename = "ines_video_manifest.generated.json" if source == "ines" else "libras_gif_manifest.generated.json"
-        path = output_dir / filename
-        if not path.exists() and not output_dir.is_absolute():
-            cwd = Path.cwd()
-            path = (cwd / Path(*output_dir.parts[1:]) / filename) if cwd.name == "backend" and output_dir.parts and output_dir.parts[0] == "backend" else cwd / path
-        if not path.exists():
-            return None
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
-            return None
+        filenames = ["libras_gif_manifest.generated.json"] if source == "ifpr" else ["ines_video_manifest.generated.json"]
+        paths: list[Path] = []
+        if source == "ines":
+            paths.append(Path(__file__).resolve().parent / "manifests" / "ines_full_catalog.generated.json")
+        for filename in filenames:
+            path = output_dir / filename
+            if not path.is_absolute():
+                cwd = Path.cwd()
+                path = (cwd / Path(*output_dir.parts[1:]) / filename) if cwd.name == "backend" and output_dir.parts and output_dir.parts[0] == "backend" else cwd / path
+            paths.append(path)
+        return paths
 
     def _load_manual_manifests(self) -> list[dict[str, Any]]:
         output_dir = Path(self.settings.crawler_output_dir)

@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.core.security import hash_password, utc_now
 from app.importers.ines_authorized_media_importer import InesAuthorizedMediaImporter
 from app.importers.ines_bulk_video_url_filler import InesBulkVideoUrlFiller
+from app.importers.ines_full_catalog_importer import InesFullCatalogImporter
 from app.importers.ines_media_importer import InesMediaImporter
 from app.importers.ines_site_crawler import InesSiteCrawler
 from app.importers.libras_gif_site_crawler import LibrasGifSiteCrawler
@@ -27,6 +28,10 @@ from app.schemas.api import (
     InesMediaImportJobResponse,
     InesMediaImportRequest,
     InesMediaImportStartRequest,
+    InesCatalogImportRequest,
+    InesCatalogResponse,
+    InesCatalogScanRequest,
+    InesCatalogValidateManifestRequest,
     InesStandardVideoDiagnoseRequest,
     InesStandardVideoFillPendingRequest,
     InesStandardVideoFillSelectedRequest,
@@ -637,6 +642,88 @@ def fill_pending_ines_standard_video(
     return {"job_id": report.get("job_id"), "status": "completed", "report": report}
 
 
+@router.post("/admin/ines-catalog/scan", response_model=InesCatalogResponse)
+def scan_ines_catalog(
+    payload: InesCatalogScanRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_full_catalog_import_enabled:
+        raise HTTPException(status_code=403, detail="Importação do catálogo completo INES desativada neste ambiente.")
+    try:
+        job, report, manifest = InesFullCatalogImporter(db).scan_catalog(
+            letters=payload.letters,
+            max_items=payload.max_items,
+            delay_ms=payload.delay_ms,
+            dry_run=payload.dry_run,
+            use_browser=payload.use_browser,
+            overwrite_manifest=payload.overwrite_manifest,
+            user=user,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"job_id": job.id if job else None, "status": "completed", "report": report, "manifest": manifest if payload.dry_run else None}
+
+
+@router.post("/admin/ines-catalog/validate-manifest", response_model=InesCatalogResponse)
+def validate_ines_catalog_manifest(
+    payload: InesCatalogValidateManifestRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_full_catalog_import_enabled:
+        raise HTTPException(status_code=403, detail="Importação do catálogo completo INES desativada neste ambiente.")
+    importer = InesFullCatalogImporter(db)
+    try:
+        manifest = payload.manifest or importer.load_manifest(payload.manifest_path)
+        report = importer.validate_manifest(manifest, max_items=payload.max_items)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    job = _create_ines_catalog_job(db, source_name="INES full catalog manifest validation", report=report)
+    return {"job_id": job.id, "status": "validated", "report": report, "manifest": None}
+
+
+@router.post("/admin/ines-catalog/import", response_model=InesCatalogResponse)
+def import_ines_catalog(
+    payload: InesCatalogImportRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(["admin"])),
+):
+    settings = get_settings()
+    if not settings.ines_full_catalog_import_enabled:
+        raise HTTPException(status_code=403, detail="Importação do catálogo completo INES desativada neste ambiente.")
+    try:
+        job, report = InesFullCatalogImporter(db).import_catalog_manifest(
+            manifest=payload.manifest,
+            manifest_path=payload.manifest_path,
+            overwrite=payload.overwrite,
+            max_items=payload.max_items,
+            status=payload.status,
+            user=user,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"job_id": job.id, "status": job.status, "report": report, "manifest": None}
+
+
+@router.get("/admin/ines-catalog/status/{job_id}", response_model=ImportJobRead)
+def get_ines_catalog_status(job_id: int, db: Session = Depends(get_db), _: User = Depends(require_role(["admin"]))):
+    job = db.get(ImportJob, job_id)
+    if not job or "ines full catalog" not in str(job.source_name).lower():
+        raise HTTPException(status_code=404, detail="Job do catálogo INES não encontrado.")
+    return job
+
+
+@router.get("/admin/ines-catalog/report/{job_id}", response_model=InesCatalogResponse)
+def get_ines_catalog_report(job_id: int, db: Session = Depends(get_db), _: User = Depends(require_role(["admin"]))):
+    job = db.get(ImportJob, job_id)
+    if not job or "ines full catalog" not in str(job.source_name).lower():
+        raise HTTPException(status_code=404, detail="Job do catálogo INES não encontrado.")
+    return {"job_id": job.id, "status": job.status, "report": _catalog_job_report(job), "manifest": None}
+
+
 @router.post("/admin/crawl/ines-media/start", response_model=CrawlJobResponse)
 def crawl_ines_media(
     payload: CrawlStartRequest,
@@ -997,6 +1084,48 @@ def _create_crawl_job(db: Session, *, source_name: str, report: dict, manifest: 
     return job
 
 
+def _create_ines_catalog_job(db: Session, *, source_name: str, report: dict) -> ImportJob:
+    job = ImportJob(
+        source_type="crawler",
+        source_name=source_name,
+        status="completed",
+        total_records=int(report.get("total_items") or report.get("entries_found") or 0),
+        imported_records=int(report.get("imported_count") or 0),
+        updated_records=int(report.get("updated_count") or 0),
+        failed_records=int(report.get("error_count") or report.get("errors_count") or 0),
+        logs=[
+            {
+                "level": "report",
+                "row": None,
+                "message": "Validação administrativa do catálogo INES executada sob demanda.",
+                "report": report,
+            }
+        ],
+        finished_at=utc_now(),
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    return job
+
+
+def _catalog_job_report(job: ImportJob) -> dict:
+    for item in reversed(job.logs or []):
+        if item.get("level") == "report" and isinstance(item.get("report"), dict):
+            return item["report"]
+    return {
+        "status": job.status,
+        "total_items": job.total_records,
+        "processed_items": max(0, job.imported_records + job.updated_records),
+        "imported_count": job.imported_records,
+        "updated_count": job.updated_records,
+        "error_count": job.failed_records,
+        "items": [],
+        "warnings": [],
+        "errors": [],
+    }
+
+
 def _set_if_present(sign: Sign, field: str, value: str | None) -> None:
     if value is not None and str(value).strip():
         setattr(sign, field, value)
@@ -1068,6 +1197,7 @@ def _sign_snapshot(sign: Sign | None) -> dict | None:
         "license": sign.license,
         "license_notes": _license_notes(sign),
         "video_url": sign.video_url,
+        "avatar_video_url": sign.avatar_video_url,
         "avatar_gif_url": sign.avatar_gif_url,
         "image_url": sign.image_url,
     }

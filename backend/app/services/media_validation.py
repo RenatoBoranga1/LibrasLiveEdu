@@ -143,3 +143,60 @@ def _is_valid_animation(content_type: str | None, final_url: str) -> bool:
 
 def _is_http_url(url: str) -> bool:
     return url.startswith("http://") or url.startswith("https://")
+
+
+def validate_remote_image_url(
+    url: str,
+    timeout_seconds: int = 15,
+    user_agent: str = "LibrasLiveEdu-media-validator/1.0",
+) -> dict[str, Any]:
+    result = {
+        "valid": False,
+        "url": url,
+        "final_url": url,
+        "status_code": None,
+        "content_type": None,
+        "content_length": None,
+        "media_type": "image",
+        "can_use_avatar": False,
+        "reason": "Validação não executada.",
+    }
+
+    if not _is_http_url(url):
+        result["reason"] = "URL deve começar com http:// ou https://."
+        return result
+
+    headers = {"User-Agent": user_agent}
+    try:
+        with httpx.Client(timeout=timeout_seconds, follow_redirects=True) as client:
+            response = _head_then_range_get(client, url, headers)
+    except httpx.TimeoutException:
+        result["reason"] = "Timeout ao validar a imagem remota."
+        return result
+    except httpx.RequestError as exc:
+        result["reason"] = f"Erro de rede ao validar imagem: {exc}"
+        return result
+    except Exception as exc:  # noqa: BLE001
+        result["reason"] = f"Erro inesperado ao validar imagem: {exc}"
+        return result
+
+    content_type = _content_type(response)
+    final_url = str(response.url)
+    result.update(
+        {
+            "final_url": final_url,
+            "status_code": response.status_code,
+            "content_type": content_type,
+            "content_length": _content_length(response),
+        }
+    )
+
+    if response.status_code not in {200, 206}:
+        result["reason"] = "URL não retornou status HTTP válido para imagem."
+        return result
+    if content_type in STATIC_IMAGE_CONTENT_TYPES or urlparse(final_url).path.lower().endswith(STATIC_IMAGE_EXTENSIONS):
+        result.update({"valid": True, "reason": "Imagem validada como apoio visual. Não serve para Avatar Libras."})
+        return result
+
+    result["reason"] = "URL não retornou imagem de apoio válida."
+    return result

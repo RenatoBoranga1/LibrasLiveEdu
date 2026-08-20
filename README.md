@@ -604,6 +604,88 @@ Ordem usada pelo preenchimento automático:
 
 Arquivos JPG/PNG, inclusive `/public/media/mao/*.jpg`, continuam entrando apenas em `image_url` e nunca contam como Avatar Libras.
 
+### Importar automaticamente todas as palavras do Dicionário INES
+
+A tela `/admin/ines-catalog` implementa o fluxo **Catálogo completo INES**. Ela escaneia letras do Dicionário INES de forma controlada, gera um manifesto revisável e permite importar as palavras para curadoria sem cadastrar item por item.
+
+Esse fluxo:
+
+- fica desativado por padrão com `INES_FULL_CATALOG_IMPORT_ENABLED=false`;
+- só roda quando um admin aciona a tela ou endpoint protegido;
+- respeita limite, delay, timeout e user-agent identificável;
+- não baixa vídeos/imagens para o Git;
+- valida vídeos antes de preencher `video_url` e `avatar_video_url`;
+- valida imagens apenas como apoio visual em `image_url`;
+- mantém todos os sinais como `pending`;
+- registra `ImportJob` e `SignAuditLog` durante a importação.
+
+Variáveis:
+
+```env
+INES_FULL_CATALOG_IMPORT_ENABLED=false
+INES_FULL_CATALOG_BASE_URL=https://dicionario.ines.gov.br/
+INES_FULL_CATALOG_DELAY_MS=1000
+INES_FULL_CATALOG_MAX_ITEMS=500
+INES_FULL_CATALOG_USE_BROWSER=false
+INES_FULL_CATALOG_USER_AGENT=LibrasLiveEdu-ines-full-catalog/1.0
+INES_FULL_CATALOG_AUTHORIZATION_NOTE=Uso autorizado para o projeto social educacional LibrasLive Edu
+```
+
+Endpoints administrativos:
+
+```bash
+POST /api/admin/ines-catalog/scan
+POST /api/admin/ines-catalog/validate-manifest
+POST /api/admin/ines-catalog/import
+GET /api/admin/ines-catalog/status/{job_id}
+GET /api/admin/ines-catalog/report/{job_id}
+```
+
+Script local/offline:
+
+```bash
+cd backend
+python scripts/crawl_ines_full_catalog.py --letters A,B,C --max-items 100 --dry-run
+python scripts/crawl_ines_full_catalog.py --letters A,B,C --max-items 100 --output app/importers/manifests/ines_full_catalog.generated.json
+```
+
+O manifesto padrão fica em `backend/app/importers/manifests/ines_full_catalog.generated.json`, mas arquivos `*.generated.json` dessa pasta são ignorados pelo Git para evitar commitar catálogos grandes. Depois de revisar o manifesto, use `/admin/ines-catalog` para validar e importar para curadoria.
+
+Formato principal do manifesto:
+
+```json
+{
+  "source": {
+    "name": "Dicionário da Língua Brasileira de Sinais - INES",
+    "base_url": "https://dicionario.ines.gov.br/",
+    "authorization": "Uso autorizado para o projeto social educacional LibrasLive Edu",
+    "generated_by": "ines_full_catalog_importer"
+  },
+  "stats": {
+    "letters_scanned": 3,
+    "entries_found": 80,
+    "videos_valid": 65,
+    "images_valid": 78,
+    "without_video": 15
+  },
+  "entries": [
+    {
+      "word": "abacate",
+      "normalized_word": "abacate",
+      "video_url": "https://dicionario.ines.gov.br/public/media/palavras/videos/abacateSm_Prog001.mp4",
+      "avatar_video_url": "https://dicionario.ines.gov.br/public/media/palavras/videos/abacateSm_Prog001.mp4",
+      "image_url": "https://dicionario.ines.gov.br/public/media/mao/...",
+      "media_type": "video",
+      "can_use_avatar": true,
+      "video_validated": true,
+      "status": "pending"
+    }
+  ]
+}
+```
+
+Mesmo quando a palavra possui imagem de configuração de mão, essa URL é apenas apoio visual. O Avatar Libras só usa vídeo, GIF ou animação após aprovação manual em `/admin`.
+
 ## Uso de GIFs como mídia complementar no Avatar Libras
 
 O LibrasLive Edu também aceita GIFs autorizados como mídia complementar para sinais em Libras. O GIF é um fallback leve quando ainda não houver vídeo aprovado, mas não substitui validação por especialista nem a atuação de intérprete humano.

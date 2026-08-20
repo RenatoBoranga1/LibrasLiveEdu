@@ -352,6 +352,36 @@ class InesStandardVideoResponse(BaseModel):
     report: dict[str, Any]
 
 
+class InesCatalogScanRequest(BaseModel):
+    letters: list[str] = Field(default_factory=list)
+    max_items: int | None = 100
+    delay_ms: int | None = None
+    dry_run: bool = True
+    use_browser: bool = False
+    overwrite_manifest: bool = False
+
+
+class InesCatalogImportRequest(BaseModel):
+    manifest_path: str | None = None
+    manifest: dict[str, Any] | None = None
+    overwrite: bool = False
+    max_items: int | None = 500
+    status: str = Field(default="pending", pattern="^(pending|review|needs_specialist_review)$")
+
+
+class InesCatalogValidateManifestRequest(BaseModel):
+    manifest_path: str | None = None
+    manifest: dict[str, Any] | None = None
+    max_items: int | None = 500
+
+
+class InesCatalogResponse(BaseModel):
+    job_id: int | None = None
+    status: str
+    report: dict[str, Any]
+    manifest: dict[str, Any] | None = None
+
+
 class CrawlStartRequest(BaseModel):
     max_pages: int | None = 20
     delay_ms: int | None = None

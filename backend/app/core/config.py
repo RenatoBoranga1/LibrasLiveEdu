@@ -70,6 +70,13 @@ class Settings(BaseSettings):
     crawler_output_dir: str = "backend/data/generated"
     crawler_respect_robots: bool = True
     crawler_allow_external_domains: bool = False
+    ines_full_catalog_import_enabled: bool = False
+    ines_full_catalog_base_url: str = "https://dicionario.ines.gov.br/"
+    ines_full_catalog_delay_ms: int = 1000
+    ines_full_catalog_max_items: int = 500
+    ines_full_catalog_use_browser: bool = False
+    ines_full_catalog_user_agent: str = "LibrasLiveEdu-ines-full-catalog/1.0"
+    ines_full_catalog_authorization_note: str = "Uso autorizado para o projeto social educacional LibrasLive Edu"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

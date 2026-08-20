@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { BadgeCheck, Image as ImageIcon, Info, Pause, Play, RotateCcw, SkipForward, Sparkles, Trash2 } from "lucide-react";
 import { LibrasLiveIcon } from "@/components/LibrasLiveIcon";
 import { LibrasLiveWelcomeVisual } from "@/components/brand/LibrasLiveWelcomeVisual";
@@ -26,19 +26,28 @@ export type AvatarMediaQueueItem = {
   licenseNotes?: string | null;
 };
 
-export function SequentialAvatarPlayer({
-  items,
-  maxQueue = DEFAULT_MAX_QUEUE,
-  gifDurationMs = DEFAULT_GIF_DURATION_MS,
-  animationDurationMs = DEFAULT_ANIMATION_DURATION_MS,
-}: {
+export type SequentialAvatarPlayerHandle = {
+  pause: () => void;
+  resume: () => void;
+  repeat: () => void;
+};
+
+export const SequentialAvatarPlayer = forwardRef<SequentialAvatarPlayerHandle, {
   items: SignCard[];
   maxQueue?: number;
   gifDurationMs?: number;
   animationDurationMs?: number;
-}) {
+  onPlaybackStateChange?: (paused: boolean) => void;
+}>(function SequentialAvatarPlayer({
+  items,
+  maxQueue = DEFAULT_MAX_QUEUE,
+  gifDurationMs = DEFAULT_GIF_DURATION_MS,
+  animationDurationMs = DEFAULT_ANIMATION_DURATION_MS,
+  onPlaybackStateChange,
+}, ref) {
   const [queue, setQueue] = useState<AvatarMediaQueueItem[]>([]);
   const [currentItem, setCurrentItem] = useState<AvatarMediaQueueItem | null>(null);
+  const [lastPlayedItem, setLastPlayedItem] = useState<AvatarMediaQueueItem | null>(null);
   const [paused, setPaused] = useState(false);
   const [needsActivation, setNeedsActivation] = useState(false);
   const [playerKey, setPlayerKey] = useState(0);
@@ -51,6 +60,10 @@ export function SequentialAvatarPlayer({
   useEffect(() => {
     currentItemRef.current = currentItem;
   }, [currentItem]);
+
+  useEffect(() => {
+    onPlaybackStateChange?.(paused);
+  }, [onPlaybackStateChange, paused]);
 
   useEffect(() => {
     const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -110,7 +123,10 @@ export function SequentialAvatarPlayer({
   }, [items]);
 
   function advance() {
-    setPlayedCount((count) => count + (currentItemRef.current ? 1 : 0));
+    if (currentItemRef.current) {
+      setLastPlayedItem(currentItemRef.current);
+      setPlayedCount((count) => count + 1);
+    }
     setCurrentItem(null);
     setPlayerKey((value) => value + 1);
   }
@@ -129,7 +145,9 @@ export function SequentialAvatarPlayer({
   }
 
   function repeatCurrent() {
-    if (!currentItem) return;
+    const target = currentItemRef.current ?? lastPlayedItem;
+    if (!target) return;
+    if (!currentItemRef.current) setCurrentItem(target);
     setPlayerKey((value) => value + 1);
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
@@ -140,6 +158,7 @@ export function SequentialAvatarPlayer({
   function clearQueue() {
     setQueue([]);
     setCurrentItem(null);
+    setLastPlayedItem(null);
     setNeedsActivation(false);
     setPlayerKey((value) => value + 1);
   }
@@ -155,25 +174,31 @@ export function SequentialAvatarPlayer({
     }
   }
 
+  useImperativeHandle(ref, () => ({
+    pause: pauseQueue,
+    resume: resumeQueue,
+    repeat: repeatCurrent,
+  }));
+
   return (
     <section className="overflow-hidden rounded-lg border border-ocean/20 bg-white shadow-soft dark:border-white/10 dark:bg-zinc-900" aria-label="Avatar Libras">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 dark:border-white/10">
-        <div>
-          <div className="flex items-center gap-2">
-            <LibrasLiveIcon size={38} decorative />
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 dark:border-white/10">
+        <div className="flex min-w-0 items-center gap-3">
+          <LibrasLiveIcon size={38} decorative />
+          <div className="min-w-0">
             <h2 className="text-lg font-black text-ink dark:text-white">Avatar Libras</h2>
+            <p className="text-xs font-semibold text-ink/60 dark:text-white/60">Somente vídeos, GIFs e animações aprovadas.</p>
           </div>
-          <p className="text-xs font-bold text-ink/60 dark:text-white/60">fila automatica de videos, GIFs e animacoes aprovadas</p>
         </div>
-        <span className="inline-flex items-center gap-2 rounded-full bg-ocean/10 px-3 py-1 text-xs font-black text-ocean dark:bg-mint/10 dark:text-mint" aria-live="polite">
+        <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-ocean/10 px-3 py-1 text-xs font-black text-ocean dark:bg-mint/10 dark:text-mint" aria-live="polite">
           <BadgeCheck className="h-4 w-4" aria-hidden="true" />
           {paused ? "Pausado" : currentItem ? "Reproduzindo automaticamente" : "Aguardando sinal"}
         </span>
-      </div>
+      </header>
 
-      <div className="grid gap-4 p-4 md:grid-cols-[1fr_240px]">
-        <div className="relative grid min-h-64 place-items-center overflow-hidden rounded-lg bg-ink text-white">
-          <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between bg-black/30 px-3 py-2 text-xs font-bold">
+      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="relative grid h-72 place-items-center overflow-hidden rounded-lg bg-ink text-white lg:h-[360px]">
+          <div className="absolute inset-x-0 top-0 z-10 flex min-h-10 items-center justify-between bg-black/45 px-3 py-2 text-xs font-bold">
             <span aria-live="polite">{currentItem ? `Sinal atual: ${currentItem.word}` : "Sem sinal animado na fila"}</span>
             <span>{currentItem?.mediaType?.toUpperCase() ?? "FILA"}</span>
           </div>
@@ -182,7 +207,7 @@ export function SequentialAvatarPlayer({
             <video
               key={`${currentItem.key}-${playerKey}`}
               ref={videoRef}
-              className="h-full max-h-96 w-full rounded-lg object-contain"
+              className="h-full w-full object-contain"
               src={currentItem.mediaUrl}
               autoPlay={!paused}
               muted
@@ -195,12 +220,12 @@ export function SequentialAvatarPlayer({
               }}
               onEnded={advance}
               onError={advance}
-              aria-label={`Video do sinal em Libras para ${currentItem.word}`}
+              aria-label={`Vídeo do sinal em Libras para ${currentItem.word}`}
             />
           ) : currentItem?.mediaType === "gif" ? (
             <img
               key={`${currentItem.key}-${playerKey}`}
-              className="h-full max-h-96 w-full rounded-lg object-contain"
+              className="h-full w-full object-contain"
               src={currentItem.mediaUrl}
               alt={`Sinal em Libras para ${currentItem.word}`}
               loading="lazy"
@@ -208,20 +233,22 @@ export function SequentialAvatarPlayer({
             />
           ) : currentItem?.mediaType === "animation" ? (
             <div className="flex max-w-md flex-col items-center gap-4 px-5 py-10 text-center">
-              <div className="grid h-24 w-24 place-items-center rounded-full bg-mint text-ink shadow-soft">
-                <Sparkles className="h-12 w-12" aria-hidden="true" />
-              </div>
-              <p className="text-base font-black">Animacao do sinal {currentItem.word} recebida.</p>
+              <span className="grid h-20 w-20 place-items-center rounded-full bg-mint text-ink shadow-soft">
+                <Sparkles className="h-10 w-10" aria-hidden="true" />
+              </span>
+              <p className="text-base font-black">Animação do sinal {currentItem.word} recebida.</p>
               <a className="focus-ring rounded-lg bg-white px-4 py-3 text-sm font-black text-ocean" href={currentItem.mediaUrl} target="_blank" rel="noreferrer">
-                Abrir animacao
+                Abrir animação
               </a>
             </div>
           ) : (
-            <div className="flex max-w-md flex-col items-center gap-4 px-5 py-10 text-center">
+            <div className="flex max-w-md items-center gap-4 px-5 py-14 text-left sm:px-8">
               <LibrasLiveWelcomeVisual variant="fallback" />
-              <p className="text-base font-black leading-relaxed">Aguardando sinal em Libras</p>
-              <p className="text-sm font-semibold leading-relaxed text-white/75">A legenda continua ativa; o Avatar tocara quando houver video, GIF ou animacao aprovada.</p>
-              <p className="text-xs font-semibold leading-relaxed text-white/55">Imagem institucional; não é uma tradução em Libras.</p>
+              <div>
+                <p className="text-lg font-black leading-relaxed">Aguardando sinal em Libras</p>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-white/75">Ainda não há sinal em Libras para este trecho. A legenda continua ativa.</p>
+                <p className="mt-3 text-xs font-semibold leading-relaxed text-white/55">Imagem institucional; não é uma tradução em Libras.</p>
+              </div>
             </div>
           )}
         </div>
@@ -229,89 +256,67 @@ export function SequentialAvatarPlayer({
         <aside className="grid content-start gap-3">
           {needsActivation && (
             <button className="focus-ring rounded-lg bg-amber px-3 py-3 text-sm font-black text-ink" onClick={resumeQueue}>
-              Toque uma vez para ativar a reproducao automatica do Avatar.
+              Toque uma vez para ativar a reprodução automática.
             </button>
           )}
-
           {reducedMotion && (
-            <div role="status" className="rounded-lg bg-amber/20 p-3 text-sm font-bold leading-relaxed text-ink dark:text-white">
-              Movimento reduzido ativo. Use Retomar para reproduzir a sequencia.
+            <div role="status" className="rounded-lg bg-amber/25 p-3 text-sm font-bold leading-relaxed text-ink dark:text-white">
+              Movimento reduzido ativo. Use Retomar para reproduzir a sequência.
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
-            <button className="focus-ring inline-flex min-h-11 items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-black text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint" onClick={pauseQueue} aria-label="Pausar avatar">
-              <Pause className="h-4 w-4" aria-hidden="true" />
-              Pausar
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Controles do Avatar Libras">
+            <button className="focus-ring inline-flex min-h-12 items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-black text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint" onClick={pauseQueue} aria-label="Pausar avatar">
+              <Pause className="h-4 w-4" aria-hidden="true" /> Pausar
             </button>
-            <button className="focus-ring inline-flex min-h-11 items-center justify-center gap-1 rounded-lg bg-ocean px-2 py-2 text-xs font-black text-white" onClick={resumeQueue} aria-label={reducedMotion && paused ? "Reproduzir sequencia do avatar" : "Retomar avatar"}>
-              <Play className="h-4 w-4" aria-hidden="true" />
-              {reducedMotion && paused ? "Reproduzir" : "Retomar"}
+            <button className="focus-ring inline-flex min-h-12 items-center justify-center gap-1 rounded-lg bg-ocean px-2 py-2 text-xs font-black text-white" onClick={resumeQueue} aria-label={reducedMotion && paused ? "Reproduzir sequência do avatar" : "Retomar avatar"}>
+              <Play className="h-4 w-4" aria-hidden="true" /> {reducedMotion && paused ? "Reproduzir" : "Retomar"}
             </button>
-            <button className="focus-ring inline-flex min-h-11 items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-black text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint" onClick={repeatCurrent} disabled={!currentItem} aria-label="Repetir sinal atual">
-              <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              Repetir
+            <button className="focus-ring inline-flex min-h-12 items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-black text-ocean shadow-soft disabled:opacity-40 dark:bg-zinc-950 dark:text-mint" onClick={repeatCurrent} disabled={!currentItem && !lastPlayedItem} aria-label="Repetir sinal atual">
+              <RotateCcw className="h-4 w-4" aria-hidden="true" /> Repetir
             </button>
-            <button className="focus-ring inline-flex min-h-11 items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-black text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint" onClick={clearQueue} disabled={!currentItem && !queue.length} aria-label="Limpar fila do avatar">
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-              Limpar
+            <button className="focus-ring inline-flex min-h-12 items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-black text-ocean shadow-soft disabled:opacity-40 dark:bg-zinc-950 dark:text-mint" onClick={clearQueue} disabled={!currentItem && !queue.length} aria-label="Limpar fila do avatar">
+              <Trash2 className="h-4 w-4" aria-hidden="true" /> Limpar
             </button>
           </div>
-          <button className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-teal-50 px-3 py-2 text-sm font-black text-ocean dark:bg-zinc-800 dark:text-mint" onClick={advance} disabled={!currentItem} aria-label="Pular para o proximo sinal">
-            <SkipForward className="h-4 w-4" aria-hidden="true" />
-            Pular sinal
+          <button className="focus-ring inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-teal-50 px-3 py-2 text-sm font-black text-ocean disabled:opacity-40 dark:bg-zinc-800 dark:text-mint" onClick={advance} disabled={!currentItem} aria-label="Pular para o próximo sinal">
+            <SkipForward className="h-4 w-4" aria-hidden="true" /> Pular sinal
           </button>
 
           <div className="rounded-lg border border-ink/10 bg-teal-50 p-3 dark:border-white/10 dark:bg-zinc-800" aria-live="polite">
-            <p className="text-sm font-black text-ink dark:text-white">Sinal atual</p>
+            <p className="text-xs font-bold text-ink/60 dark:text-white/60">Sinal atual</p>
             <p className="mt-1 text-xl font-black text-ocean dark:text-mint">{currentItem?.word ?? "Aguardando"}</p>
-            <p className="mt-2 text-xs font-bold text-ink/65 dark:text-white/65">
-              Status: {paused ? "Avatar pausado" : currentItem ? "Reproduzindo automaticamente" : "Aguardando sinal aprovado"}
-            </p>
-            <p className="mt-2 text-xs font-bold text-ink/65 dark:text-white/65">Reproduzidos nesta aula: {playedCount}</p>
-          </div>
-
-          <div className="rounded-lg bg-white p-3 text-xs font-bold leading-relaxed text-ink/75 shadow-soft dark:bg-zinc-950 dark:text-white/75">
-            <p className="font-black text-ink dark:text-white">Na fila</p>
-            <p className="mt-1">{upcomingWords.length ? upcomingWords.join(", ") : "Nenhum sinal aguardando."}</p>
-          </div>
-
-          {currentItem && (
-            <div className="rounded-lg bg-white p-3 text-xs font-bold leading-relaxed text-ink/75 shadow-soft dark:bg-zinc-950 dark:text-white/75">
-              <p>Palavra: {currentItem.word}</p>
-              {currentItem.sourceName && <p>Fonte: {currentItem.sourceName}</p>}
-              {currentItem.license && <p className="mt-1">Licenca/autorizacao: {currentItem.license}</p>}
-              {currentItem.licenseNotes && <p className="mt-1">Observacao: {currentItem.licenseNotes}</p>}
-              {referenceUrl && (
-                <a className="focus-ring mt-2 inline-flex min-h-9 items-center rounded-lg bg-teal-50 px-3 py-2 text-ocean dark:bg-zinc-800 dark:text-mint" href={referenceUrl} target="_blank" rel="noreferrer">
-                  Abrir fonte
-                </a>
-              )}
-            </div>
-          )}
-
-          {latestSupportImage && !currentItem && (
-            <div role="status" className="rounded-lg bg-amber/20 p-3 text-sm font-bold leading-relaxed text-ink dark:text-white">
-              <div className="mb-2 flex items-center gap-2">
-                <ImageIcon className="h-4 w-4" aria-hidden="true" />
-                Imagem de apoio
-              </div>
-              <p>Imagem de apoio para {latestSupportImage.word}. Nao representa o movimento completo em Libras.</p>
-            </div>
-          )}
-
-          <div className="rounded-lg bg-amber/20 p-3 text-xs font-bold leading-relaxed text-ink/80 dark:text-white/80">
-            <div className="mb-1 flex items-center gap-2 text-ink dark:text-white">
-              <Info className="h-4 w-4" aria-hidden="true" />
-              Limite importante
-            </div>
-            O app apoia acessibilidade, mas nao substitui interprete humano ou revisao especializada em Libras.
+            <p className="mt-2 text-xs font-semibold text-ink/65 dark:text-white/65">{upcomingWords.length ? `Na fila: ${upcomingWords.join(", ")}` : "Nenhum sinal aguardando."}</p>
+            <p className="mt-2 text-xs font-semibold text-ink/55 dark:text-white/55">Reproduzidos: {playedCount}</p>
           </div>
         </aside>
       </div>
+
+      {(currentItem || latestSupportImage) && (
+        <footer className="grid gap-3 border-t border-ink/10 px-4 py-3 text-xs font-semibold leading-relaxed text-ink/70 dark:border-white/10 dark:text-white/70 sm:grid-cols-2">
+          {currentItem ? (
+            <div>
+              <p><strong>Palavra:</strong> {currentItem.word}</p>
+              {currentItem.sourceName && <p><strong>Fonte:</strong> {currentItem.sourceName}</p>}
+              {currentItem.license && <p><strong>Licença:</strong> {currentItem.license}</p>}
+              {referenceUrl && <a className="focus-ring mt-2 inline-flex min-h-10 items-center rounded-lg bg-teal-50 px-3 py-2 font-black text-ocean dark:bg-zinc-800 dark:text-mint" href={referenceUrl} target="_blank" rel="noreferrer">Abrir fonte</a>}
+            </div>
+          ) : <span />}
+          {latestSupportImage && !currentItem && (
+            <div role="status" className="rounded-lg bg-amber/25 p-3 text-ink dark:text-white">
+              <p className="flex items-center gap-2 font-black"><ImageIcon className="h-4 w-4" aria-hidden="true" /> Imagem de apoio</p>
+              <p className="mt-1">Apoio para {latestSupportImage.word}; não representa o movimento completo em Libras.</p>
+            </div>
+          )}
+          <div className="rounded-lg bg-amber/20 p-3 text-ink/80 dark:text-white/80">
+            <p className="flex items-center gap-2 font-black text-ink dark:text-white"><Info className="h-4 w-4" aria-hidden="true" /> Limite importante</p>
+            <p className="mt-1">O app apoia a acessibilidade, mas não substitui intérprete humano ou revisão especializada.</p>
+          </div>
+        </footer>
+      )}
     </section>
   );
-}
+});
 
 function toQueueItem(card: SignCard): AvatarMediaQueueItem | null {
   if (card.status !== "approved") return null;

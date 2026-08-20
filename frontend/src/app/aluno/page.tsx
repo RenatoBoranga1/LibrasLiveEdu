@@ -17,13 +17,13 @@ export default function StudentEntryPage() {
         eyebrow="Acesso do aluno"
         title="Acompanhe sua aula com mais clareza"
         description="Entre com o código compartilhado pelo professor e acompanhe legenda, Avatar Libras e resumo em uma tela preparada para leitura."
-        visual={<LibrasLiveRealisticVisual variant="student" decorative className="h-56 w-full" />}
+        visual={<LibrasLiveRealisticVisual variant="student" decorative priority className="h-56 w-full" />}
       />
-      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,760px)_360px] lg:justify-center">
+      <div className="mx-auto grid max-w-6xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,680px)_320px] lg:justify-center lg:py-8">
         <StudentJoinForm />
         <aside className="grid gap-4 self-start">
           <div className="rounded-lg bg-white p-5 shadow-soft dark:bg-zinc-900">
-            <h2 className="text-2xl font-black text-ink dark:text-white">Acesso pelo celular</h2>
+            <h2 className="text-xl font-black text-ink dark:text-white">Acesso simples pelo celular</h2>
             <p className="mt-3 font-semibold leading-relaxed text-ink/75 dark:text-white/75">
               Use o código mostrado pelo professor ou leia o QR Code. Não é necessário criar conta para assistir à aula.
             </p>

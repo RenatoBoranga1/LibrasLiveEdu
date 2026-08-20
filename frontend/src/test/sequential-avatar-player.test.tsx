@@ -47,7 +47,7 @@ describe("SequentialAvatarPlayer", () => {
     );
 
     expect(await screen.findByText("Sinal atual: aprender")).toBeInTheDocument();
-    fireEvent.ended(screen.getByLabelText(/video do sinal em libras para aprender/i));
+    fireEvent.ended(screen.getByLabelText(/vídeo do sinal em libras para aprender/i));
     expect(await screen.findByText("Sinal atual: abacate")).toBeInTheDocument();
   });
 
@@ -97,7 +97,7 @@ describe("SequentialAvatarPlayer", () => {
     );
 
     expect(await screen.findByText("Sinal atual: aprender")).toBeInTheDocument();
-    fireEvent.error(screen.getByLabelText(/video do sinal em libras para aprender/i));
+    fireEvent.error(screen.getByLabelText(/vídeo do sinal em libras para aprender/i));
     expect(await screen.findByText("Sinal atual: abacate")).toBeInTheDocument();
   });
 
@@ -141,7 +141,7 @@ describe("SequentialAvatarPlayer", () => {
     );
 
     expect(await screen.findByText("Sinal atual: aprender")).toBeInTheDocument();
-    fireEvent.ended(screen.getByLabelText(/video do sinal em libras para aprender/i));
+    fireEvent.ended(screen.getByLabelText(/vídeo do sinal em libras para aprender/i));
     expect(await screen.findByText("Sinal atual: abacate")).toBeInTheDocument();
   });
 
@@ -159,6 +159,20 @@ describe("SequentialAvatarPlayer", () => {
     fireEvent.click(screen.getByRole("button", { name: /limpar fila do avatar/i }));
     expect(screen.getByText("Sem sinal animado na fila")).toBeInTheDocument();
     expect(screen.getByText("Nenhum sinal aguardando.")).toBeInTheDocument();
+  });
+
+  it("repeats the last signal after it has finished", async () => {
+    render(
+      <SequentialAvatarPlayer
+        items={[card({ word: "aprender", queueKey: "repeat", videoUrl: "https://example.com/aprender.mp4" })]}
+      />
+    );
+
+    expect(await screen.findByText("Sinal atual: aprender")).toBeInTheDocument();
+    fireEvent.ended(screen.getByLabelText(/vídeo do sinal em libras para aprender/i));
+    expect(await screen.findByText("Sem sinal animado na fila")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /repetir sinal atual/i }));
+    expect(await screen.findByText("Sinal atual: aprender")).toBeInTheDocument();
   });
 });
 

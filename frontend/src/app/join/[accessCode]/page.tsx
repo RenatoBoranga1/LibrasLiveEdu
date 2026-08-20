@@ -1,22 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { BookmarkPlus, CaptionsOff, History, Image as ImageIcon, Maximize2, Minimize2, RotateCcw, Trash2, Video, X } from "lucide-react";
+import { BookmarkPlus, ChevronDown, Image as ImageIcon, RotateCcw, Trash2, Video, X } from "lucide-react";
 import { useParams } from "next/navigation";
-import { AccessibleModeToggle } from "@/components/AccessibleModeToggle";
 import { ConnectionStatusBanner } from "@/components/ConnectionStatusBanner";
 import { HelpButton } from "@/components/HelpButton";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
-import { LiveCaption } from "@/components/LiveCaption";
+import { LibrasLiveLogo } from "@/components/LibrasLiveLogo";
+import { LiveCaption, type LiveCaptionSize, type LiveCaptionStatus } from "@/components/LiveCaption";
 import { LiveModeSelector, type LiveViewMode } from "@/components/LiveModeSelector";
 import { LiveSummaryPanel } from "@/components/LiveSummaryPanel";
-import { SequentialAvatarPlayer } from "@/components/SequentialAvatarPlayer";
+import { SequentialAvatarPlayer, type SequentialAvatarPlayerHandle } from "@/components/SequentialAvatarPlayer";
+import { StudentAccessibilityBar } from "@/components/StudentAccessibilityBar";
 import { getClassByAccessCode, getLiveSummaryByAccessCode, joinClass, saveWord } from "@/services/api";
 import type { ClassSession, LiveSummary, SignCard } from "@/types/live";
 import { useLiveClass } from "@/hooks/useLiveClass";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+const CAPTION_SIZE_STORAGE_KEY = "libraslive.student.caption-size";
+const HIGH_CONTRAST_STORAGE_KEY = "libraslive.student.high-contrast";
+const captionSizes: LiveCaptionSize[] = ["regular", "large", "extra-large"];
 
 export default function JoinClassPage() {
   const params = useParams<{ accessCode: string }>();
@@ -26,7 +30,9 @@ export default function JoinClassPage() {
   const [classSession, setClassSession] = useState<ClassSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [highContrast, setHighContrast] = useState(false);
-  const [enlargedText, setEnlargedText] = useState(true);
+  const [captionSizeIndex, setCaptionSizeIndex] = useState(1);
+  const [summaryTextScale, setSummaryTextScale] = useState<0 | 1 | 2>(0);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [captionPaused, setCaptionPaused] = useState(false);
   const [displayCaption, setDisplayCaption] = useState("");
   const [savedWords, setSavedWords] = useState<string[]>([]);
@@ -35,11 +41,29 @@ export default function JoinClassPage() {
   const [classEnded, setClassEnded] = useState(false);
   const [viewMode, setViewMode] = useState<LiveViewMode>("full");
   const [videoCard, setVideoCard] = useState<SignCard | null>(null);
+  const [avatarPaused, setAvatarPaused] = useState(false);
+  const avatarPlayerRef = useRef<SequentialAvatarPlayerHandle | null>(null);
 
   useEffect(() => {
     const queryToken = new URLSearchParams(window.location.search).get("token");
     if (queryToken) setJoinToken(queryToken);
   }, []);
+
+  useEffect(() => {
+    const savedSizeValue = window.localStorage.getItem(CAPTION_SIZE_STORAGE_KEY);
+    const savedSize = savedSizeValue === null ? null : Number(savedSizeValue);
+    if (savedSize !== null && Number.isInteger(savedSize) && savedSize >= 0 && savedSize < captionSizes.length) {
+      setCaptionSizeIndex(savedSize);
+    }
+    setHighContrast(window.localStorage.getItem(HIGH_CONTRAST_STORAGE_KEY) === "true");
+    setPreferencesLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+    window.localStorage.setItem(CAPTION_SIZE_STORAGE_KEY, String(captionSizeIndex));
+    window.localStorage.setItem(HIGH_CONTRAST_STORAGE_KEY, String(highContrast));
+  }, [captionSizeIndex, highContrast, preferencesLoaded]);
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get("token");
@@ -102,6 +126,23 @@ export default function JoinClassPage() {
         ? "Tentando reconectar"
         : "Aguardando professor";
   const modalMedia = getCardMedia(videoCard);
+  const focusMode = viewMode === "focus";
+  const captionStatus: LiveCaptionStatus = classEnded
+    ? "offline"
+    : live.reconnecting
+      ? "reconnecting"
+      : captionPaused
+        ? "paused"
+        : displayCaption
+          ? "receiving"
+          : live.connected
+            ? "waiting"
+            : "offline";
+  const captionText = classEnded
+    ? "A aula foi encerrada. Você ainda pode revisar os trechos salvos."
+    : live.reconnecting
+      ? "Reconectando à aula. Aguarde um instante..."
+      : displayCaption || (live.connected ? "Aguardando a fala do professor..." : "Aguardando conexão com a aula...");
 
   async function handleSaveWord(card?: SignCard) {
     const target = card ?? cards[0];
@@ -121,20 +162,45 @@ export default function JoinClassPage() {
     window.setTimeout(() => setNotice(null), 1800);
   }
 
-  return (
-    <main className={`min-h-screen bg-paper pb-28 text-ink dark:bg-zinc-950 dark:text-white ${highContrast ? "high-contrast" : ""}`}>
-      <section className="sticky top-0 z-20 border-b border-ink/10 bg-paper/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-normal text-ocean dark:text-mint">LibrasLive Edu</p>
-            <h1 className="text-base font-black leading-tight">{loading ? "Entrando na aula..." : classSession?.title ?? "Aula"}</h1>
-            <p className="mt-1 text-xs font-bold text-ink/65 dark:text-white/65">{connectionLabel}</p>
-          </div>
-          <HelpButton />
-        </div>
-      </section>
+  function changeCaptionSize(direction: -1 | 1) {
+    setCaptionSizeIndex((current) => Math.min(captionSizes.length - 1, Math.max(0, current + direction)));
+  }
 
-      <div className="mx-auto grid max-w-5xl gap-4 px-4 py-4">
+  function toggleFocusMode() {
+    setViewMode((current) => current === "focus" ? "full" : "focus");
+  }
+
+  function toggleAvatarPlayback() {
+    if (avatarPaused) {
+      avatarPlayerRef.current?.resume();
+    } else {
+      avatarPlayerRef.current?.pause();
+    }
+  }
+
+  return (
+    <main className={`min-h-screen bg-paper pb-40 text-ink dark:bg-zinc-950 dark:text-white lg:pb-32 ${highContrast ? "high-contrast" : ""}`}>
+      <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/95 px-4 py-2 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <LibrasLiveLogo compact />
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-ocean dark:text-mint">Ambiente do aluno</p>
+              <h1 className="truncate text-base font-black leading-tight sm:text-lg">{loading ? "Entrando na aula..." : classSession?.title ?? "Aula"}</h1>
+              <p className="text-xs font-semibold text-ink/60 dark:text-white/60">Legenda ao vivo e apoio visual em Libras</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className={`hidden min-h-9 items-center gap-2 rounded-full px-3 py-1 text-xs font-black sm:inline-flex ${live.connected ? "bg-mint text-ink" : "bg-amber/40 text-ink dark:text-white"}`} role="status">
+              <span className={`h-2.5 w-2.5 rounded-full ${live.connected ? "bg-ocean" : "bg-amber-strong"}`} aria-hidden="true" />
+              {connectionLabel}
+            </span>
+            <HelpButton />
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto grid max-w-6xl gap-4 px-4 py-4 sm:px-6">
         <ConnectionStatusBanner connected={live.connected} reconnecting={live.reconnecting} error={live.connectionError} label={connectionLabel} />
         {notice && (
           <div role="status" className="rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white">
@@ -146,16 +212,9 @@ export default function JoinClassPage() {
             Voltar para entrar com outro código
           </Link>
         )}
-        <LiveModeSelector value={viewMode} onChange={setViewMode} />
-        <AccessibleModeToggle
-          highContrast={highContrast}
-          largeText={enlargedText}
-          onHighContrast={() => setHighContrast((value) => !value)}
-          onLargeText={() => setEnlargedText((value) => !value)}
-        />
-        {demoMode && (
+        {demoMode && !focusMode && (
           <button
-            className="focus-ring inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-amber px-4 py-3 text-sm font-black text-ink shadow-soft hover:bg-yellow-400"
+            className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 justify-self-start rounded-lg bg-amber px-4 py-2 text-sm font-black text-ink"
             onClick={live.injectDemo}
             aria-label="Testar acessibilidade com trecho local de demonstração"
           >
@@ -164,31 +223,56 @@ export default function JoinClassPage() {
           </button>
         )}
 
-        {showAvatar && (
-          <div className="sticky top-[73px] z-10">
-            <SequentialAvatarPlayer items={live.avatarItems} />
-          </div>
-        )}
-
         {showCaption && (
-          <LiveCaption text={displayCaption || "Aguardando a fala do professor..."} enlarged={enlargedText} />
-        )}
-
-        {showCaption && (
-          <LiveSummaryPanel
-            summaryText={visibleSummary?.summaryText}
-            bulletPoints={visibleSummary?.bulletPoints}
-            keywords={visibleSummary?.keywords}
-            updatedAt={visibleSummary?.updatedAt}
-            generatedBy={visibleSummary?.generatedBy}
-            isAutoGenerated={visibleSummary?.isAutoGenerated}
-            enlarged={enlargedText}
-            collapsible
-            defaultOpen={false}
+          <LiveCaption
+            text={captionText}
+            size={captionSizes[captionSizeIndex]}
+            status={captionStatus}
+            paused={captionPaused}
+            onTogglePause={() => setCaptionPaused((value) => !value)}
           />
         )}
 
-        {showCards && (
+        {(showAvatar || showCaption) && (
+          <div className={`grid items-start gap-4 ${showAvatar && showCaption && !focusMode ? "lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.8fr)]" : ""}`}>
+            {showAvatar && (
+              <SequentialAvatarPlayer
+                ref={avatarPlayerRef}
+                items={live.avatarItems}
+                onPlaybackStateChange={setAvatarPaused}
+              />
+            )}
+            {showCaption && (
+              <LiveSummaryPanel
+                summaryText={visibleSummary?.summaryText}
+                bulletPoints={visibleSummary?.bulletPoints}
+                keywords={visibleSummary?.keywords}
+                updatedAt={visibleSummary?.updatedAt}
+                generatedBy={visibleSummary?.generatedBy}
+                isAutoGenerated={visibleSummary?.isAutoGenerated}
+                textScale={summaryTextScale}
+                onIncreaseText={() => setSummaryTextScale((value) => Math.min(2, value + 1) as 0 | 1 | 2)}
+                onDecreaseText={() => setSummaryTextScale((value) => Math.max(0, value - 1) as 0 | 1 | 2)}
+                collapsible
+                defaultOpen
+              />
+            )}
+          </div>
+        )}
+
+        {!focusMode && (
+          <details className="rounded-lg border border-ink/10 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-zinc-900">
+            <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg text-sm font-black text-ocean dark:text-mint">
+              Opções de visualização
+              <ChevronDown className="h-5 w-5" aria-hidden="true" />
+            </summary>
+            <div className="mt-3 max-w-xl">
+              <LiveModeSelector value={viewMode} onChange={setViewMode} />
+            </div>
+          </details>
+        )}
+
+        {showCards && !focusMode && (
           <section aria-label="Cards visuais de palavras-chave" className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-black">Palavras-chave</h2>
@@ -268,39 +352,43 @@ export default function JoinClassPage() {
           </section>
         )}
 
-        <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-          <h2 className="text-lg font-black">Histórico dos últimos trechos</h2>
-          <div className="mt-3 space-y-2">
-            {(live.segments.length ? live.segments : [{ originalText: "Os trechos aparecerão aqui durante a aula." }]).map((segment, index) => (
-              <p key={`${segment.id ?? index}-${segment.originalText}`} className="rounded-lg bg-teal-50 p-3 text-base font-semibold leading-relaxed dark:bg-zinc-800">
-                {segment.originalText ?? segment.text}
-              </p>
-            ))}
-          </div>
-        </section>
+        {!focusMode && (
+          <>
+            <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+              <h2 className="text-lg font-black">Histórico dos últimos trechos</h2>
+              <div className="mt-3 space-y-2">
+                {(live.segments.length ? live.segments : [{ originalText: "Os trechos aparecerão aqui durante a aula." }]).map((segment, index) => (
+                  <p key={`${segment.id ?? index}-${segment.originalText}`} className="rounded-lg bg-teal-50 p-3 text-base font-semibold leading-relaxed dark:bg-zinc-800">
+                    {segment.originalText ?? segment.text}
+                  </p>
+                ))}
+              </div>
+            </section>
 
-        <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-black">Palavras salvas neste celular</h2>
-            <button
-              className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-bold text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint"
-              onClick={clearSavedWords}
-              aria-label="Limpar palavras salvas"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-              Limpar palavras salvas
-            </button>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {(savedWords.length ? savedWords : ["Nenhuma palavra salva ainda"]).map((word) => (
-              <span key={word} className="rounded-full bg-amber/20 px-3 py-2 text-sm font-bold">
-                {word}
-              </span>
-            ))}
-          </div>
-        </section>
+            <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-black">Palavras salvas neste celular</h2>
+                <button
+                  className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-bold text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint"
+                  onClick={clearSavedWords}
+                  aria-label="Limpar palavras salvas"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  Limpar palavras salvas
+                </button>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(savedWords.length ? savedWords : ["Nenhuma palavra salva ainda"]).map((word) => (
+                  <span key={word} className="rounded-full bg-amber/20 px-3 py-2 text-sm font-bold">
+                    {word}
+                  </span>
+                ))}
+              </div>
+            </section>
 
-        <InstallPWAButton />
+            <InstallPWAButton />
+          </>
+        )}
       </div>
 
       {videoCard && modalMedia && (
@@ -362,38 +450,20 @@ export default function JoinClassPage() {
         </div>
       )}
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-white/95 px-3 py-2 shadow-soft backdrop-blur dark:border-white/10 dark:bg-zinc-950/95" aria-label="Ações da aula">
-        <div className="mx-auto grid max-w-5xl grid-cols-6 gap-1">
-          <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={() => setCaptionPaused((value) => !value)} aria-label="Pausar legenda">
-            <CaptionsOff className="mx-auto h-5 w-5" aria-hidden="true" />
-            {captionPaused ? "Voltar" : "Pausar"}
-          </button>
-          <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={() => setEnlargedText(true)} aria-label="Aumentar legenda">
-            <Maximize2 className="mx-auto h-5 w-5" aria-hidden="true" />
-            Aumentar
-          </button>
-          <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={() => setEnlargedText(false)} aria-label="Reduzir legenda">
-            <Minimize2 className="mx-auto h-5 w-5" aria-hidden="true" />
-            Reduzir
-          </button>
-          <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={() => handleSaveWord()} aria-label="Salvar palavra">
-            <BookmarkPlus className="mx-auto h-5 w-5" aria-hidden="true" />
-            Salvar
-          </button>
-          {demoMode ? (
-            <button className="focus-ring rounded-lg px-2 py-2 text-xs font-bold" onClick={live.injectDemo} aria-label="Testar acessibilidade">
-              <RotateCcw className="mx-auto h-5 w-5" aria-hidden="true" />
-              Testar
-            </button>
-          ) : (
-            <span className="rounded-lg px-2 py-2 text-center text-xs font-bold text-ink/50 dark:text-white/50">Ao vivo</span>
-          )}
-          <Link className="focus-ring rounded-lg px-2 py-2 text-center text-xs font-bold" href={`/review/${accessCode}`} aria-label="Revisar aula">
-            <History className="mx-auto h-5 w-5" aria-hidden="true" />
-            Revisar
-          </Link>
-        </div>
-      </nav>
+      <StudentAccessibilityBar
+        highContrast={highContrast}
+        focusMode={focusMode}
+        avatarPaused={avatarPaused}
+        canSaveWord={cards.length > 0}
+        reviewHref={`/review/${accessCode}`}
+        onDecreaseText={() => changeCaptionSize(-1)}
+        onIncreaseText={() => changeCaptionSize(1)}
+        onToggleContrast={() => setHighContrast((value) => !value)}
+        onToggleFocus={toggleFocusMode}
+        onToggleAvatar={toggleAvatarPlayback}
+        onRepeatSignal={() => avatarPlayerRef.current?.repeat()}
+        onSaveWord={() => handleSaveWord()}
+      />
     </main>
   );
 }

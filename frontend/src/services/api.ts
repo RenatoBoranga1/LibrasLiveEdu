@@ -1,6 +1,11 @@
 import type { AdminStats, AuthResponse, AuthUser, ClassReview, ClassSession, LiveSummary, SignCategory, SignRecord, Subject } from "@/types/live";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export function normalizeApiBase(value?: string) {
+  const normalized = (value?.trim() || "http://localhost:8000").replace(/\/+$/, "");
+  return normalized.replace(/\/api$/i, "");
+}
+
+export const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
 export const WS_BASE = API_BASE.replace(/^http/, "ws");
 
 export function getStoredAccessToken() {

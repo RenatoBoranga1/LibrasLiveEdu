@@ -78,4 +78,24 @@ describe("student classroom page", () => {
     expect(screen.getByRole("heading", { name: /legenda ao vivo/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /avatar libras/i })).toBeInTheDocument();
   });
+
+  it("normalizes invalid stored preferences without losing viewport containment", async () => {
+    window.localStorage.setItem("libraslive.student.caption-size", "999");
+    window.localStorage.setItem("libraslive.student.high-contrast", "invalid");
+    window.localStorage.setItem("libraslive.saved.AULA-8F4K-29QX", "not-json");
+
+    render(<JoinClassPage />);
+    await screen.findByRole("heading", { name: "Aula de Ciências" });
+
+    await waitFor(() => expect(window.localStorage.getItem("libraslive.student.caption-size")).toBe("1"));
+    const main = screen.getByRole("main");
+    const caption = screen.getByRole("region", { name: /legenda ao vivo/i });
+    const accessibilityBar = screen.getByRole("navigation", { name: /acessibilidade e ações/i });
+
+    expect(main).toHaveClass("w-full", "max-w-full", "overflow-x-clip");
+    expect(main).not.toHaveClass("high-contrast");
+    expect(caption).toHaveAttribute("data-caption-size", "large");
+    expect(caption).toHaveClass("max-w-full", "overflow-hidden");
+    expect(accessibilityBar).toHaveClass("max-w-full", "overflow-hidden");
+  });
 });

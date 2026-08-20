@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { BookmarkPlus, ChevronDown, Image as ImageIcon, RotateCcw, Trash2, Video, X } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -8,19 +8,26 @@ import { ConnectionStatusBanner } from "@/components/ConnectionStatusBanner";
 import { HelpButton } from "@/components/HelpButton";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 import { LibrasLiveLogo } from "@/components/LibrasLiveLogo";
-import { LiveCaption, type LiveCaptionSize, type LiveCaptionStatus } from "@/components/LiveCaption";
+import { LiveCaption, type LiveCaptionStatus } from "@/components/LiveCaption";
 import { LiveModeSelector, type LiveViewMode } from "@/components/LiveModeSelector";
 import { LiveSummaryPanel } from "@/components/LiveSummaryPanel";
 import { SequentialAvatarPlayer, type SequentialAvatarPlayerHandle } from "@/components/SequentialAvatarPlayer";
 import { StudentAccessibilityBar } from "@/components/StudentAccessibilityBar";
 import { getClassByAccessCode, getLiveSummaryByAccessCode, joinClass, saveWord } from "@/services/api";
+import {
+  CAPTION_SIZES,
+  CAPTION_SIZE_STORAGE_KEY,
+  clampCaptionSizeIndex,
+  DEFAULT_CAPTION_SIZE_INDEX,
+  HIGH_CONTRAST_STORAGE_KEY,
+  normalizeSavedWords,
+  readStudentPreferences,
+  type CaptionSizeIndex,
+} from "@/lib/studentPreferences";
 import type { ClassSession, LiveSummary, SignCard } from "@/types/live";
 import { useLiveClass } from "@/hooks/useLiveClass";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-const CAPTION_SIZE_STORAGE_KEY = "libraslive.student.caption-size";
-const HIGH_CONTRAST_STORAGE_KEY = "libraslive.student.high-contrast";
-const captionSizes: LiveCaptionSize[] = ["regular", "large", "extra-large"];
 
 export default function JoinClassPage() {
   const params = useParams<{ accessCode: string }>();
@@ -30,7 +37,7 @@ export default function JoinClassPage() {
   const [classSession, setClassSession] = useState<ClassSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [highContrast, setHighContrast] = useState(false);
-  const [captionSizeIndex, setCaptionSizeIndex] = useState(1);
+  const [captionSizeIndex, setCaptionSizeIndex] = useState<CaptionSizeIndex>(DEFAULT_CAPTION_SIZE_INDEX);
   const [summaryTextScale, setSummaryTextScale] = useState<0 | 1 | 2>(0);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [captionPaused, setCaptionPaused] = useState(false);
@@ -49,20 +56,21 @@ export default function JoinClassPage() {
     if (queryToken) setJoinToken(queryToken);
   }, []);
 
-  useEffect(() => {
-    const savedSizeValue = window.localStorage.getItem(CAPTION_SIZE_STORAGE_KEY);
-    const savedSize = savedSizeValue === null ? null : Number(savedSizeValue);
-    if (savedSize !== null && Number.isInteger(savedSize) && savedSize >= 0 && savedSize < captionSizes.length) {
-      setCaptionSizeIndex(savedSize);
-    }
-    setHighContrast(window.localStorage.getItem(HIGH_CONTRAST_STORAGE_KEY) === "true");
+  useLayoutEffect(() => {
+    const preferences = readStudentPreferences(window.localStorage);
+    setCaptionSizeIndex(preferences.captionSizeIndex);
+    setHighContrast(preferences.highContrast);
     setPreferencesLoaded(true);
   }, []);
 
   useEffect(() => {
     if (!preferencesLoaded) return;
-    window.localStorage.setItem(CAPTION_SIZE_STORAGE_KEY, String(captionSizeIndex));
-    window.localStorage.setItem(HIGH_CONTRAST_STORAGE_KEY, String(highContrast));
+    try {
+      window.localStorage.setItem(CAPTION_SIZE_STORAGE_KEY, String(captionSizeIndex));
+      window.localStorage.setItem(HIGH_CONTRAST_STORAGE_KEY, String(highContrast));
+    } catch {
+      // The classroom remains usable when browser storage is blocked.
+    }
   }, [captionSizeIndex, highContrast, preferencesLoaded]);
 
   useEffect(() => {
@@ -104,8 +112,11 @@ export default function JoinClassPage() {
   }, [live.connectionError]);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(`libraslive.saved.${accessCode}`);
-    if (saved) setSavedWords(JSON.parse(saved));
+    try {
+      setSavedWords(normalizeSavedWords(window.localStorage.getItem(`libraslive.saved.${accessCode}`)));
+    } catch {
+      setSavedWords([]);
+    }
   }, [accessCode]);
 
   useEffect(() => {
@@ -149,7 +160,11 @@ export default function JoinClassPage() {
     if (!target) return;
     const nextWords = savedWords.includes(target.word) ? savedWords : [target.word, ...savedWords];
     setSavedWords(nextWords);
-    window.localStorage.setItem(`libraslive.saved.${accessCode}`, JSON.stringify(nextWords));
+    try {
+      window.localStorage.setItem(`libraslive.saved.${accessCode}`, JSON.stringify(nextWords));
+    } catch {
+      // Keep the in-memory action available when browser storage is blocked.
+    }
     await saveWord({ sign_id: target.id, word: target.word, access_code: accessCode }).catch(() => undefined);
     setNotice(`Palavra salva: ${target.word}`);
     window.setTimeout(() => setNotice(null), 1800);
@@ -157,13 +172,17 @@ export default function JoinClassPage() {
 
   function clearSavedWords() {
     setSavedWords([]);
-    window.localStorage.removeItem(`libraslive.saved.${accessCode}`);
+    try {
+      window.localStorage.removeItem(`libraslive.saved.${accessCode}`);
+    } catch {
+      // The visible list is still cleared even when browser storage is blocked.
+    }
     setNotice("Palavras salvas neste celular foram limpas.");
     window.setTimeout(() => setNotice(null), 1800);
   }
 
   function changeCaptionSize(direction: -1 | 1) {
-    setCaptionSizeIndex((current) => Math.min(captionSizes.length - 1, Math.max(0, current + direction)));
+    setCaptionSizeIndex((current) => clampCaptionSizeIndex(current + direction));
   }
 
   function toggleFocusMode() {
@@ -179,9 +198,9 @@ export default function JoinClassPage() {
   }
 
   return (
-    <main className={`min-h-screen bg-paper pb-40 text-ink dark:bg-zinc-950 dark:text-white lg:pb-32 ${highContrast ? "high-contrast" : ""}`}>
-      <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/95 px-4 py-2 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+    <main className={`student-classroom min-h-screen w-full max-w-full overflow-x-clip bg-paper pb-40 text-ink dark:bg-zinc-950 dark:text-white lg:pb-32 ${highContrast ? "high-contrast" : ""}`}>
+      <header className="sticky top-0 z-20 w-full max-w-full overflow-hidden border-b border-ink/10 bg-paper/95 py-2 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <LibrasLiveLogo compact />
             <div className="min-w-0">
@@ -200,7 +219,7 @@ export default function JoinClassPage() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-6xl gap-4 px-4 py-4 sm:px-6">
+      <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <ConnectionStatusBanner connected={live.connected} reconnecting={live.reconnecting} error={live.connectionError} label={connectionLabel} />
         {notice && (
           <div role="status" className="rounded-lg bg-ocean px-4 py-3 text-sm font-bold text-white">
@@ -226,7 +245,7 @@ export default function JoinClassPage() {
         {showCaption && (
           <LiveCaption
             text={captionText}
-            size={captionSizes[captionSizeIndex]}
+            size={CAPTION_SIZES[captionSizeIndex]}
             status={captionStatus}
             paused={captionPaused}
             onTogglePause={() => setCaptionPaused((value) => !value)}
@@ -234,28 +253,32 @@ export default function JoinClassPage() {
         )}
 
         {(showAvatar || showCaption) && (
-          <div className={`grid items-start gap-4 ${showAvatar && showCaption && !focusMode ? "lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.8fr)]" : ""}`}>
+          <div className={`grid min-w-0 max-w-full items-start gap-4 ${showAvatar && showCaption && !focusMode ? "lg:grid-cols-[minmax(0,1.7fr)_minmax(280px,0.8fr)]" : ""}`}>
             {showAvatar && (
-              <SequentialAvatarPlayer
-                ref={avatarPlayerRef}
-                items={live.avatarItems}
-                onPlaybackStateChange={setAvatarPaused}
-              />
+              <div className="min-w-0 max-w-full overflow-hidden">
+                <SequentialAvatarPlayer
+                  ref={avatarPlayerRef}
+                  items={live.avatarItems}
+                  onPlaybackStateChange={setAvatarPaused}
+                />
+              </div>
             )}
             {showCaption && (
-              <LiveSummaryPanel
-                summaryText={visibleSummary?.summaryText}
-                bulletPoints={visibleSummary?.bulletPoints}
-                keywords={visibleSummary?.keywords}
-                updatedAt={visibleSummary?.updatedAt}
-                generatedBy={visibleSummary?.generatedBy}
-                isAutoGenerated={visibleSummary?.isAutoGenerated}
-                textScale={summaryTextScale}
-                onIncreaseText={() => setSummaryTextScale((value) => Math.min(2, value + 1) as 0 | 1 | 2)}
-                onDecreaseText={() => setSummaryTextScale((value) => Math.max(0, value - 1) as 0 | 1 | 2)}
-                collapsible
-                defaultOpen
-              />
+              <div className="min-w-0 max-w-full overflow-hidden">
+                <LiveSummaryPanel
+                  summaryText={visibleSummary?.summaryText}
+                  bulletPoints={visibleSummary?.bulletPoints}
+                  keywords={visibleSummary?.keywords}
+                  updatedAt={visibleSummary?.updatedAt}
+                  generatedBy={visibleSummary?.generatedBy}
+                  isAutoGenerated={visibleSummary?.isAutoGenerated}
+                  textScale={summaryTextScale}
+                  onIncreaseText={() => setSummaryTextScale((value) => Math.min(2, value + 1) as 0 | 1 | 2)}
+                  onDecreaseText={() => setSummaryTextScale((value) => Math.max(0, value - 1) as 0 | 1 | 2)}
+                  collapsible
+                  defaultOpen
+                />
+              </div>
             )}
           </div>
         )}
@@ -302,7 +325,7 @@ export default function JoinClassPage() {
                   return (
                     <article key={`${card.word}-${card.id ?? card.status}`} className="w-72 shrink-0 rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-xl font-black">{card.word}</h3>
+                        <h3 className="min-w-0 break-words text-xl font-black [overflow-wrap:anywhere]">{card.word}</h3>
                         <div className="flex flex-col items-end gap-1">
                           <span className={`rounded-full px-2 py-1 text-xs font-black ${approved ? "bg-ocean text-white" : unavailable ? "bg-zinc-200 text-ink" : "bg-amber/20 text-ink dark:text-white"}`}>
                             {statusLabel}
@@ -358,7 +381,7 @@ export default function JoinClassPage() {
               <h2 className="text-lg font-black">Histórico dos últimos trechos</h2>
               <div className="mt-3 space-y-2">
                 {(live.segments.length ? live.segments : [{ originalText: "Os trechos aparecerão aqui durante a aula." }]).map((segment, index) => (
-                  <p key={`${segment.id ?? index}-${segment.originalText}`} className="rounded-lg bg-teal-50 p-3 text-base font-semibold leading-relaxed dark:bg-zinc-800">
+                  <p key={`${segment.id ?? index}-${segment.originalText}`} className="max-w-full whitespace-pre-wrap break-words rounded-lg bg-teal-50 p-3 text-base font-semibold leading-relaxed [overflow-wrap:anywhere] dark:bg-zinc-800">
                     {segment.originalText ?? segment.text}
                   </p>
                 ))}
@@ -379,7 +402,7 @@ export default function JoinClassPage() {
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {(savedWords.length ? savedWords : ["Nenhuma palavra salva ainda"]).map((word) => (
-                  <span key={word} className="rounded-full bg-amber/20 px-3 py-2 text-sm font-bold">
+                  <span key={word} className="max-w-full break-words rounded-lg bg-amber/20 px-3 py-2 text-sm font-bold [overflow-wrap:anywhere]">
                     {word}
                   </span>
                 ))}
@@ -456,6 +479,8 @@ export default function JoinClassPage() {
         avatarPaused={avatarPaused}
         canSaveWord={cards.length > 0}
         reviewHref={`/review/${accessCode}`}
+        canDecreaseText={captionSizeIndex > 0}
+        canIncreaseText={captionSizeIndex < CAPTION_SIZES.length - 1}
         onDecreaseText={() => changeCaptionSize(-1)}
         onIncreaseText={() => changeCaptionSize(1)}
         onToggleContrast={() => setHighContrast((value) => !value)}

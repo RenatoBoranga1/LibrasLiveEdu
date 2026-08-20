@@ -71,6 +71,28 @@ textarea {
   outline: 2px solid #fff;
 }
 
+.student-classroom.high-contrast > header,
+.student-classroom.high-contrast > header [role="status"],
+.student-classroom.high-contrast > div > [role="status"],
+.student-classroom.high-contrast > div > [role="alert"] {
+  background: #000 !important;
+  color: #fff !important;
+}
+
+.student-classroom.high-contrast > header p,
+.student-classroom.high-contrast > header h1,
+.student-classroom.high-contrast > header [role="status"] *,
+.student-classroom.high-contrast > div > [role="status"] *,
+.student-classroom.high-contrast > div > [role="alert"] * {
+  color: #fff !important;
+}
+
+.student-classroom.high-contrast > div > [role="status"] > span:first-child,
+.student-classroom.high-contrast > div > [role="alert"] > span:first-child {
+  background: #fff !important;
+  color: #000 !important;
+}
+
 .focus-ring {
   @apply focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-amber-strong;
 }

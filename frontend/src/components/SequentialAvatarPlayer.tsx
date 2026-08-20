@@ -181,7 +181,7 @@ export const SequentialAvatarPlayer = forwardRef<SequentialAvatarPlayerHandle, {
   }));
 
   return (
-    <section className="overflow-hidden rounded-lg border border-ocean/20 bg-white shadow-soft dark:border-white/10 dark:bg-zinc-900" aria-label="Avatar Libras">
+    <section className="w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-ocean/20 bg-white shadow-soft dark:border-white/10 dark:bg-zinc-900" aria-label="Avatar Libras">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 dark:border-white/10">
         <div className="flex min-w-0 items-center gap-3">
           <LibrasLiveIcon size={38} decorative />
@@ -196,7 +196,7 @@ export const SequentialAvatarPlayer = forwardRef<SequentialAvatarPlayerHandle, {
         </span>
       </header>
 
-      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+      <div className="grid min-w-0 max-w-full gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_220px]">
         <div className="relative grid h-72 place-items-center overflow-hidden rounded-lg bg-ink text-white lg:h-[360px]">
           <div className="absolute inset-x-0 top-0 z-10 flex min-h-10 items-center justify-between bg-black/45 px-3 py-2 text-xs font-bold">
             <span aria-live="polite">{currentItem ? `Sinal atual: ${currentItem.word}` : "Sem sinal animado na fila"}</span>
@@ -242,9 +242,9 @@ export const SequentialAvatarPlayer = forwardRef<SequentialAvatarPlayerHandle, {
               </a>
             </div>
           ) : (
-            <div className="flex max-w-md items-center gap-4 px-5 py-14 text-left sm:px-8">
-              <LibrasLiveWelcomeVisual variant="fallback" />
-              <div>
+            <div className="grid w-full max-w-md min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-4 px-4 py-10 text-left sm:px-6">
+              <LibrasLiveWelcomeVisual variant="fallback" className="max-w-[9rem] sm:max-w-[11rem]" />
+              <div className="min-w-0">
                 <p className="text-lg font-black leading-relaxed">Aguardando sinal em Libras</p>
                 <p className="mt-2 text-sm font-semibold leading-relaxed text-white/75">Ainda não há sinal em Libras para este trecho. A legenda continua ativa.</p>
                 <p className="mt-3 text-xs font-semibold leading-relaxed text-white/55">Imagem institucional; não é uma tradução em Libras.</p>

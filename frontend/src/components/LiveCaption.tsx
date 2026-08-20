@@ -14,9 +14,9 @@ const statusLabels: Record<LiveCaptionStatus, string> = {
 };
 
 const sizeClasses: Record<LiveCaptionSize, string> = {
-  regular: "text-3xl",
-  large: "text-4xl",
-  "extra-large": "text-5xl",
+  regular: "text-2xl",
+  large: "text-3xl",
+  "extra-large": "text-4xl",
 };
 
 export function LiveCaption({
@@ -33,7 +33,7 @@ export function LiveCaption({
   onTogglePause?: () => void;
 }) {
   return (
-    <section className="rounded-lg border border-ink/10 bg-ink p-5 text-white shadow-elevated ring-2 ring-mint/25 dark:border-white/15 sm:p-6" aria-label="Legenda ao vivo">
+    <section className="w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-ink/10 bg-ink p-5 text-white shadow-elevated ring-2 ring-mint/25 dark:border-white/15 sm:p-6" aria-label="Legenda ao vivo" data-caption-size={size}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-lg bg-white/10 text-mint">
@@ -65,7 +65,7 @@ export function LiveCaption({
       <p
         role="status"
         aria-live="polite"
-        className={`${sizeClasses[size]} min-h-24 break-words font-black leading-tight [overflow-wrap:anywhere]`}
+        className={`${sizeClasses[size]} min-h-24 max-h-48 max-w-full overflow-y-auto whitespace-pre-wrap break-words font-black leading-snug [overflow-wrap:anywhere]`}
       >
         {text || "Aguardando transmissão..."}
       </p>

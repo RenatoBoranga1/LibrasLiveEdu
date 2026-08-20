@@ -10,6 +10,10 @@ describe("normalizeApiBase", () => {
     expect(normalizeApiBase("http://localhost:8000/api/")).toBe("http://localhost:8000");
   });
 
+  it("removes repeated API suffixes so requests never contain /api/api", () => {
+    expect(normalizeApiBase("http://localhost:8000/api/api/")).toBe("http://localhost:8000");
+  });
+
   it("uses the local backend when the environment value is empty", () => {
     expect(normalizeApiBase(" ")).toBe("http://localhost:8000");
   });

@@ -28,8 +28,8 @@ export function ConnectionStatusBanner({
         {connected ? <Wifi className="h-5 w-5" aria-hidden="true" /> : <WifiOff className="h-5 w-5" aria-hidden="true" />}
       </span>
       <span className="min-w-0">
-        <strong className="block text-sm font-black">{error ?? label ?? defaultLabel}</strong>
-        <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-ink/65 dark:text-white/70">{error ? "Verifique sua internet ou aguarde a reconexão automática." : description}</span>
+        <strong className="block break-words text-sm font-black [overflow-wrap:anywhere]">{error ?? label ?? defaultLabel}</strong>
+        <span className="mt-0.5 block break-words text-xs font-semibold leading-relaxed text-ink/65 [overflow-wrap:anywhere] dark:text-white/70">{error ? "Verifique sua internet ou aguarde a reconexão automática." : description}</span>
       </span>
     </div>
   );

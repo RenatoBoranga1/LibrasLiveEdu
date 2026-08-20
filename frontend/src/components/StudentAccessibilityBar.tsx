@@ -8,6 +8,8 @@ export function StudentAccessibilityBar({
   focusMode,
   avatarPaused,
   canSaveWord,
+  canDecreaseText = true,
+  canIncreaseText = true,
   reviewHref,
   onDecreaseText,
   onIncreaseText,
@@ -21,6 +23,8 @@ export function StudentAccessibilityBar({
   focusMode: boolean;
   avatarPaused: boolean;
   canSaveWord: boolean;
+  canDecreaseText?: boolean;
+  canIncreaseText?: boolean;
   reviewHref: string;
   onDecreaseText: () => void;
   onIncreaseText: () => void;
@@ -30,19 +34,19 @@ export function StudentAccessibilityBar({
   onRepeatSignal: () => void;
   onSaveWord: () => void;
 }) {
-  const baseClass = "focus-ring flex min-h-16 min-w-24 flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-black lg:min-h-14";
+  const baseClass = "focus-ring flex min-h-16 min-w-24 flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-45 lg:min-h-14";
   const inactiveClass = "bg-white text-ocean dark:bg-zinc-900 dark:text-mint";
   const activeClass = "bg-ocean text-white";
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-paper/95 px-3 py-2 shadow-elevated backdrop-blur dark:border-white/10 dark:bg-zinc-950/95" aria-label="Acessibilidade e ações da aula">
-      <div className="mx-auto max-w-6xl overflow-x-auto pb-1">
-        <div className="grid grid-flow-col auto-cols-[minmax(96px,1fr)] gap-2 lg:grid-flow-row lg:grid-cols-8">
-          <button type="button" className={`${baseClass} ${inactiveClass}`} onClick={onDecreaseText} aria-label="Reduzir fonte da legenda">
+    <nav className="fixed inset-x-0 bottom-0 z-30 w-full max-w-full overflow-hidden border-t border-ink/10 bg-paper/95 px-3 py-2 shadow-elevated backdrop-blur dark:border-white/10 dark:bg-zinc-950/95" aria-label="Acessibilidade e ações da aula">
+      <div className="mx-auto w-full max-w-6xl overflow-x-auto overscroll-x-contain pb-1">
+        <div className="grid w-max min-w-full grid-flow-col auto-cols-[minmax(96px,1fr)] gap-2 lg:w-full lg:grid-flow-row lg:grid-cols-8">
+          <button type="button" className={`${baseClass} ${inactiveClass}`} onClick={onDecreaseText} disabled={!canDecreaseText} aria-label="Reduzir fonte da legenda">
             <Minus className="h-5 w-5" aria-hidden="true" />
             Reduzir fonte
           </button>
-          <button type="button" className={`${baseClass} ${inactiveClass}`} onClick={onIncreaseText} aria-label="Aumentar fonte da legenda">
+          <button type="button" className={`${baseClass} ${inactiveClass}`} onClick={onIncreaseText} disabled={!canIncreaseText} aria-label="Aumentar fonte da legenda">
             <Plus className="h-5 w-5" aria-hidden="true" />
             Aumentar fonte
           </button>

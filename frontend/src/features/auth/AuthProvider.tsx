@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   clearAuthTokens,
@@ -12,6 +12,7 @@ import {
   storeAuthTokens,
 } from "@/services/api";
 import type { AuthResponse, AuthUser } from "@/types/live";
+import { isRoleAllowed, normalizeAuthUser } from "./roles";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -36,20 +37,24 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const sessionRevision = useRef(0);
 
   useEffect(() => {
     let active = true;
+    const revision = sessionRevision.current;
     if (!getStoredAccessToken()) {
       setLoading(false);
       return;
     }
     getMe()
       .then((currentUser) => {
-        if (active) setUser(currentUser);
+        if (active && revision === sessionRevision.current) setUser(normalizeAuthUser(currentUser));
       })
       .catch(() => {
-        clearAuthTokens();
-        if (active) setUser(null);
+        if (revision === sessionRevision.current) {
+          clearAuthTokens();
+          if (active) setUser(null);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -60,9 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const response = await loginRequest({ email, password });
-    storeAuthTokens(response);
-    setUser(response.user);
+    const revision = ++sessionRevision.current;
+    const rawResponse = await loginRequest({ email, password });
+    const response = { ...rawResponse, user: normalizeAuthUser(rawResponse.user) };
+    if (revision === sessionRevision.current) {
+      storeAuthTokens(response);
+      setUser(response.user);
+      setLoading(false);
+    }
     return response;
   }, []);
 
@@ -75,20 +85,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     school_name?: string;
     birth_date?: string;
   }) => {
-    const response = await registerRequest({
+    const revision = ++sessionRevision.current;
+    const rawResponse = await registerRequest({
       ...payload,
       accept_terms: true,
       accept_privacy: true,
     });
-    storeAuthTokens(response);
-    setUser(response.user);
+    const response = { ...rawResponse, user: normalizeAuthUser(rawResponse.user) };
+    if (revision === sessionRevision.current) {
+      storeAuthTokens(response);
+      setUser(response.user);
+      setLoading(false);
+    }
     return response;
   }, []);
 
   const logout = useCallback(async () => {
-    await logoutRequest().catch(() => undefined);
+    ++sessionRevision.current;
+    const serverLogout = logoutRequest().catch(() => undefined);
     clearAuthTokens();
     setUser(null);
+    setLoading(false);
+    await serverLogout;
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -99,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
-      hasRole: (roles: string[]) => Boolean(user && roles.includes(user.role)),
+      hasRole: (roles: string[]) => Boolean(user && isRoleAllowed(user.role, roles)),
     }),
     [loading, login, logout, register, user]
   );
@@ -127,7 +145,7 @@ export function useRequireRole(roles: string[]) {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
       return;
     }
-    if (!roleKey.split("|").includes(auth.user.role)) {
+    if (!isRoleAllowed(auth.user.role, roleKey.split("|"))) {
       router.replace("/unauthorized");
     }
   }, [auth.loading, auth.user, pathname, roleKey, router]);

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
+import { AuthProvider } from "@/features/auth/AuthProvider";
 import { AvatarPanel } from "@/components/AvatarPanel";
 import { LibrasLiveIcon } from "@/components/LibrasLiveIcon";
 import { LibrasLiveLogo } from "@/components/LibrasLiveLogo";
@@ -31,7 +32,11 @@ describe("LibrasLive visual identity", () => {
   });
 
   it("shows the new logo in the app header", () => {
-    render(<AppHeader />);
+    render(
+      <AuthProvider>
+        <AppHeader />
+      </AuthProvider>
+    );
     expect(screen.getByRole("link", { name: /libraslive edu/i })).toBeInTheDocument();
   });
 

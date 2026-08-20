@@ -1,7 +1,5 @@
-const CACHE_NAME = "libraslive-edu-public-v4";
+const CACHE_NAME = "libraslive-edu-public-v5";
 const CORE_ASSETS = [
-  "/",
-  "/aluno",
   "/offline.html",
   "/manifest.json",
   "/icon.svg",
@@ -30,11 +28,14 @@ const PRIVATE_PATTERNS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS)));
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim())
   );
 });
 
@@ -47,6 +48,10 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
+  if (url.pathname.startsWith("/_next/")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   const isPrivate = PRIVATE_PATTERNS.some((pattern) => event.request.url.includes(pattern) || url.pathname.includes(pattern));
   if (isPrivate || event.request.headers.has("authorization")) {
     event.respondWith(fetch(event.request));
@@ -79,7 +84,7 @@ self.addEventListener("fetch", (event) => {
       if (cached) return cached;
       return fetch(event.request)
         .then((response) => {
-          if (response.ok && (url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icon"))) {
+          if (response.ok && url.pathname.startsWith("/icon")) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           }

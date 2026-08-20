@@ -8,6 +8,7 @@ import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { getRoleHome } from "@/features/auth/roles";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
@@ -16,20 +17,20 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState(demoMode ? "professor.demo@libraslive.local" : "");
   const [password, setPassword] = useState(demoMode ? "LibrasLive#2026" : "");
-  const [nextPath, setNextPath] = useState("/teacher");
+  const [nextPath, setNextPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const next = new URLSearchParams(window.location.search).get("next");
-    if (next?.startsWith("/")) setNextPath(next);
+    if (next?.startsWith("/") && !next.startsWith("//")) setNextPath(next);
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     try {
-      await login(email, password);
-      router.replace(nextPath);
+      const response = await login(email, password);
+      router.replace(nextPath || getRoleHome(response.user.role));
     } catch {
       setError("E-mail ou senha inválidos. Verifique os dados e tente novamente.");
     }

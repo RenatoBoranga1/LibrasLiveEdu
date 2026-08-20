@@ -15,7 +15,8 @@ const validateMediaUrl = vi.fn(() =>
 );
 
 vi.mock("@/features/auth/AuthProvider", () => ({
-  useRequireRole: () => ({ loading: false }),
+  useRequireRole: () => ({ loading: false, user: { id: 1, name: "Admin", email: "admin@example.com", role: "admin" } }),
+  useAuth: () => ({ loading: false, isAuthenticated: true, user: { id: 1, name: "Admin", email: "admin@example.com", role: "admin" } }),
 }));
 
 vi.mock("@/services/api", async (importOriginal) => {

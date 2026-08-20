@@ -33,8 +33,12 @@ export function clearAuthTokens() {
   navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_PRIVATE_CACHE" });
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getStoredAccessToken();
+type RequestOptions = {
+  authenticated?: boolean;
+};
+
+async function request<T>(path: string, init?: RequestInit, options: RequestOptions = {}): Promise<T> {
+  const token = options.authenticated === false ? null : getStoredAccessToken();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
@@ -860,7 +864,7 @@ export function login(payload: { email: string; password: string }): Promise<Aut
   return request<AuthResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }, { authenticated: false });
 }
 
 export function register(payload: {
@@ -877,7 +881,7 @@ export function register(payload: {
   return request<AuthResponse>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }, { authenticated: false });
 }
 
 export function getMe(): Promise<AuthUser> {

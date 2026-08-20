@@ -48,7 +48,8 @@ const validateInesCatalogManifest = vi.fn(() => Promise.resolve({ job_id: 2, sta
 const importInesCatalog = vi.fn(() => Promise.resolve({ job_id: 3, status: "completed", report: { ...report, imported_count: 1 } }));
 
 vi.mock("@/features/auth/AuthProvider", () => ({
-  useRequireRole: () => ({ loading: false }),
+  useRequireRole: () => ({ loading: false, user: { id: 1, name: "Admin", email: "admin@example.com", role: "admin" } }),
+  useAuth: () => ({ loading: false, isAuthenticated: true, user: { id: 1, name: "Admin", email: "admin@example.com", role: "admin" } }),
 }));
 
 vi.mock("@/services/api", async (importOriginal) => {

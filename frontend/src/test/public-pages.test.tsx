@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const replace = vi.fn();
@@ -9,7 +9,12 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/features/auth/AuthProvider", () => ({
-  useAuth: () => ({ login }),
+  useAuth: () => ({
+    login,
+    user: null,
+    loading: false,
+    isAuthenticated: false,
+  }),
 }));
 
 describe("home page", () => {
@@ -48,6 +53,12 @@ describe("about page", () => {
 });
 
 describe("login page", () => {
+  beforeEach(() => {
+    login.mockReset();
+    replace.mockReset();
+    window.history.replaceState({}, "", "/login");
+  });
+
   it("does not prefill demo password when demo mode is disabled", async () => {
     vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "false");
     vi.resetModules();
@@ -55,5 +66,27 @@ describe("login page", () => {
     render(<LoginPage />);
     expect(screen.getByLabelText(/senha/i)).toHaveValue("");
     expect(screen.queryByText(/credenciais de demonstração/i)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["admin", "/admin"],
+    ["curator", "/admin"],
+    ["professor", "/teacher"],
+    ["student", "/aluno"],
+  ])("redirects a %s session to the correct area", async (role, destination) => {
+    login.mockResolvedValueOnce({
+      access_token: "access",
+      refresh_token: "refresh",
+      token_type: "bearer",
+      user: { id: 1, name: "Usuário Demo", email: "demo@example.com", role },
+    });
+    const { default: LoginPage } = await import("@/app/login/page");
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByLabelText(/e-mail/i), { target: { value: "demo@example.com" } });
+    fireEvent.change(screen.getByLabelText(/senha/i), { target: { value: "LibrasLive#2026" } });
+    fireEvent.click(screen.getByRole("button", { name: /entrar com segurança/i }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(destination));
   });
 });

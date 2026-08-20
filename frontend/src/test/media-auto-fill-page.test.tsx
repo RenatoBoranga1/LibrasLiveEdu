@@ -49,7 +49,8 @@ const startMediaAutoFillSelected = vi.fn(() => Promise.resolve({ job_id: 1, stat
 const startMediaAutoFillPending = vi.fn(() => Promise.resolve({ job_id: 2, status: "completed", report }));
 
 vi.mock("@/features/auth/AuthProvider", () => ({
-  useRequireRole: () => ({ loading: false }),
+  useRequireRole: () => ({ loading: false, user: { id: 1, name: "Admin", email: "admin@example.com", role: "admin" } }),
+  useAuth: () => ({ loading: false, isAuthenticated: true, user: { id: 1, name: "Admin", email: "admin@example.com", role: "admin" } }),
 }));
 
 vi.mock("@/services/api", async (importOriginal) => {

@@ -24,7 +24,12 @@ const createManualSign = vi.fn(() =>
 );
 
 vi.mock("@/features/auth/AuthProvider", () => ({
-  useRequireRole: () => ({ loading: false }),
+  useRequireRole: () => ({ loading: false, user: { id: 2, name: "Curadora Demo", email: "curadora@example.com", role: "curator" } }),
+  useAuth: () => ({
+    loading: false,
+    isAuthenticated: true,
+    user: { id: 2, name: "Curadora Demo", email: "curadora@example.com", role: "curator" },
+  }),
 }));
 
 vi.mock("@/services/api", () => ({

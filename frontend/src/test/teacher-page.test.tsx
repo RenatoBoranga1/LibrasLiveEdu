@@ -16,6 +16,11 @@ vi.mock("@/features/auth/AuthProvider", () => ({
     loading: false,
     user: { id: 1, name: "Professora Ana", email: "ana@example.com", role: "professor" },
   }),
+  useAuth: () => ({
+    loading: false,
+    isAuthenticated: true,
+    user: { id: 1, name: "Professora Ana", email: "ana@example.com", role: "professor" },
+  }),
 }));
 
 vi.mock("@/components/QrCode", () => ({

@@ -8,7 +8,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { LibrasLiveIcon } from "@/components/LibrasLiveIcon";
 import { ModeBadge } from "@/components/ModeBadge";
-import { SignCurationIllustration } from "@/components/illustrations/SignCurationIllustration";
+import { LibrasLiveRealisticVisual } from "@/components/brand/LibrasLiveRealisticVisual";
 import { PageHero } from "@/components/ui/ProductUI";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
@@ -246,7 +246,7 @@ export default function AdminPage() {
             </ActionButton>
           </>
         }
-        visual={<SignCurationIllustration decorative className="h-auto w-full -translate-y-8" />}
+        visual={<LibrasLiveRealisticVisual variant="curation" decorative className="h-56 w-full" />}
       />
       <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

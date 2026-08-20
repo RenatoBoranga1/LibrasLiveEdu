@@ -3,7 +3,7 @@ import { BookOpenCheck, Captions, GraduationCap, HandHeart, ShieldCheck, UsersRo
 import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
-import { HeroInclusiveClassroom } from "@/components/illustrations/HeroInclusiveClassroom";
+import { LibrasLiveRealisticVisual } from "@/components/brand/LibrasLiveRealisticVisual";
 import { PageHero } from "@/components/ui/ProductUI";
 
 const sections = [
@@ -57,7 +57,7 @@ export default function AboutPage() {
             </Link>
           </>
         }
-        visual={<HeroInclusiveClassroom decorative className="h-auto w-full -translate-y-8" />}
+        visual={<LibrasLiveRealisticVisual variant="classroom" decorative className="h-56 w-full" />}
       />
 
       <section className="mx-auto max-w-7xl px-4 pb-8 sm:px-6">

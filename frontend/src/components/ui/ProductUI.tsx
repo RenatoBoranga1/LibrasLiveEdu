@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { EmptyStateIllustration } from "@/components/illustrations/EmptyStateIllustration";
+import { LibrasLiveIcon } from "@/components/LibrasLiveIcon";
 
 export function AppSection({
   id,
@@ -93,7 +93,9 @@ export function EmptyState({ title, description, action }: { title: string; desc
   return (
     <div className="grid min-h-72 place-items-center rounded-lg border border-dashed border-ocean/25 bg-sky/35 p-6 text-center dark:border-white/15 dark:bg-white/5">
       <div className="max-w-md">
-        <EmptyStateIllustration decorative className="mx-auto h-auto w-48" />
+        <span className="mx-auto grid h-20 w-20 place-items-center rounded-lg bg-white shadow-soft dark:bg-zinc-900">
+          <LibrasLiveIcon size={56} decorative />
+        </span>
         <h3 className="mt-3 text-xl font-extrabold text-ink dark:text-white">{title}</h3>
         <p className="mt-2 text-sm font-medium leading-relaxed text-ink/65 dark:text-white/65">{description}</p>
         {action && <div className="mt-5">{action}</div>}

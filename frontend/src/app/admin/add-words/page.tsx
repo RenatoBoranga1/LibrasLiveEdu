@@ -6,7 +6,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, FilePlus, RotateCcw, Upload, Wand2 } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
-import { SignCurationIllustration } from "@/components/illustrations/SignCurationIllustration";
+import { LibrasLiveRealisticVisual } from "@/components/brand/LibrasLiveRealisticVisual";
 import { PageHero } from "@/components/ui/ProductUI";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
@@ -167,7 +167,7 @@ export default function AddWordsPage() {
             Voltar para curadoria
           </Link>
         }
-        visual={<SignCurationIllustration decorative className="h-auto w-full -translate-y-8" />}
+        visual={<LibrasLiveRealisticVisual variant="curation" decorative className="h-56 w-full" />}
       />
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
         <section className="grid gap-4 lg:grid-cols-3" aria-label="Opções para adicionar palavras">

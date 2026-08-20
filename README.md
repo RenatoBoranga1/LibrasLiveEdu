@@ -143,6 +143,8 @@ A identidade principal usa um símbolo original de **mão + balão de comunicaç
 
 A home e os estados sem mídia usam `frontend/public/brand/libraslive-welcome-realistic.png`, uma representante visual original e realista. Essa imagem é identidade institucional de boas-vindas, não mascote tradutora e não representa um sinal em Libras. `frontend/public/brand/libraslive-dashboard-reference.png` documenta a referência visual aplicada aos painéis: navegação clara, largura consistente, cards compactos, superfícies claras e estados operacionais legíveis.
 
+As páginas de professor, aluno, escola e curadoria usam um conjunto fotográfico original em `frontend/public/brand/*-realistic.jpg`. Esses visuais substituem integralmente os antigos personagens SVG e mantêm pessoas, iluminação e paleta coerentes. Nenhuma fotografia é tratada como tradução: os sinais de Libras continuam vindo apenas de vídeo, GIF ou animação aprovados.
+
 A interface segue uma linguagem institucional e acolhedora: azul profundo para confiança, verde-mint para acessibilidade, âmbar como destaque e superfícies claras para leitura. Títulos, botões, cards, estados vazios e ilustrações reutilizam os componentes de `frontend/src/components/ui/ProductUI.tsx` e os tokens de `frontend/tailwind.config.ts`.
 
 Arquivos principais:
@@ -150,7 +152,7 @@ Arquivos principais:
 - `frontend/src/components/LibrasLiveIcon.tsx`: ícone vetorial inline com nome acessível.
 - `frontend/src/components/LibrasLiveLogo.tsx`: assinatura compacta usada no header.
 - `frontend/src/components/brand/LibrasLiveWelcomeVisual.tsx`: imagem institucional responsiva usada na home e em fallbacks.
-- `frontend/src/components/illustrations/`: ilustrações originais para sala inclusiva, professor, aluno, curadoria e estados vazios.
+- `frontend/src/components/brand/LibrasLiveRealisticVisual.tsx`: cenas realistas reutilizáveis de sala, professor, aluno e curadoria.
 - `frontend/public/icons/libraslive-icon.svg` e `libraslive-logo.svg`: fontes vetoriais públicas da marca.
 
 A antiga mascote vetorial foi removida das telas e dos assets públicos para evitar uma identidade cartunesca concorrente. O Avatar Libras continua usando exclusivamente `avatar_video_url`, `video_url`, `avatar_gif_url` ou `avatar_animation_url` validados e aprovados por curadoria; o retrato realista aparece apenas quando o player está aguardando uma mídia animada.

@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { StudentJoinForm } from "@/components/StudentJoinForm";
-import { StudentExperienceIllustration } from "@/components/illustrations/StudentExperienceIllustration";
+import { LibrasLiveRealisticVisual } from "@/components/brand/LibrasLiveRealisticVisual";
 import { PageHero } from "@/components/ui/ProductUI";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
@@ -17,7 +17,7 @@ export default function StudentEntryPage() {
         eyebrow="Acesso do aluno"
         title="Acompanhe sua aula com mais clareza"
         description="Entre com o código compartilhado pelo professor e acompanhe legenda, Avatar Libras e resumo em uma tela preparada para leitura."
-        visual={<StudentExperienceIllustration decorative className="h-auto w-full -translate-y-10" />}
+        visual={<LibrasLiveRealisticVisual variant="student" decorative className="h-56 w-full" />}
       />
       <div className="mx-auto grid max-w-7xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,760px)_360px] lg:justify-center">
         <StudentJoinForm />

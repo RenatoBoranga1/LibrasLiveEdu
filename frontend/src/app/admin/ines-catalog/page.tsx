@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, Database, FileCheck2, RotateCcw, Search, ShieldCheck } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
-import { SignCurationIllustration } from "@/components/illustrations/SignCurationIllustration";
+import { LibrasLiveRealisticVisual } from "@/components/brand/LibrasLiveRealisticVisual";
 import { PageHero } from "@/components/ui/ProductUI";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
@@ -137,7 +137,7 @@ export default function InesCatalogPage() {
             Voltar para curadoria
           </Link>
         }
-        visual={<SignCurationIllustration decorative className="h-auto w-full -translate-y-8" />}
+        visual={<LibrasLiveRealisticVisual variant="curation" decorative className="h-56 w-full" />}
       />
       <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <section className="rounded-lg border border-amber/40 bg-amber/15 p-4 text-sm font-bold leading-relaxed text-ink dark:border-amber/30 dark:text-white" role="note">

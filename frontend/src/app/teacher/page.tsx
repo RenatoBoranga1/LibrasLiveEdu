@@ -7,7 +7,7 @@ import { Captions, Check, Copy, Download, FileDown, FileText, ListChecks, Mic, P
 import { ActionButton } from "@/components/ActionButton";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 import { AppHeader } from "@/components/AppHeader";
-import { TeacherToolsIllustration } from "@/components/illustrations/TeacherToolsIllustration";
+import { LibrasLiveRealisticVisual } from "@/components/brand/LibrasLiveRealisticVisual";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { LiveSummaryPanel } from "@/components/LiveSummaryPanel";
 import { ModeBadge } from "@/components/ModeBadge";
@@ -344,7 +344,7 @@ export default function TeacherPage() {
         eyebrow="Sala do professor"
         title="Controle a aula e acompanhe a participação em tempo real"
         description="Crie a sala, compartilhe o acesso e mantenha legenda, resumo e relatório organizados em um único painel."
-        visual={<TeacherToolsIllustration decorative className="h-auto w-full -translate-y-8" />}
+        visual={<LibrasLiveRealisticVisual variant="teacher" decorative className="h-56 w-full" />}
       />
       <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[390px_1fr]">
         <aside className="space-y-4">

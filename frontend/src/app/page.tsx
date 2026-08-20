@@ -17,9 +17,7 @@ import {
 import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
 import { LibrasLiveWelcomeVisual } from "@/components/brand/LibrasLiveWelcomeVisual";
-import { SignCurationIllustration } from "@/components/illustrations/SignCurationIllustration";
-import { StudentExperienceIllustration } from "@/components/illustrations/StudentExperienceIllustration";
-import { TeacherToolsIllustration } from "@/components/illustrations/TeacherToolsIllustration";
+import { LibrasLiveRealisticVisual } from "@/components/brand/LibrasLiveRealisticVisual";
 import { AppSection, FeatureCard, InfoBadge } from "@/components/ui/ProductUI";
 
 const steps = [
@@ -119,9 +117,9 @@ export default function HomePage() {
         description="A interface reduz o esforço operacional e mantém o conteúdo essencial em destaque."
       >
         <div className="grid gap-5 lg:grid-cols-3">
-          <ProfileBlock title="Para professores" description="Crie aulas, compartilhe QR Code, acompanhe a transcrição e gere relatórios pedagógicos." href="/teacher" action="Preparar uma aula" visual={<TeacherToolsIllustration decorative className="h-auto w-full" />} />
-          <ProfileBlock title="Para alunos" description="Entre pelo celular, ajuste a leitura e acompanhe legenda, Avatar Libras e resumo." href="/aluno" action="Entrar em uma aula" visual={<StudentExperienceIllustration decorative className="h-auto w-full" />} />
-          <ProfileBlock title="Para escolas" description="Organize a curadoria de sinais, valide fontes e acompanhe a cobertura de mídias aprovadas." href="/about" action="Conhecer o projeto" visual={<SignCurationIllustration decorative className="h-auto w-full" />} />
+          <ProfileBlock title="Para professores" description="Crie aulas, compartilhe QR Code, acompanhe a transcrição e gere relatórios pedagógicos." href="/teacher" action="Preparar uma aula" visual={<LibrasLiveRealisticVisual variant="teacher" decorative />} />
+          <ProfileBlock title="Para alunos" description="Entre pelo celular, ajuste a leitura e acompanhe legenda, Avatar Libras e resumo." href="/aluno" action="Entrar em uma aula" visual={<LibrasLiveRealisticVisual variant="student" decorative />} />
+          <ProfileBlock title="Para escolas" description="Organize a curadoria de sinais, valide fontes e acompanhe a cobertura de mídias aprovadas." href="/about" action="Conhecer o projeto" visual={<LibrasLiveRealisticVisual variant="curation" decorative />} />
         </div>
       </AppSection>
 

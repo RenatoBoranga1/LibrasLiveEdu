@@ -5,8 +5,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { AvatarPanel } from "@/components/AvatarPanel";
 import { LibrasLiveIcon } from "@/components/LibrasLiveIcon";
 import { LibrasLiveLogo } from "@/components/LibrasLiveLogo";
+import { LibrasLiveRealisticVisual } from "@/components/brand/LibrasLiveRealisticVisual";
 import { LibrasLiveWelcomeVisual } from "@/components/brand/LibrasLiveWelcomeVisual";
-import { HeroInclusiveClassroom } from "@/components/illustrations/HeroInclusiveClassroom";
 
 describe("LibrasLive visual identity", () => {
   it("renders the product logo text", () => {
@@ -25,9 +25,9 @@ describe("LibrasLive visual identity", () => {
     expect(screen.getByRole("img", { name: /símbolo institucional/i })).toBeInTheDocument();
   });
 
-  it("renders the inclusive classroom illustration accessibly", () => {
-    render(<HeroInclusiveClassroom title="Cena inclusiva em sala de aula" />);
-    expect(screen.getByRole("img", { name: /cena inclusiva/i })).toBeInTheDocument();
+  it("renders the realistic classroom visual accessibly", () => {
+    render(<LibrasLiveRealisticVisual variant="classroom" />);
+    expect(screen.getByRole("img", { name: /sala de aula inclusiva/i })).toBeInTheDocument();
   });
 
   it("shows the new logo in the app header", () => {

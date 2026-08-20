@@ -1,5 +1,5 @@
 import { BadgeCheck, Box, Info, VideoOff } from "lucide-react";
-import { LibrasLiveMascot } from "@/components/LibrasLiveMascot";
+import { LibrasLiveWelcomeVisual } from "@/components/brand/LibrasLiveWelcomeVisual";
 import { resolveAvatarState } from "@/services/avatarProvider";
 import type { SignCard } from "@/types/live";
 
@@ -107,15 +107,13 @@ export function AvatarPanel({
             />
           ) : (
             <div className="flex max-w-md flex-col items-center gap-4 px-5 py-10 text-center">
-              <LibrasLiveMascot
-                size={132}
-                variant="empty"
-                ariaLabel="Liva, mascote do LibrasLive Edu aguardando sinal em Libras"
-                className="drop-shadow-lg"
-              />
+              <LibrasLiveWelcomeVisual variant="fallback" />
               <p className="text-base font-black leading-relaxed">{avatarState.message}</p>
               <p className="text-sm font-semibold leading-relaxed text-white/75">
                 A legenda está ativa. O avatar será exibido quando houver vídeo, GIF ou animação aprovada.
+              </p>
+              <p className="text-xs font-semibold leading-relaxed text-white/55">
+                Imagem institucional de boas-vindas. Não representa um sinal ou tradução em Libras.
               </p>
             </div>
           )}

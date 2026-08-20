@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
-import { HeroInclusiveClassroom } from "@/components/illustrations/HeroInclusiveClassroom";
+import { LibrasLiveWelcomeVisual } from "@/components/brand/LibrasLiveWelcomeVisual";
 import { SignCurationIllustration } from "@/components/illustrations/SignCurationIllustration";
 import { StudentExperienceIllustration } from "@/components/illustrations/StudentExperienceIllustration";
 import { TeacherToolsIllustration } from "@/components/illustrations/TeacherToolsIllustration";
@@ -45,10 +45,12 @@ export default function HomePage() {
 
       <section className="relative isolate overflow-hidden bg-ink text-white">
         <div className="surface-grid absolute inset-0 opacity-30" aria-hidden="true" />
-        <HeroInclusiveClassroom decorative className="pointer-events-none absolute -bottom-8 right-[-2rem] hidden h-auto w-[52%] max-w-[730px] lg:block" />
-        <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:py-20">
-          <div className="max-w-2xl lg:w-[51%]">
-            <InfoBadge>Educação inclusiva em tempo real</InfoBadge>
+        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end lg:py-10">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-3">
+              <InfoBadge>Educação inclusiva em tempo real</InfoBadge>
+              <LibrasLiveWelcomeVisual variant="compact" decorative className="lg:hidden" />
+            </div>
             <h1 className="mt-5 text-4xl font-extrabold leading-tight sm:mt-6 sm:text-5xl">
               Apoio inclusivo em sala de aula com Libras ao vivo
             </h1>
@@ -74,6 +76,7 @@ export default function HomePage() {
               Ferramenta de apoio pedagógico. Não substitui o intérprete humano de Libras.
             </p>
           </div>
+          <LibrasLiveWelcomeVisual priority decorative className="hidden h-[510px] lg:block" />
         </div>
       </section>
 

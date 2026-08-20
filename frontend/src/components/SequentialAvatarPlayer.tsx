@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BadgeCheck, Image as ImageIcon, Info, Pause, Play, RotateCcw, SkipForward, Sparkles, Trash2 } from "lucide-react";
-import { LibrasLiveMascot } from "@/components/LibrasLiveMascot";
+import { LibrasLiveIcon } from "@/components/LibrasLiveIcon";
+import { LibrasLiveWelcomeVisual } from "@/components/brand/LibrasLiveWelcomeVisual";
 import type { SignCard } from "@/types/live";
 
 const DEFAULT_MAX_QUEUE = 20;
@@ -159,7 +160,7 @@ export function SequentialAvatarPlayer({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 dark:border-white/10">
         <div>
           <div className="flex items-center gap-2">
-            <LibrasLiveMascot size={42} variant="compact" decorative />
+            <LibrasLiveIcon size={38} decorative />
             <h2 className="text-lg font-black text-ink dark:text-white">Avatar Libras</h2>
           </div>
           <p className="text-xs font-bold text-ink/60 dark:text-white/60">fila automatica de videos, GIFs e animacoes aprovadas</p>
@@ -217,14 +218,10 @@ export function SequentialAvatarPlayer({
             </div>
           ) : (
             <div className="flex max-w-md flex-col items-center gap-4 px-5 py-10 text-center">
-              <LibrasLiveMascot
-                size={150}
-                variant="empty"
-                ariaLabel="Liva, mascote do LibrasLive Edu aguardando sinal em Libras"
-                className="drop-shadow-lg"
-              />
+              <LibrasLiveWelcomeVisual variant="fallback" />
               <p className="text-base font-black leading-relaxed">Aguardando sinal em Libras</p>
               <p className="text-sm font-semibold leading-relaxed text-white/75">A legenda continua ativa; o Avatar tocara quando houver video, GIF ou animacao aprovada.</p>
+              <p className="text-xs font-semibold leading-relaxed text-white/55">Imagem institucional; não é uma tradução em Libras.</p>
             </div>
           )}
         </div>

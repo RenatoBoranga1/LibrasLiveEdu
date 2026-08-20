@@ -56,15 +56,15 @@ export function FeatureCard({ icon: Icon, title, description, accent = "ocean" }
 
 export function PageHero({ eyebrow, title, description, actions, visual }: { eyebrow: string; title: string; description: string; actions?: ReactNode; visual?: ReactNode }) {
   return (
-    <section className="border-b border-ink/10 bg-sky/45 dark:border-white/10 dark:bg-zinc-900">
-      <div className="mx-auto grid max-w-7xl gap-7 px-4 py-9 sm:px-6 lg:grid-cols-[1fr_360px] lg:items-center">
+    <section className="border-b border-ink/10 bg-white dark:border-white/10 dark:bg-zinc-950">
+      <div className="mx-auto grid max-w-7xl gap-7 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_360px] lg:items-center">
         <div className="max-w-3xl">
           <p className="text-sm font-extrabold text-ocean dark:text-mint-strong">{eyebrow}</p>
           <h1 className="mt-2 text-3xl font-extrabold leading-tight text-ink dark:text-white sm:text-4xl">{title}</h1>
           <p className="mt-4 text-base font-medium leading-relaxed text-ink/68 dark:text-white/68 sm:text-lg">{description}</p>
           {actions && <div className="mt-6 flex flex-wrap gap-3">{actions}</div>}
         </div>
-        {visual && <div className="hidden max-h-56 overflow-hidden lg:block" aria-hidden="true">{visual}</div>}
+        {visual && <div className="hidden max-h-56 overflow-hidden rounded-lg border border-ink/10 bg-sky/45 p-3 dark:border-white/10 dark:bg-white/5 lg:block" aria-hidden="true">{visual}</div>}
       </div>
     </section>
   );
@@ -81,8 +81,8 @@ export function InfoBadge({ children, tone = "ocean" }: { children: ReactNode; t
 
 export function StatCard({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
   return (
-    <article className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-      <p className="text-xs font-bold text-ink/58 dark:text-white/58">{label}</p>
+    <article className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-zinc-900">
+      <p className="text-xs font-extrabold uppercase text-ink/58 dark:text-white/58">{label}</p>
       <p className="mt-2 text-3xl font-extrabold text-ocean dark:text-mint-strong">{value}</p>
       {detail && <p className="mt-1 text-xs font-medium text-ink/55 dark:text-white/55">{detail}</p>}
     </article>

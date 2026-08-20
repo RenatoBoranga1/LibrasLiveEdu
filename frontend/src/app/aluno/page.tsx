@@ -19,7 +19,7 @@ export default function StudentEntryPage() {
         description="Entre com o código compartilhado pelo professor e acompanhe legenda, Avatar Libras e resumo em uma tela preparada para leitura."
         visual={<StudentExperienceIllustration decorative className="h-auto w-full -translate-y-10" />}
       />
-      <div className="mx-auto grid max-w-5xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_360px]">
+      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,760px)_360px] lg:justify-center">
         <StudentJoinForm />
         <aside className="grid gap-4 self-start">
           <div className="rounded-lg bg-white p-5 shadow-soft dark:bg-zinc-900">

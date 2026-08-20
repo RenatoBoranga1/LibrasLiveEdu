@@ -141,16 +141,19 @@ O sistema não inventa sinais oficiais de Libras. Sinais pendentes exibem aviso 
 
 A identidade principal usa um símbolo original de **mão + balão de comunicação + ondas ao vivo**. O ícone foi desenhado para manter leitura clara no header, favicon e PWA sem usar marcas oficiais do INES, Governo, IFPR, VLibras ou assets de terceiros.
 
+A home e os estados sem mídia usam `frontend/public/brand/libraslive-welcome-realistic.png`, uma representante visual original e realista. Essa imagem é identidade institucional de boas-vindas, não mascote tradutora e não representa um sinal em Libras. `frontend/public/brand/libraslive-dashboard-reference.png` documenta a referência visual aplicada aos painéis: navegação clara, largura consistente, cards compactos, superfícies claras e estados operacionais legíveis.
+
 A interface segue uma linguagem institucional e acolhedora: azul profundo para confiança, verde-mint para acessibilidade, âmbar como destaque e superfícies claras para leitura. Títulos, botões, cards, estados vazios e ilustrações reutilizam os componentes de `frontend/src/components/ui/ProductUI.tsx` e os tokens de `frontend/tailwind.config.ts`.
 
 Arquivos principais:
 
 - `frontend/src/components/LibrasLiveIcon.tsx`: ícone vetorial inline com nome acessível.
 - `frontend/src/components/LibrasLiveLogo.tsx`: assinatura compacta usada no header.
+- `frontend/src/components/brand/LibrasLiveWelcomeVisual.tsx`: imagem institucional responsiva usada na home e em fallbacks.
 - `frontend/src/components/illustrations/`: ilustrações originais para sala inclusiva, professor, aluno, curadoria e estados vazios.
 - `frontend/public/icons/libraslive-icon.svg` e `libraslive-logo.svg`: fontes vetoriais públicas da marca.
 
-A mascote permanece disponível somente como identidade complementar e fallback quando não existe mídia animada aprovada. Ela nunca deve ser apresentada como tradução linguística. O Avatar Libras continua usando exclusivamente `avatar_video_url`, `video_url`, `avatar_gif_url` ou `avatar_animation_url` validados e aprovados por curadoria.
+A antiga mascote vetorial foi removida das telas e dos assets públicos para evitar uma identidade cartunesca concorrente. O Avatar Libras continua usando exclusivamente `avatar_video_url`, `video_url`, `avatar_gif_url` ou `avatar_animation_url` validados e aprovados por curadoria; o retrato realista aparece apenas quando o player está aguardando uma mídia animada.
 
 Se forem necessários PNGs para lojas ou dispositivos específicos, gere-os a partir dos SVGs e preserve os vetores como fonte versionada.
 

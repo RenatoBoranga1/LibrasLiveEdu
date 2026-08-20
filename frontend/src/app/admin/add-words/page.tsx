@@ -134,7 +134,7 @@ export default function AddWordsPage() {
       };
       const created = await createManualSign(payload);
       setCreatedSign(created);
-      setMessage(`"${created.word}" foi salva como pending para curadoria.`);
+      setMessage(`"${created.word}" foi salva como pendente de revisão para curadoria.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Não foi possível salvar a palavra.");
     } finally {

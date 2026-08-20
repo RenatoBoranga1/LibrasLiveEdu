@@ -25,6 +25,6 @@ describe("LibrasLive visual identity", () => {
   it("uses the mascot as Avatar fallback when there is no animated media", () => {
     render(<AvatarPanel status="fallback" word="teste" />);
     expect(screen.getByRole("img", { name: /liva, mascote/i })).toBeInTheDocument();
-    expect(screen.getByText(/avatar ser/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/avatar ser/i).length).toBeGreaterThan(0);
   });
 });

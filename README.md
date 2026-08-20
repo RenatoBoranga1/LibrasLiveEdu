@@ -15,7 +15,7 @@ PWA educacional inclusiva para apoiar alunos surdos ou com deficiência auditiva
 
 - Funcional em modo demonstração quando `DEMO_MODE=true` e `NEXT_PUBLIC_DEMO_MODE=true`.
 - Backend FastAPI com JWT, perfis, rotas protegidas, WebSocket separado para professor/aluno e tokens temporários de aula.
-- Frontend Next.js PWA mobile-first com telas `/aluno`, `/join/[accessCode]`, `/teacher`, `/admin`, `/login`, `/register`, `/privacy`, `/terms`, `/consent` e `/data-rights`.
+- Frontend Next.js PWA mobile-first com telas `/aluno`, `/join/[accessCode]`, `/teacher`, `/admin`, `/about`, `/login`, `/register`, `/privacy`, `/terms`, `/consent` e `/data-rights`.
 - Banco PostgreSQL com migrations, seeds robustos, importador CSV/JSON/API autorizada e curadoria de sinais.
 - Pronto para integrar Speech-to-Text real e avatar real, sem prometer tradução perfeita.
 
@@ -112,6 +112,19 @@ No celular, não use `localhost`, porque `localhost` aponta para o próprio celu
 - Aula finalizada bloqueia entrada e expira token.
 - WebSocket do aluno apenas recebe eventos.
 - WebSocket do professor exige JWT e permite enviar transcrição.
+
+## Uso em sala de aula
+
+O LibrasLive Edu foi organizado para parecer uma ferramenta educacional de apoio, não um painel técnico. O fluxo recomendado é:
+
+1. Professor acessa `/teacher`, usa a seção **Controle da aula**, cria a aula e compartilha código/QR Code.
+2. Aluno entra por `/aluno` ou `/join/[accessCode]`, acompanha legenda em destaque e recebe o Avatar Libras em fila automática.
+3. O Avatar toca somente mídia animada aprovada: `avatar_video_url`, `video_url`, `avatar_gif_url` ou `avatar_animation_url`. `image_url` continua apenas como apoio visual.
+4. Durante a aula, o professor acompanha a seção **Acompanhamento em tempo real** com trechos capturados, palavras detectadas e orientação de curadoria.
+5. Depois da aula, a seção **Depois da aula** gera relatório simples em JSON com transcrição, resumo, palavras importantes, palavras para curadoria e recomendações.
+6. Admin acessa `/admin` e usa o botão **Adicionar novas palavras** para escolher cadastro manual, preenchimento pelo padrão INES ou importação em lote.
+
+A página institucional `/about` explica o problema social, o uso em sala, os recursos para professores/alunos e a responsabilidade de não substituir intérprete humano de Libras.
 
 ## Dados e Curadoria de Libras
 

@@ -16,6 +16,9 @@ export function AppHeader() {
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-ocean/10 text-ocean dark:bg-mint/10 dark:text-mint">
             <GraduationCap className="h-4 w-4" aria-hidden="true" />
           </span>
+          <Link className="focus-ring rounded-lg px-3 py-2 hover:text-ocean dark:hover:text-mint" href="/about">
+            Projeto
+          </Link>
           <Link className="focus-ring rounded-lg px-3 py-2 hover:text-ocean dark:hover:text-mint" href="/aluno">
             Aluno
           </Link>

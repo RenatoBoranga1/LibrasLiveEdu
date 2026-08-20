@@ -81,13 +81,13 @@ describe("add words admin flow", () => {
     const { default: Page } = await import("@/app/admin/add-words/page");
     render(<Page />);
 
-    fireEvent.change(screen.getByLabelText(/palavra/i), { target: { value: "abacate" } });
+    fireEvent.change(screen.getByRole("textbox", { name: /^palavra/i }), { target: { value: "abacate" } });
     fireEvent.change(screen.getByLabelText(/url do vídeo/i), { target: { value: validVideo.url } });
     fireEvent.click(screen.getByRole("button", { name: /salvar como pendente/i }));
 
     await waitFor(() => expect(validateMediaUrl).toHaveBeenCalled());
     await waitFor(() => expect(createManualSign).toHaveBeenCalled());
-    expect(await screen.findByText(/foi salva como pending/i)).toBeInTheDocument();
+    expect(await screen.findByText(/foi salva como pendente de revisão/i)).toBeInTheDocument();
     expect(createManualSign).toHaveBeenCalledWith(expect.objectContaining({ word: "abacate", video_url: validVideo.url }));
   });
 
@@ -102,7 +102,7 @@ describe("add words admin flow", () => {
     const { default: Page } = await import("@/app/admin/add-words/page");
     render(<Page />);
 
-    fireEvent.change(screen.getByLabelText(/palavra/i), { target: { value: "escola" } });
+    fireEvent.change(screen.getByRole("textbox", { name: /^palavra/i }), { target: { value: "escola" } });
     fireEvent.change(screen.getByLabelText(/url do vídeo/i), { target: { value: validVideo.url } });
     fireEvent.click(screen.getByRole("button", { name: /testar mídia/i }));
 

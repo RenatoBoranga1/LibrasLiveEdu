@@ -13,7 +13,6 @@ function card(overrides: Partial<SignCard>): SignCard {
 }
 
 beforeEach(() => {
-  vi.useFakeTimers();
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: vi.fn().mockReturnValue({
@@ -67,6 +66,7 @@ describe("SequentialAvatarPlayer", () => {
   });
 
   it("advances from GIF after the default duration", async () => {
+    vi.useFakeTimers();
     render(
       <SequentialAvatarPlayer
         gifDurationMs={2500}
@@ -77,11 +77,13 @@ describe("SequentialAvatarPlayer", () => {
       />
     );
 
-    expect(await screen.findByText("Sinal atual: professor")).toBeInTheDocument();
+    await flushEffects();
+    expect(screen.getByText("Sinal atual: professor")).toBeInTheDocument();
     act(() => {
       vi.advanceTimersByTime(2500);
     });
-    expect(await screen.findByText("Sinal atual: livro")).toBeInTheDocument();
+    await flushEffects();
+    expect(screen.getByText("Sinal atual: livro")).toBeInTheDocument();
   });
 
   it("video errors skip to the next item", async () => {
@@ -100,6 +102,7 @@ describe("SequentialAvatarPlayer", () => {
   });
 
   it("pause and resume control automatic GIF advancement", async () => {
+    vi.useFakeTimers();
     render(
       <SequentialAvatarPlayer
         gifDurationMs={2500}
@@ -110,7 +113,8 @@ describe("SequentialAvatarPlayer", () => {
       />
     );
 
-    expect(await screen.findByText("Sinal atual: professor")).toBeInTheDocument();
+    await flushEffects();
+    expect(screen.getByText("Sinal atual: professor")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /pausar avatar/i }));
     act(() => {
       vi.advanceTimersByTime(3000);
@@ -121,7 +125,8 @@ describe("SequentialAvatarPlayer", () => {
     act(() => {
       vi.advanceTimersByTime(2500);
     });
-    expect(await screen.findByText("Sinal atual: livro")).toBeInTheDocument();
+    await flushEffects();
+    expect(screen.getByText("Sinal atual: livro")).toBeInTheDocument();
   });
 
   it("ignores an immediate duplicate sign", async () => {
@@ -139,4 +144,26 @@ describe("SequentialAvatarPlayer", () => {
     fireEvent.ended(screen.getByLabelText(/video do sinal em libras para aprender/i));
     expect(await screen.findByText("Sinal atual: abacate")).toBeInTheDocument();
   });
+
+  it("clears the current signal and queued items", async () => {
+    render(
+      <SequentialAvatarPlayer
+        items={[
+          card({ word: "aprender", normalizedWord: "aprender", queueKey: "a1", videoUrl: "https://example.com/a1.mp4" }),
+          card({ word: "abacate", normalizedWord: "abacate", queueKey: "b", videoUrl: "https://example.com/b.mp4" }),
+        ]}
+      />
+    );
+
+    expect(await screen.findByText("Sinal atual: aprender")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /limpar fila do avatar/i }));
+    expect(screen.getByText("Sem sinal animado na fila")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum sinal aguardando.")).toBeInTheDocument();
+  });
 });
+
+async function flushEffects() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}

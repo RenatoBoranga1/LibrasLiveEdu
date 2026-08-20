@@ -6,6 +6,7 @@ node_modules/
 dist/
 build/
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *.log
 backend/data/import_report_*.json

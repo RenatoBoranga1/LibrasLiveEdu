@@ -45,8 +45,8 @@ describe("AvatarPanel", () => {
       />
     );
 
-    expect(screen.queryByRole("img", { name: /sinal em libras/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/apenas apoio visual dispon/i)).toBeInTheDocument();
+    expect(screen.queryByAltText(/sinal em libras/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/apenas apoio visual dispon/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/gif ou anima/i)).toBeInTheDocument();
   });
 });

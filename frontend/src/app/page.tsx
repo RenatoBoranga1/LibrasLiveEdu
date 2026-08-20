@@ -45,6 +45,9 @@ export default function HomePage() {
             <LibrasLiveLogo />
           </Link>
           <nav className="flex items-center gap-1 text-sm font-bold text-ink/70 dark:text-white/75" aria-label="Navegação principal">
+            <Link className="focus-ring rounded-lg px-3 py-2 hover:text-ocean dark:hover:text-mint" href="/about">
+              Projeto
+            </Link>
             <Link className="focus-ring rounded-lg px-3 py-2 hover:text-ocean dark:hover:text-mint" href="/aluno">
               Aluno
             </Link>
@@ -65,9 +68,12 @@ export default function HomePage() {
             legenda ao vivo + suporte visual em Libras
           </div>
           <div>
-            <h1 className="text-5xl font-black leading-tight sm:text-6xl">LibrasLive Edu</h1>
+            <h1 className="text-5xl font-black leading-tight sm:text-6xl">Seja bem-vindo ao LibrasLive Edu</h1>
             <p className="mt-5 max-w-2xl text-lg font-semibold leading-relaxed text-ink/72 dark:text-white/72">
-              Plataforma educacional inclusiva com legenda ao vivo e suporte visual em Libras.
+              Plataforma educacional inclusiva com legenda ao vivo, apoio visual e Avatar Libras.
+            </p>
+            <p className="mt-4 max-w-2xl rounded-lg bg-amber/20 p-4 text-sm font-bold leading-relaxed text-ink dark:text-white">
+              O LibrasLive Edu é uma ferramenta de apoio pedagógico e não substitui o intérprete humano de Libras.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -75,13 +81,19 @@ export default function HomePage() {
               href="/aluno"
               className="focus-ring inline-flex min-h-14 items-center justify-center rounded-lg bg-ocean px-6 py-4 text-base font-black text-white shadow-soft transition hover:bg-teal-800"
             >
-              Entrar como aluno
+              Sou Aluno
             </Link>
             <Link
               href="/teacher"
               className="focus-ring inline-flex min-h-14 items-center justify-center rounded-lg border border-ink/15 bg-white px-6 py-4 text-base font-black text-ocean shadow-soft transition hover:border-ocean/50 dark:border-white/15 dark:bg-zinc-900 dark:text-mint"
             >
-              Sou professor
+              Sou Professor
+            </Link>
+            <Link
+              href="/about"
+              className="focus-ring inline-flex min-h-14 items-center justify-center rounded-lg border border-ocean/20 bg-teal-50 px-6 py-4 text-base font-black text-ocean shadow-soft transition hover:border-ocean/50 dark:border-white/15 dark:bg-zinc-900 dark:text-mint"
+            >
+              Conhecer o projeto
             </Link>
           </div>
         </div>

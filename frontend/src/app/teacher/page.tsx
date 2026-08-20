@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { Check, Copy, FileDown, Mic, Pause, Play, Plus, Square } from "lucide-react";
+import { Captions, Check, Copy, Download, FileDown, FileText, ListChecks, Mic, Pause, Play, Plus, Square } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 import { AppHeader } from "@/components/AppHeader";
@@ -36,6 +37,18 @@ const quickTestPhrases = [
   { label: "Enviar frase de Tecnologia", text: "Um sistema recebe dados, processa informações e gera uma saída." },
 ];
 
+type LessonReport = {
+  title: string;
+  generated_at: string;
+  access_code: string;
+  status: string;
+  transcript: string[];
+  summary: string;
+  important_words: string[];
+  words_for_curation: string[];
+  recommendations: string[];
+};
+
 export default function TeacherPage() {
   const auth = useRequireRole(["professor", "admin"]);
   const [subjects, setSubjects] = useState<Subject[]>(fallbackSubjects);
@@ -55,6 +68,7 @@ export default function TeacherPage() {
   const [microphoneStatus, setMicrophoneStatus] = useState("microfone aguardando");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lessonReport, setLessonReport] = useState<LessonReport | null>(null);
 
   useEffect(() => {
     setMobileOrigin(process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin);
@@ -71,6 +85,11 @@ export default function TeacherPage() {
   const needsLanIp = joinLink.includes("localhost") || joinLink.includes("127.0.0.1");
   const statusLabel = live ? "Aula ao vivo" : getClassStatusLabel(classSession);
   const modeLabel = live ? "aula ao vivo" : demoMode ? "modo demonstração" : "aula aguardando início";
+  const importantWords = useMemo(() => {
+    if (liveSummary?.keywords?.length) return liveSummary.keywords;
+    return extractImportantWords(transcript);
+  }, [liveSummary?.keywords, transcript]);
+  const reportSummary = liveSummary?.summaryText ?? summary ?? "Resumo ainda não gerado.";
 
   useEffect(() => {
     if (!demoMode || !live || !classSession) return;
@@ -201,6 +220,47 @@ export default function TeacherPage() {
     setFeedback("Resumo copiado.");
   }
 
+  function generateLessonReport() {
+    if (!classSession) {
+      setError("Crie uma aula antes de gerar o relatório.");
+      return;
+    }
+    const report: LessonReport = {
+      title: classSession.title || title || "Aula sem título",
+      generated_at: new Date().toISOString(),
+      access_code: accessCode,
+      status: classSession.status,
+      transcript: transcript.slice().reverse(),
+      summary: reportSummary,
+      important_words: importantWords,
+      words_for_curation: importantWords,
+      recommendations: [
+        "Revisar palavras sem sinal aprovado no painel administrativo.",
+        "Conferir fonte e licença antes de aprovar novas mídias do Avatar Libras.",
+        "Usar o relatório como apoio pedagógico; ele não substitui avaliação de especialista em Libras.",
+      ],
+    };
+    setLessonReport(report);
+    setFeedback("Relatório da aula gerado. Revise e baixe o arquivo quando quiser.");
+  }
+
+  function downloadLessonReport() {
+    if (!lessonReport) {
+      generateLessonReport();
+      return;
+    }
+    const blob = new Blob([JSON.stringify(lessonReport, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `libraslive-relatorio-${lessonReport.access_code}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setFeedback("Relatório baixado em JSON.");
+  }
+
   async function sendManualTranscript() {
     const sent = await sendTranscriptToStudents(manualText.trim());
     if (sent) setManualText("");
@@ -284,7 +344,8 @@ export default function TeacherPage() {
           <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-black text-ink dark:text-white">Professor</h1>
+                <p className="text-xs font-black uppercase tracking-normal text-ocean dark:text-mint">Controle da aula</p>
+                <h1 className="mt-1 text-2xl font-black text-ink dark:text-white">Professor</h1>
                 <p className="mt-1 text-sm font-bold text-ocean dark:text-mint">{statusLabel}</p>
               </div>
               <span className="rounded-full bg-ocean/10 px-3 py-1 text-xs font-black text-ocean dark:bg-mint/10 dark:text-mint">
@@ -293,6 +354,11 @@ export default function TeacherPage() {
             </div>
             {feedback && <div role="status" className="mt-4 rounded-lg bg-ocean px-3 py-2 text-sm font-bold text-white">{feedback}</div>}
             {error && <div role="alert" className="mt-4 rounded-lg bg-red-100 px-3 py-2 text-sm font-bold text-red-900">{error}</div>}
+            <div className="mt-4 grid gap-2 text-sm font-bold text-ink/75 dark:text-white/75">
+              <div className="rounded-lg bg-teal-50 p-3 dark:bg-zinc-800">Código da aula: <span className="font-black text-ocean dark:text-mint">{accessCode}</span></div>
+              <div className="rounded-lg bg-teal-50 p-3 dark:bg-zinc-800">Microfone: <span className="font-black">{microphoneStatus}</span></div>
+              <div className="rounded-lg bg-teal-50 p-3 dark:bg-zinc-800">Conexão: <span className="font-black">{statusLabel}</span></div>
+            </div>
             <label className="mt-5 block text-sm font-bold text-ink/75 dark:text-white/75" htmlFor="title">
               Título da aula
             </label>
@@ -325,12 +391,12 @@ export default function TeacherPage() {
               </ActionButton>
               <ActionButton onClick={startClass} disabled={creating}>
                 <Play className="h-5 w-5" aria-hidden="true" />
-                Iniciar aula
+                {classSession?.status === "paused" ? "Retomar legenda" : "Iniciar aula"}
               </ActionButton>
               <div className="grid grid-cols-2 gap-3">
                 <ActionButton tone="quiet" onClick={pause} disabled={!classSession}>
                   <Pause className="h-5 w-5" aria-hidden="true" />
-                  Pausar
+                  Pausar legenda
                 </ActionButton>
                 <ActionButton tone="danger" onClick={finish} disabled={!classSession}>
                   <Square className="h-5 w-5" aria-hidden="true" />
@@ -340,6 +406,10 @@ export default function TeacherPage() {
               <ActionButton tone="secondary" onClick={exportSummary} disabled={!classSession}>
                 <FileDown className="h-5 w-5" aria-hidden="true" />
                 Exportar resumo
+              </ActionButton>
+              <ActionButton tone="quiet" onClick={generateLessonReport} disabled={!classSession}>
+                <FileText className="h-5 w-5" aria-hidden="true" />
+                Gerar relatório da aula
               </ActionButton>
             </div>
           </section>
@@ -351,6 +421,7 @@ export default function TeacherPage() {
           <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
+                <h2 className="text-xl font-black text-ink dark:text-white">Acompanhamento em tempo real</h2>
                 <p className="text-sm font-bold uppercase tracking-normal text-ocean dark:text-mint">
                   {selectedSubject?.name ?? "Disciplina"}
                 </p>
@@ -401,6 +472,13 @@ export default function TeacherPage() {
                   </p>
                 )}
               </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores da aula em tempo real">
+              <StatusCard icon={<Captions className="h-5 w-5" aria-hidden="true" />} label="Legenda capturada" value={`${transcript.length} trecho(s)`} />
+              <StatusCard icon={<ListChecks className="h-5 w-5" aria-hidden="true" />} label="Palavras detectadas" value={importantWords.length ? importantWords.slice(0, 4).join(", ") : "Aguardando fala"} />
+              <StatusCard icon={<Play className="h-5 w-5" aria-hidden="true" />} label="Sinais com mídia" value="Enviados ao aluno quando aprovados" />
+              <StatusCard icon={<Pause className="h-5 w-5" aria-hidden="true" />} label="Sinais sem vídeo" value="Aparecem para curadoria no relatório" />
             </div>
           </section>
 
@@ -456,6 +534,48 @@ export default function TeacherPage() {
             loading={summaryLoading}
             defaultOpen
           />
+
+          <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-black text-ink dark:text-white">Depois da aula</h2>
+                <p className="mt-1 text-sm font-semibold leading-relaxed text-ink/65 dark:text-white/65">
+                  Gere um relatório simples com transcrição, resumo, palavras importantes e recomendações para a próxima aula.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton tone="quiet" onClick={generateLessonReport} disabled={!classSession}>
+                  <FileText className="h-5 w-5" aria-hidden="true" />
+                  Gerar relatório da aula
+                </ActionButton>
+                <ActionButton tone="secondary" onClick={downloadLessonReport} disabled={!classSession}>
+                  <Download className="h-5 w-5" aria-hidden="true" />
+                  Baixar relatório
+                </ActionButton>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-lg bg-teal-50 p-3 dark:bg-zinc-800">
+                <p className="text-sm font-black text-ink dark:text-white">Resumo da aula</p>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">{reportSummary}</p>
+              </div>
+              <div className="rounded-lg bg-teal-50 p-3 dark:bg-zinc-800">
+                <p className="text-sm font-black text-ink dark:text-white">Palavras importantes</p>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">{importantWords.length ? importantWords.join(", ") : "Aguardando transcrição."}</p>
+              </div>
+              <div className="rounded-lg bg-amber/20 p-3">
+                <p className="text-sm font-black text-ink dark:text-white">Palavras sem sinal aprovado</p>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
+                  Revise as palavras importantes no admin e cadastre vídeo, GIF ou animação quando necessário.
+                </p>
+              </div>
+            </div>
+            {lessonReport && (
+              <div role="status" className="mt-4 rounded-lg bg-ocean/10 p-3 text-sm font-bold leading-relaxed text-ink dark:bg-mint/10 dark:text-white">
+                Relatório pronto para download: {lessonReport.transcript.length} trecho(s), {lessonReport.important_words.length} palavra(s) importante(s).
+              </div>
+            )}
+          </section>
 
           <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -514,4 +634,53 @@ function getClassStatusLabel(classSession: ClassSession | null) {
   if (classSession.status === "paused") return "Aula pausada";
   if (classSession.status === "finished") return "Aula finalizada";
   return "Aula criada";
+}
+
+function StatusCard({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-teal-50 p-3 text-sm font-bold text-ink dark:bg-zinc-800 dark:text-white">
+      <div className="flex items-center gap-2 text-ocean dark:text-mint">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <p className="mt-2 leading-relaxed text-ink/75 dark:text-white/75">{value}</p>
+    </div>
+  );
+}
+
+function extractImportantWords(lines: string[]) {
+  const stopWords = new Set([
+    "a",
+    "ao",
+    "as",
+    "com",
+    "da",
+    "de",
+    "do",
+    "e",
+    "em",
+    "hoje",
+    "na",
+    "no",
+    "o",
+    "os",
+    "para",
+    "por",
+    "que",
+    "um",
+    "uma",
+    "vamos",
+  ]);
+  const counts = new Map<string, number>();
+  for (const line of lines) {
+    for (const raw of line.toLowerCase().split(/[^a-zà-ú0-9]+/i)) {
+      const word = raw.trim();
+      if (word.length < 4 || stopWords.has(word)) continue;
+      counts.set(word, (counts.get(word) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))
+    .slice(0, 10)
+    .map(([word]) => word);
 }

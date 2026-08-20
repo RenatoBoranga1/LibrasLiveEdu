@@ -23,6 +23,7 @@ describe("home page", () => {
     const { default: HomePage } = await import("@/app/page");
     render(<HomePage />);
     expect(screen.getByRole("heading", { name: /libraslive edu/i })).toBeInTheDocument();
+    expect(screen.getByText(/ferramenta de apoio pedagógico/i)).toBeInTheDocument();
   });
 
   it("does not show the demo card when demo mode is not explicitly enabled", async () => {
@@ -30,7 +31,17 @@ describe("home page", () => {
     const { default: HomePage } = await import("@/app/page");
     render(<HomePage />);
     expect(screen.queryByRole("heading", { name: /demonstração/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/ambiente de produção/i)).toBeInTheDocument();
+    expect(screen.getByText(/não substitui o intérprete humano/i)).toBeInTheDocument();
+  });
+});
+
+describe("about page", () => {
+  it("explains the social education project", async () => {
+    vi.resetModules();
+    const { default: AboutPage } = await import("@/app/about/page");
+    render(<AboutPage />);
+    expect(screen.getByRole("heading", { name: /sobre o libraslive edu/i })).toBeInTheDocument();
+    expect(screen.getByText(/não substitui intérprete humano/i)).toBeInTheDocument();
   });
 });
 

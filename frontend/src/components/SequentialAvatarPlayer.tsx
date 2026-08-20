@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BadgeCheck, Image as ImageIcon, Info, Pause, Play, RotateCcw, SkipForward, Sparkles } from "lucide-react";
+import { BadgeCheck, Image as ImageIcon, Info, Pause, Play, RotateCcw, SkipForward, Sparkles, Trash2 } from "lucide-react";
 import { LibrasLiveMascot } from "@/components/LibrasLiveMascot";
 import type { SignCard } from "@/types/live";
 
@@ -136,6 +136,13 @@ export function SequentialAvatarPlayer({
     }
   }
 
+  function clearQueue() {
+    setQueue([]);
+    setCurrentItem(null);
+    setNeedsActivation(false);
+    setPlayerKey((value) => value + 1);
+  }
+
   async function tryPlay(video: HTMLVideoElement) {
     try {
       const promise = video.play();
@@ -155,7 +162,7 @@ export function SequentialAvatarPlayer({
             <LibrasLiveMascot size={42} variant="compact" decorative />
             <h2 className="text-lg font-black text-ink dark:text-white">Avatar Libras</h2>
           </div>
-          <p className="text-xs font-bold text-ink/60 dark:text-white/60">fila automatica de sinais aprovados</p>
+          <p className="text-xs font-bold text-ink/60 dark:text-white/60">fila automatica de videos, GIFs e animacoes aprovadas</p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-full bg-ocean/10 px-3 py-1 text-xs font-black text-ocean dark:bg-mint/10 dark:text-mint" aria-live="polite">
           <BadgeCheck className="h-4 w-4" aria-hidden="true" />
@@ -235,7 +242,7 @@ export function SequentialAvatarPlayer({
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button className="focus-ring inline-flex min-h-11 items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-black text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint" onClick={pauseQueue} aria-label="Pausar avatar">
               <Pause className="h-4 w-4" aria-hidden="true" />
               Pausar
@@ -248,6 +255,10 @@ export function SequentialAvatarPlayer({
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
               Repetir
             </button>
+            <button className="focus-ring inline-flex min-h-11 items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-black text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint" onClick={clearQueue} disabled={!currentItem && !queue.length} aria-label="Limpar fila do avatar">
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Limpar
+            </button>
           </div>
           <button className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-teal-50 px-3 py-2 text-sm font-black text-ocean dark:bg-zinc-800 dark:text-mint" onClick={advance} disabled={!currentItem} aria-label="Pular para o proximo sinal">
             <SkipForward className="h-4 w-4" aria-hidden="true" />
@@ -257,6 +268,9 @@ export function SequentialAvatarPlayer({
           <div className="rounded-lg border border-ink/10 bg-teal-50 p-3 dark:border-white/10 dark:bg-zinc-800" aria-live="polite">
             <p className="text-sm font-black text-ink dark:text-white">Sinal atual</p>
             <p className="mt-1 text-xl font-black text-ocean dark:text-mint">{currentItem?.word ?? "Aguardando"}</p>
+            <p className="mt-2 text-xs font-bold text-ink/65 dark:text-white/65">
+              Status: {paused ? "Avatar pausado" : currentItem ? "Reproduzindo automaticamente" : "Aguardando sinal aprovado"}
+            </p>
             <p className="mt-2 text-xs font-bold text-ink/65 dark:text-white/65">Reproduzidos nesta aula: {playedCount}</p>
           </div>
 

@@ -7,6 +7,7 @@ import { Captions, Check, Copy, Download, FileDown, FileText, ListChecks, Mic, P
 import { ActionButton } from "@/components/ActionButton";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 import { AppHeader } from "@/components/AppHeader";
+import { TeacherToolsIllustration } from "@/components/illustrations/TeacherToolsIllustration";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { LiveSummaryPanel } from "@/components/LiveSummaryPanel";
 import { ModeBadge } from "@/components/ModeBadge";
@@ -15,6 +16,7 @@ import { useRequireRole } from "@/features/auth/AuthProvider";
 import { createClass, createLiveSummary, createSummary, finishClass, listSubjects, pauseClass, sendDemoTick, sendTranscript } from "@/services/api";
 import { createBrowserSpeechRecognition } from "@/services/speech";
 import type { ClassSession, LiveSummary, Subject } from "@/types/live";
+import { PageHero } from "@/components/ui/ProductUI";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
@@ -338,6 +340,12 @@ export default function TeacherPage() {
   return (
     <main className="min-h-screen bg-paper dark:bg-zinc-950">
       <AppHeader />
+      <PageHero
+        eyebrow="Sala do professor"
+        title="Controle a aula e acompanhe a participação em tempo real"
+        description="Crie a sala, compartilhe o acesso e mantenha legenda, resumo e relatório organizados em um único painel."
+        visual={<TeacherToolsIllustration decorative className="h-auto w-full -translate-y-8" />}
+      />
       <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[390px_1fr]">
         <aside className="space-y-4">
           <ModeBadge label={modeLabel} />

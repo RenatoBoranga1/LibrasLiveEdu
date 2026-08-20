@@ -5,8 +5,11 @@ import { ServiceWorker } from "./ServiceWorker";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "LibrasLive Edu",
-  description: "Plataforma educacional inclusiva com legenda ao vivo e suporte visual em Libras.",
+  title: {
+    default: "LibrasLive Edu",
+    template: "%s | LibrasLive Edu",
+  },
+  description: "Apoio inclusivo em sala de aula com legenda ao vivo, Avatar Libras e recursos para professores e alunos.",
   manifest: "/manifest.json",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
@@ -15,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f766e",
+  themeColor: "#12304a",
   width: "device-width",
   initialScale: 1,
 };

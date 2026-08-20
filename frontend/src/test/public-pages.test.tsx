@@ -18,11 +18,13 @@ describe("home page", () => {
     vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "false");
   });
 
-  it("renders the LibrasLive Edu title", async () => {
+  it("renders the inclusive classroom offer", async () => {
     vi.resetModules();
     const { default: HomePage } = await import("@/app/page");
     render(<HomePage />);
-    expect(screen.getByRole("heading", { name: /libraslive edu/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /apoio inclusivo em sala de aula/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /sou professor/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /sou aluno/i })).toBeInTheDocument();
     expect(screen.getByText(/ferramenta de apoio pedagógico/i)).toBeInTheDocument();
   });
 
@@ -41,7 +43,7 @@ describe("about page", () => {
     const { default: AboutPage } = await import("@/app/about/page");
     render(<AboutPage />);
     expect(screen.getByRole("heading", { name: /sobre o libraslive edu/i })).toBeInTheDocument();
-    expect(screen.getByText(/não substitui intérprete humano/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/não substitui intérprete humano/i).length).toBeGreaterThan(0);
   });
 });
 

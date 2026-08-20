@@ -6,15 +6,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#10201c",
-        ocean: "#0f766e",
-        mint: "#d9f99d",
-        paper: "#f8faf7",
-        amber: "#f59e0b",
-        coral: "#f97316"
+        ink: "#142a3b",
+        ocean: "#075e66",
+        sky: "#dceef4",
+        mint: "#cbeedd",
+        "mint-strong": "#59d4c2",
+        paper: "#f7fafc",
+        amber: "#f8e7bd",
+        "amber-strong": "#c87916",
+        coral: "#d96a4b"
       },
       boxShadow: {
-        soft: "0 18px 50px rgba(16, 32, 28, 0.10)"
+        soft: "0 12px 32px rgba(20, 42, 59, 0.09)",
+        elevated: "0 22px 55px rgba(20, 42, 59, 0.14)"
+      },
+      fontFamily: {
+        sans: ["Inter", "Aptos", "Segoe UI", "system-ui", "sans-serif"]
       }
     }
   },

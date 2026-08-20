@@ -16,8 +16,27 @@
 
 body {
   margin: 0;
-  background: #f8faf7;
-  color: #10201c;
+  background: #f7fafc;
+  color: #142a3b;
+  font-family: Inter, Aptos, "Segoe UI", system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #cbeedd;
+  color: #142a3b;
+}
+
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.surface-grid {
+  background-image:
+    linear-gradient(rgba(7, 94, 102, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(7, 94, 102, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 button,
@@ -53,7 +72,7 @@ textarea {
 }
 
 .focus-ring {
-  @apply focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-amber;
+  @apply focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-amber-strong;
 }
 
 @media (prefers-reduced-motion: reduce) {

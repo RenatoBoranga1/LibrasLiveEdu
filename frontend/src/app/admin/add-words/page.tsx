@@ -6,6 +6,8 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, FilePlus, RotateCcw, Upload, Wand2 } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
+import { SignCurationIllustration } from "@/components/illustrations/SignCurationIllustration";
+import { PageHero } from "@/components/ui/ProductUI";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
   createManualSign,
@@ -156,20 +158,18 @@ export default function AddWordsPage() {
   return (
     <main className="min-h-screen bg-paper dark:bg-zinc-950">
       <AppHeader />
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="max-w-3xl">
-            <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Curadoria de vocabulário</p>
-            <h1 className="mt-2 text-3xl font-black text-ink dark:text-white">Adicionar novas palavras</h1>
-            <p className="mt-2 text-base font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-              Escolha como deseja cadastrar novas palavras no LibrasLive Edu. Você pode usar o padrão automático do INES, cadastrar manualmente ou importar uma lista.
-            </p>
-          </div>
+      <PageHero
+        eyebrow="Curadoria de vocabulário"
+        title="Adicionar novas palavras"
+        description="Escolha entre o padrão automático do INES, cadastro manual ou importação de uma lista autorizada. Toda palavra nova permanece pendente para revisão."
+        actions={
           <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin">
             Voltar para curadoria
           </Link>
-        </div>
-
+        }
+        visual={<SignCurationIllustration decorative className="h-auto w-full -translate-y-8" />}
+      />
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
         <section className="grid gap-4 lg:grid-cols-3" aria-label="Opções para adicionar palavras">
           <OptionCard
             icon={<Wand2 className="h-7 w-7" aria-hidden="true" />}

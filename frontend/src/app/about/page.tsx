@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { BookOpenCheck, Captions, GraduationCap, HandHeart, ShieldCheck, UsersRound } from "lucide-react";
+import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
-import { LibrasLiveMascot } from "@/components/LibrasLiveMascot";
+import { HeroInclusiveClassroom } from "@/components/illustrations/HeroInclusiveClassroom";
+import { PageHero } from "@/components/ui/ProductUI";
 
 const sections = [
   {
@@ -41,31 +43,22 @@ export default function AboutPage() {
   return (
     <main className="min-h-screen bg-paper text-ink dark:bg-zinc-950 dark:text-white">
       <AppHeader />
-      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_420px] lg:items-center">
-        <div>
-          <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Projeto social educacional</p>
-          <h1 className="mt-3 text-4xl font-black leading-tight sm:text-5xl">Sobre o LibrasLive Edu</h1>
-          <p className="mt-5 max-w-3xl text-lg font-semibold leading-relaxed text-ink/72 dark:text-white/72">
-            Uma plataforma inclusiva para apoiar professores e alunos em sala de aula com legenda ao vivo, apoio visual, glossário e Avatar Libras com mídias curadas.
-          </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+      <PageHero
+        eyebrow="Projeto social educacional"
+        title="Sobre o LibrasLive Edu"
+        description="Uma plataforma inclusiva para apoiar professores e alunos em sala de aula com legenda ao vivo, apoio visual, glossário e Avatar Libras com mídias curadas."
+        actions={
+          <>
             <Link className="focus-ring inline-flex min-h-14 items-center justify-center rounded-lg bg-ocean px-6 py-4 text-base font-black text-white shadow-soft" href="/teacher">
               Testar como professor
             </Link>
             <Link className="focus-ring inline-flex min-h-14 items-center justify-center rounded-lg bg-white px-6 py-4 text-base font-black text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/aluno">
               Entrar como aluno
             </Link>
-          </div>
-        </div>
-        <div className="rounded-lg border border-ocean/15 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-          <LibrasLiveMascot
-            size={460}
-            variant="hero"
-            ariaLabel="Mascote do LibrasLive Edu apresentando o projeto social"
-            className="h-auto w-full"
-          />
-        </div>
-      </section>
+          </>
+        }
+        visual={<HeroInclusiveClassroom decorative className="h-auto w-full -translate-y-8" />}
+      />
 
       <section className="mx-auto max-w-7xl px-4 pb-8 sm:px-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -98,6 +91,7 @@ export default function AboutPage() {
           <InstitutionalNotice />
         </div>
       </section>
+      <AppFooter />
     </main>
   );
 }

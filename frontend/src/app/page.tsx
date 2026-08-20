@@ -1,191 +1,172 @@
 import Link from "next/link";
-import { Captions, GraduationCap, MonitorUp, QrCode, Smartphone, UserRound } from "lucide-react";
-import { InstitutionalNotice } from "@/components/InstitutionalNotice";
-import { LibrasLiveLogo } from "@/components/LibrasLiveLogo";
-import { LibrasLiveMascot } from "@/components/LibrasLiveMascot";
-
-const profileCards = [
-  {
-    href: "/teacher",
-    title: "Sou Professor",
-    description: "Crie aulas com código seguro, compartilhe QR Code e transmita conteúdo acessível em tempo real.",
-    icon: MonitorUp,
-    action: "Preparar aula",
-  },
-  {
-    href: "/aluno",
-    title: "Sou Aluno",
-    description: "Digite o código da aula, escaneie o QR Code e acompanhe a aula pelo celular.",
-    icon: UserRound,
-    action: "Entrar pelo celular",
-  },
-];
+import {
+  ArrowRight,
+  BookOpenCheck,
+  Captions,
+  ChartNoAxesColumnIncreasing,
+  CircleCheck,
+  GraduationCap,
+  Images,
+  MonitorUp,
+  QrCode,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
+import { AppFooter } from "@/components/AppFooter";
+import { AppHeader } from "@/components/AppHeader";
+import { HeroInclusiveClassroom } from "@/components/illustrations/HeroInclusiveClassroom";
+import { SignCurationIllustration } from "@/components/illustrations/SignCurationIllustration";
+import { StudentExperienceIllustration } from "@/components/illustrations/StudentExperienceIllustration";
+import { TeacherToolsIllustration } from "@/components/illustrations/TeacherToolsIllustration";
+import { AppSection, FeatureCard, InfoBadge } from "@/components/ui/ProductUI";
 
 const steps = [
-  {
-    title: "O professor inicia a aula",
-    icon: GraduationCap,
-  },
-  {
-    title: "O aluno entra com código ou QR Code",
-    icon: QrCode,
-  },
-  {
-    title: "A aula é acompanhada com legenda, avatar e apoio visual",
-    icon: Captions,
-  },
+  { icon: GraduationCap, title: "Professor cria a aula", description: "Uma sala segura é preparada com tema, código de acesso e QR Code." },
+  { icon: QrCode, title: "Aluno entra rapidamente", description: "O acesso funciona pelo celular sem exigir uma conta para acompanhar a aula." },
+  { icon: Captions, title: "Conteúdo chega ao vivo", description: "Legenda, sinais aprovados e apoios visuais acompanham a explicação do professor." },
+  { icon: BookOpenCheck, title: "A turma pode revisar", description: "Resumo e palavras importantes ficam organizados para retomar o conteúdo." },
+];
+
+const benefits = [
+  { icon: Captions, title: "Legenda ao vivo", description: "Texto em destaque para acompanhar a fala com leitura confortável em diferentes telas." },
+  { icon: Sparkles, title: "Avatar Libras", description: "Vídeos, GIFs e animações aprovadas são reproduzidos em sequência, com fonte e licença." },
+  { icon: Images, title: "Apoio visual", description: "Imagens de referência aparecem separadas da tradução animada e nunca são tratadas como sinal completo." },
+  { icon: BookOpenCheck, title: "Resumo da aula", description: "Conteúdo essencial e palavras importantes apoiam a revisão depois do encontro." },
+  { icon: ShieldCheck, title: "Curadoria responsável", description: "Toda mídia passa por validação, rastreabilidade e aprovação antes de chegar ao Avatar." },
+  { icon: UsersRound, title: "Inclusão em sala", description: "Recursos pensados para apoiar estudantes, professores e escolas em um único fluxo." },
 ];
 
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-paper text-ink dark:bg-zinc-950 dark:text-white">
-      <header className="border-b border-ink/10 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-zinc-950/90">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <Link href="/" className="focus-ring flex items-center gap-3 rounded-xl" aria-label="Início do LibrasLive Edu">
-            <LibrasLiveLogo />
-          </Link>
-          <nav className="flex items-center gap-1 text-sm font-bold text-ink/70 dark:text-white/75" aria-label="Navegação principal">
-            <Link className="focus-ring rounded-lg px-3 py-2 hover:text-ocean dark:hover:text-mint" href="/about">
-              Projeto
-            </Link>
-            <Link className="focus-ring rounded-lg px-3 py-2 hover:text-ocean dark:hover:text-mint" href="/aluno">
-              Aluno
-            </Link>
-            <Link className="focus-ring rounded-lg px-3 py-2 hover:text-ocean dark:hover:text-mint" href="/teacher">
-              Professor
-            </Link>
-            <Link className="focus-ring rounded-lg px-3 py-2 hover:text-ocean dark:hover:text-mint" href="/login">
-              Login
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <AppHeader />
 
-      <section className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-16">
-        <div className="space-y-7">
-          <div className="inline-flex items-center gap-2 rounded-full bg-ocean/10 px-4 py-2 text-sm font-black text-ocean dark:bg-mint/10 dark:text-mint">
-            <Smartphone className="h-4 w-4" aria-hidden="true" />
-            legenda ao vivo + suporte visual em Libras
+      <section className="relative isolate overflow-hidden bg-ink text-white">
+        <div className="surface-grid absolute inset-0 opacity-30" aria-hidden="true" />
+        <HeroInclusiveClassroom decorative className="pointer-events-none absolute -bottom-8 right-[-2rem] hidden h-auto w-[52%] max-w-[730px] lg:block" />
+        <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:py-20">
+          <div className="max-w-2xl lg:w-[51%]">
+            <InfoBadge>Educação inclusiva em tempo real</InfoBadge>
+            <h1 className="mt-5 text-4xl font-extrabold leading-tight sm:mt-6 sm:text-5xl">
+              Apoio inclusivo em sala de aula com Libras ao vivo
+            </h1>
+            <p className="mt-4 max-w-xl text-lg font-medium leading-relaxed text-white/76 sm:mt-5">
+              Legenda em tempo real, Avatar Libras, apoio visual e recursos para professores e alunos acompanharem a aula com mais acesso à informação.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
+              <Link href="/teacher" className="focus-ring inline-flex min-h-14 items-center justify-center gap-2 rounded-lg bg-mint-strong px-6 py-4 text-base font-extrabold text-ink shadow-soft transition hover:bg-white">
+                <MonitorUp className="h-5 w-5" aria-hidden="true" />
+                Sou Professor
+              </Link>
+              <Link href="/aluno" className="focus-ring inline-flex min-h-14 items-center justify-center gap-2 rounded-lg bg-white px-6 py-4 text-base font-extrabold text-ocean shadow-soft transition hover:bg-sky">
+                <UserRound className="h-5 w-5" aria-hidden="true" />
+                Sou Aluno
+              </Link>
+              <Link href="/about" className="focus-ring inline-flex min-h-14 items-center justify-center gap-2 rounded-lg border border-white/25 px-6 py-4 text-base font-extrabold text-white transition hover:bg-white/10">
+                Conheça o projeto
+                <ArrowRight className="h-5 w-5" aria-hidden="true" />
+              </Link>
+            </div>
+            <p className="mt-5 flex max-w-xl items-start gap-2 text-sm font-semibold leading-relaxed text-white/68 sm:mt-6">
+              <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-mint-strong" aria-hidden="true" />
+              Ferramenta de apoio pedagógico. Não substitui o intérprete humano de Libras.
+            </p>
           </div>
-          <div>
-            <h1 className="text-5xl font-black leading-tight sm:text-6xl">Seja bem-vindo ao LibrasLive Edu</h1>
-            <p className="mt-5 max-w-2xl text-lg font-semibold leading-relaxed text-ink/72 dark:text-white/72">
-              Plataforma educacional inclusiva com legenda ao vivo, apoio visual e Avatar Libras.
-            </p>
-            <p className="mt-4 max-w-2xl rounded-lg bg-amber/20 p-4 text-sm font-bold leading-relaxed text-ink dark:text-white">
-              O LibrasLive Edu é uma ferramenta de apoio pedagógico e não substitui o intérprete humano de Libras.
-            </p>
+        </div>
+      </section>
+
+      <AppSection
+        eyebrow="Como funciona"
+        title="Da fala do professor ao apoio visual do aluno"
+        description="Um fluxo simples para entrar na aula, acompanhar o conteúdo e revisar o que foi apresentado."
+      >
+        <ol className="grid gap-0 overflow-hidden rounded-lg border border-ink/10 bg-white shadow-soft dark:border-white/10 dark:bg-zinc-900 md:grid-cols-4">
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            return (
+              <li key={step.title} className="relative border-b border-ink/10 p-5 last:border-b-0 dark:border-white/10 md:border-b-0 md:border-r md:last:border-r-0">
+                <div className="flex items-center justify-between">
+                  <span className="grid h-11 w-11 place-items-center rounded-lg bg-sky text-ocean dark:bg-white/10 dark:text-mint-strong"><Icon className="h-5 w-5" aria-hidden="true" /></span>
+                  <span className="text-2xl font-extrabold text-ink/16 dark:text-white/18">0{index + 1}</span>
+                </div>
+                <h3 className="mt-5 text-lg font-extrabold">{step.title}</h3>
+                <p className="mt-2 text-sm font-medium leading-relaxed text-ink/64 dark:text-white/64">{step.description}</p>
+              </li>
+            );
+          })}
+        </ol>
+      </AppSection>
+
+      <AppSection
+        tone="soft"
+        eyebrow="Principais benefícios"
+        title="Acessibilidade organizada para a rotina escolar"
+        description="Cada recurso tem um papel claro e mantém a responsabilidade pedagógica no centro da experiência."
+      >
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {benefits.map((benefit, index) => <FeatureCard key={benefit.title} {...benefit} accent={index === 4 ? "amber" : index === 5 ? "coral" : "ocean"} />)}
+        </div>
+      </AppSection>
+
+      <AppSection
+        eyebrow="Recursos por perfil"
+        title="Uma experiência própria para cada pessoa na aula"
+        description="A interface reduz o esforço operacional e mantém o conteúdo essencial em destaque."
+      >
+        <div className="grid gap-5 lg:grid-cols-3">
+          <ProfileBlock title="Para professores" description="Crie aulas, compartilhe QR Code, acompanhe a transcrição e gere relatórios pedagógicos." href="/teacher" action="Preparar uma aula" visual={<TeacherToolsIllustration decorative className="h-auto w-full" />} />
+          <ProfileBlock title="Para alunos" description="Entre pelo celular, ajuste a leitura e acompanhe legenda, Avatar Libras e resumo." href="/aluno" action="Entrar em uma aula" visual={<StudentExperienceIllustration decorative className="h-auto w-full" />} />
+          <ProfileBlock title="Para escolas" description="Organize a curadoria de sinais, valide fontes e acompanhe a cobertura de mídias aprovadas." href="/about" action="Conhecer o projeto" visual={<SignCurationIllustration decorative className="h-auto w-full" />} />
+        </div>
+      </AppSection>
+
+      <AppSection tone="dark" eyebrow="Projeto social" title="Tecnologia com propósito e responsabilidade" description="O LibrasLive Edu foi criado para reduzir barreiras de acompanhamento em aulas presenciais e remotas. A plataforma complementa o trabalho pedagógico e preserva a necessidade de curadoria especializada em Libras.">
+        <div className="grid gap-4 border-t border-white/14 pt-7 sm:grid-cols-3">
+          <ImpactItem icon={ShieldCheck} title="Privacidade desde o início" text="Consentimento, direitos de dados e rastreabilidade fazem parte do produto." />
+          <ImpactItem icon={ChartNoAxesColumnIncreasing} title="Evolução mensurável" text="Relatórios ajudam escolas a identificar vocabulário e oportunidades de melhoria." />
+          <ImpactItem icon={GraduationCap} title="Apoio à escola" text="Pilotos podem começar com poucas turmas e crescer com revisão responsável." />
+        </div>
+      </AppSection>
+
+      <section className="bg-mint py-12 text-ink dark:bg-ocean dark:text-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-sm font-extrabold text-ocean dark:text-mint-strong">Pronto para começar?</p>
+            <h2 className="mt-2 text-3xl font-extrabold leading-tight sm:text-4xl">Comece uma aula inclusiva</h2>
+            <p className="mt-3 font-medium leading-relaxed text-ink/68 dark:text-white/70">Escolha seu perfil e acesse uma experiência preparada para sala de aula.</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/aluno"
-              className="focus-ring inline-flex min-h-14 items-center justify-center rounded-lg bg-ocean px-6 py-4 text-base font-black text-white shadow-soft transition hover:bg-teal-800"
-            >
-              Sou Aluno
-            </Link>
-            <Link
-              href="/teacher"
-              className="focus-ring inline-flex min-h-14 items-center justify-center rounded-lg border border-ink/15 bg-white px-6 py-4 text-base font-black text-ocean shadow-soft transition hover:border-ocean/50 dark:border-white/15 dark:bg-zinc-900 dark:text-mint"
-            >
-              Sou Professor
-            </Link>
-            <Link
-              href="/about"
-              className="focus-ring inline-flex min-h-14 items-center justify-center rounded-lg border border-ocean/20 bg-teal-50 px-6 py-4 text-base font-black text-ocean shadow-soft transition hover:border-ocean/50 dark:border-white/15 dark:bg-zinc-900 dark:text-mint"
-            >
-              Conhecer o projeto
-            </Link>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="overflow-hidden rounded-lg border border-ocean/15 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-            <div className="grid gap-5">
-              <LibrasLiveMascot
-                size={520}
-                variant="welcome"
-                ariaLabel="Liva, mascote do LibrasLive Edu sinalizando em Libras"
-                className="h-auto w-full"
-              />
-              <div>
-                <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Boas-vindas</p>
-                <p className="mt-2 text-2xl font-black leading-tight">Seja bem-vindo ao LibrasLive Edu</p>
-                <p className="mt-2 text-sm font-semibold leading-relaxed text-ink/65 dark:text-white/65">
-                  A mascote é original, vetorial e usada como apoio institucional. Vídeos, GIFs e animações aprovadas continuam sendo a mídia real do Avatar Libras.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-lg bg-teal-50 p-5 dark:bg-zinc-900">
-            <p className="text-sm font-bold uppercase tracking-normal text-ocean dark:text-mint">Acesso rápido</p>
-            <p className="mt-2 text-2xl font-black leading-tight">professor cria a aula, aluno entra com código ou QR Code</p>
-          </div>
-          <div className="grid gap-3">
-            {profileCards.map((card) => {
-              const Icon = card.icon;
-              return (
-                <Link key={card.href} href={card.href} className="focus-ring rounded-lg">
-                  <article className="flex items-start gap-4 rounded-lg border border-ink/10 bg-white p-4 transition hover:border-ocean/40 hover:bg-teal-50 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-zinc-800">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-ocean/10 text-ocean dark:bg-mint/10 dark:text-mint">
-                      <Icon className="h-6 w-6" aria-hidden="true" />
-                    </span>
-                    <span>
-                      <span className="block text-xl font-black">{card.title}</span>
-                      <span className="mt-1 block text-sm font-semibold leading-relaxed text-ink/65 dark:text-white/65">
-                        {card.description}
-                      </span>
-                      <span className="mt-3 inline-flex text-sm font-black text-ocean dark:text-mint">{card.action}</span>
-                    </span>
-                  </article>
-                </Link>
-              );
-            })}
+            <Link href="/teacher" className="focus-ring inline-flex min-h-14 items-center justify-center gap-2 rounded-lg bg-ink px-6 py-4 font-extrabold text-white dark:bg-white dark:text-ink">Entrar como professor <ArrowRight className="h-5 w-5" aria-hidden="true" /></Link>
+            <Link href="/aluno" className="focus-ring inline-flex min-h-14 items-center justify-center rounded-lg border border-ink/15 bg-white px-6 py-4 font-extrabold text-ocean shadow-soft dark:border-white/20 dark:bg-transparent dark:text-white">Entrar como aluno</Link>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
-        <div className="border-y border-ink/10 py-8 dark:border-white/10">
-          <h2 className="text-2xl font-black">Como funciona</h2>
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <article key={step.title} className="rounded-lg bg-white p-5 shadow-soft dark:bg-zinc-900">
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-10 w-10 place-items-center rounded-lg bg-amber/25 text-ink dark:text-white">
-                      <Icon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <span className="text-sm font-black text-ocean dark:text-mint">Passo {index + 1}</span>
-                  </div>
-                  <p className="mt-4 text-lg font-black leading-snug">{step.title}</p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
-        <InstitutionalNotice />
-      </section>
-
-      <footer className="border-t border-ink/10 bg-white/70 dark:border-white/10 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm font-bold text-ink/65 dark:text-white/65 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p>LibrasLive Edu · apoio à acessibilidade educacional</p>
-          <nav className="flex flex-wrap gap-3" aria-label="Links institucionais">
-            <Link className="focus-ring rounded-lg px-2 py-1 hover:text-ocean dark:hover:text-mint" href="/privacy">
-              Política de Privacidade
-            </Link>
-            <Link className="focus-ring rounded-lg px-2 py-1 hover:text-ocean dark:hover:text-mint" href="/terms">
-              Termos de Uso
-            </Link>
-            <Link className="focus-ring rounded-lg px-2 py-1 text-ink/45 hover:text-ocean dark:text-white/45 dark:hover:text-mint" href="/admin">
-              Área Administrativa
-            </Link>
-          </nav>
-        </div>
-      </footer>
+      <AppFooter />
     </main>
+  );
+}
+
+function ProfileBlock({ title, description, href, action, visual }: { title: string; description: string; href: string; action: string; visual: React.ReactNode }) {
+  return (
+    <article className="overflow-hidden rounded-lg border border-ink/10 bg-white shadow-soft dark:border-white/10 dark:bg-zinc-900">
+      <div className="aspect-[13/8] overflow-hidden bg-sky/45 dark:bg-white/5">{visual}</div>
+      <div className="p-5">
+        <h3 className="text-2xl font-extrabold">{title}</h3>
+        <p className="mt-2 text-sm font-medium leading-relaxed text-ink/65 dark:text-white/65">{description}</p>
+        <Link href={href} className="focus-ring mt-5 inline-flex items-center gap-2 rounded-lg text-sm font-extrabold text-ocean dark:text-mint-strong">{action}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+      </div>
+    </article>
+  );
+}
+
+function ImpactItem({ icon: Icon, title, text }: { icon: typeof ShieldCheck; title: string; text: string }) {
+  return (
+    <article className="flex items-start gap-4 py-2">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white/10 text-mint-strong"><Icon className="h-5 w-5" aria-hidden="true" /></span>
+      <div><h3 className="font-extrabold">{title}</h3><p className="mt-1 text-sm font-medium leading-relaxed text-white/65">{text}</p></div>
+    </article>
   );
 }

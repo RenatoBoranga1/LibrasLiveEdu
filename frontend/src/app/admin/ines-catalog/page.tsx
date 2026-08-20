@@ -5,6 +5,8 @@ import Link from "next/link";
 import { CheckCircle2, Database, FileCheck2, RotateCcw, Search, ShieldCheck } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
+import { SignCurationIllustration } from "@/components/illustrations/SignCurationIllustration";
+import { PageHero } from "@/components/ui/ProductUI";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
   importInesCatalog,
@@ -126,20 +128,18 @@ export default function InesCatalogPage() {
   return (
     <main className="min-h-screen bg-paper dark:bg-zinc-950">
       <AppHeader />
-      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="max-w-3xl">
-            <p className="text-sm font-black uppercase tracking-normal text-ocean dark:text-mint">Importação controlada</p>
-            <h1 className="mt-2 text-3xl font-black text-ink dark:text-white">Catálogo completo INES</h1>
-            <p className="mt-2 text-base font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-              Escaneie letras do Dicionário INES, valide vídeos/imagens, gere manifesto JSON e importe palavras como pendentes para curadoria humana.
-            </p>
-          </div>
+      <PageHero
+        eyebrow="Importação controlada"
+        title="Catálogo completo INES"
+        description="Escaneie letras do Dicionário INES, valide vídeos e imagens, gere um manifesto revisável e importe palavras como pendentes para curadoria humana."
+        actions={
           <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-black text-ocean shadow-soft dark:bg-zinc-900 dark:text-mint" href="/admin">
             Voltar para curadoria
           </Link>
-        </div>
-
+        }
+        visual={<SignCurationIllustration decorative className="h-auto w-full -translate-y-8" />}
+      />
+      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <section className="rounded-lg border border-amber/40 bg-amber/15 p-4 text-sm font-bold leading-relaxed text-ink dark:border-amber/30 dark:text-white" role="note">
           A rotina não roda em build, deploy, startup, seed ou migration. Ela não baixa mídia, não salva vídeos/GIFs no Git e não aprova sinais automaticamente. JPG/PNG entram apenas como imagem de apoio; Avatar Libras exige vídeo, GIF ou animação aprovada.
         </section>

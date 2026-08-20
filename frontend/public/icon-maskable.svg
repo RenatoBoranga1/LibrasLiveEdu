@@ -1,11 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0" x2="512" y1="0" y2="512" gradientUnits="userSpaceOnUse"><stop stop-color="#1d3e70"/><stop offset=".56" stop-color="#0a2a52"/><stop offset="1" stop-color="#061a34"/></linearGradient>
-    <linearGradient id="mint" x1="130" x2="383" y1="115" y2="333" gradientUnits="userSpaceOnUse"><stop stop-color="#81fff0"/><stop offset="1" stop-color="#10b9ad"/></linearGradient>
-  </defs>
-  <rect width="512" height="512" fill="url(#bg)"/>
-  <path d="M140 255c0-71 58-129 129-129 26 0 50 8 70 21" fill="none" stroke="url(#mint)" stroke-linecap="round" stroke-width="25"/>
-  <path d="M357 236c25 39 20 89-12 124-32 36-83 49-129 35h-30l-67 48 19-68c-25-31-38-70-33-111" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="25"/>
-  <path fill="#fff" stroke="#e7eef7" stroke-width="3" d="M172 258v-82c0-14 11-25 25-25s25 11 25 25v61-84c0-14 11-25 25-25s25 11 25 25v85-67c0-14 11-25 25-25s25 11 25 25v98c0 57-46 103-103 103h-10c-44 0-79-35-79-79v-30c0-14 11-25 25-25 6 0 12 2 17 6Z"/>
-  <path d="M356 124c27 18 43 48 43 82M321 149c16 12 26 30 26 51" fill="none" stroke="url(#mint)" stroke-linecap="round" stroke-width="18"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#12304a"/><g transform="translate(6 6) scale(.81)"><rect width="64" height="64" rx="16" fill="#12304a"/><path d="M13.5 28.5C13.5 18.8 21.4 11 31 11c3.8 0 7.3 1.2 10.2 3.2" fill="none" stroke="#59d4c2" stroke-linecap="round" stroke-width="5"/><path d="M45.9 25.2c2.2 7.2-.3 15.2-6.5 19.6-5.1 3.7-11.8 4.4-17.5 2.1l-8.4 4.8 2.2-9.3a18.1 18.1 0 0 1-2.1-6.2" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.5"/><path d="M24.2 33.3V23a2.8 2.8 0 0 1 5.6 0v7.7-10.1a2.8 2.8 0 0 1 5.6 0v10.5-7.7a2.8 2.8 0 0 1 5.6 0v10.2c0 7.1-5.7 12.8-12.8 12.8h-1.1a9.8 9.8 0 0 1-9.8-9.8v-3.3a2.9 2.9 0 0 1 5.1-1.8l1.8 1.8Z" fill="#fff"/><path d="M47.4 12.4c3.2 2 5.3 5.4 5.5 9.2M44.3 17c1.5 1 2.4 2.6 2.5 4.4" fill="none" stroke="#f3b84b" stroke-linecap="round" stroke-width="3"/></g></svg>

@@ -6,8 +6,10 @@ import { Check, Database, FileJson, Filter, Pencil, PlusCircle, RefreshCcw, Uplo
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
-import { LibrasLiveMascot } from "@/components/LibrasLiveMascot";
+import { LibrasLiveIcon } from "@/components/LibrasLiveIcon";
 import { ModeBadge } from "@/components/ModeBadge";
+import { SignCurationIllustration } from "@/components/illustrations/SignCurationIllustration";
+import { PageHero } from "@/components/ui/ProductUI";
 import { useRequireRole } from "@/features/auth/AuthProvider";
 import {
   curateSign,
@@ -224,29 +226,38 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-paper dark:bg-zinc-950">
       <AppHeader />
-      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <ModeBadge />
-            <h1 className="mt-3 text-3xl font-black text-ink dark:text-white">Administração de sinais</h1>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-              Quer cadastrar novas palavras? Escolha entre cadastro manual, preenchimento automático pelo INES ou importação em lote.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+      <PageHero
+        eyebrow="Curadoria e cobertura de sinais"
+        title="Administração de sinais"
+        description="Escolha entre cadastro manual, preenchimento automático pelo INES ou importação em lote. Valide as mídias e acompanhe o que está pronto para revisão."
+        actions={
+          <>
             <Link
               aria-label="Adicionar novas palavras: cadastrar manualmente ou gerar vídeos automaticamente pelo padrão INES"
-              className="focus-ring inline-flex min-h-14 items-center justify-center gap-2 rounded-lg bg-amber px-5 py-4 text-base font-black text-ink shadow-soft"
+              className="focus-ring inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-ocean px-5 py-3 text-sm font-extrabold text-white shadow-soft"
               href="/admin/add-words"
-              title="Cadastre palavras manualmente ou gere vídeos automaticamente pelo padrão INES."
             >
-              <PlusCircle className="h-6 w-6" aria-hidden="true" />
+              <PlusCircle className="h-5 w-5" aria-hidden="true" />
               Adicionar novas palavras
             </Link>
             <ActionButton tone="quiet" onClick={refresh}>
               <RefreshCcw className="h-5 w-5" aria-hidden="true" />
-              Atualizar
+              Atualizar painel
             </ActionButton>
+          </>
+        }
+        visual={<SignCurationIllustration decorative className="h-auto w-full -translate-y-8" />}
+      />
+      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <ModeBadge />
+            <h2 className="mt-3 text-2xl font-black text-ink dark:text-white">Ferramentas de curadoria</h2>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
+              Acesse importadores controlados, validação de mídia e rotinas de catálogo sem alterar o fluxo de aprovação manual.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-ocean px-4 py-3 text-base font-bold text-white" href="/admin/signs/new">
               Novo sinal INES
             </Link>
@@ -286,7 +297,7 @@ export default function AdminPage() {
         <section className="rounded-lg border border-amber/40 bg-amber/15 p-4 shadow-soft dark:border-amber/30" aria-labelledby="add-words-callout">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-start gap-3">
-              <LibrasLiveMascot size={82} variant="compact" decorative className="hidden shrink-0 sm:block" />
+              <LibrasLiveIcon size={62} decorative className="hidden shrink-0 sm:block" />
               <div>
               <h2 id="add-words-callout" className="text-xl font-black text-ink dark:text-white">Quer cadastrar novas palavras?</h2>
               <p className="mt-1 text-sm font-semibold leading-relaxed text-ink/75 dark:text-white/75">

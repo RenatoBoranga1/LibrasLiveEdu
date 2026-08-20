@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { StudentJoinForm } from "@/components/StudentJoinForm";
+import { StudentExperienceIllustration } from "@/components/illustrations/StudentExperienceIllustration";
+import { PageHero } from "@/components/ui/ProductUI";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
@@ -10,7 +13,13 @@ export default function StudentEntryPage() {
   return (
     <main className="min-h-screen bg-paper dark:bg-zinc-950">
       <AppHeader />
-      <div className="mx-auto grid max-w-5xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_360px]">
+      <PageHero
+        eyebrow="Acesso do aluno"
+        title="Acompanhe sua aula com mais clareza"
+        description="Entre com o código compartilhado pelo professor e acompanhe legenda, Avatar Libras e resumo em uma tela preparada para leitura."
+        visual={<StudentExperienceIllustration decorative className="h-auto w-full -translate-y-10" />}
+      />
+      <div className="mx-auto grid max-w-5xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_360px]">
         <StudentJoinForm />
         <aside className="grid gap-4 self-start">
           <div className="rounded-lg bg-white p-5 shadow-soft dark:bg-zinc-900">
@@ -28,6 +37,7 @@ export default function StudentEntryPage() {
           <InstitutionalNotice />
         </aside>
       </div>
+      <AppFooter />
     </main>
   );
 }

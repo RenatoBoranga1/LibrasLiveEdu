@@ -34,7 +34,7 @@ services:
       ENVIRONMENT: development
       DATABASE_URL: postgresql+psycopg://libraslive:libraslive@postgres:5432/libraslive
       REDIS_URL: redis://redis:6379/0
-      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:3010,http://127.0.0.1:3010
       DEMO_MODE: "true"
       SECRET_KEY: ${SECRET_KEY:-change-me-use-a-long-random-value}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}

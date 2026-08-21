@@ -7,6 +7,39 @@ export function normalizeApiBase(value?: string) {
 
 export const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
 export const WS_BASE = API_BASE.replace(/^http/, "ws");
+export const AUTH_SESSION_CHANGED_EVENT = "libraslive:auth-session-changed";
+
+export type ApiErrorPayload = {
+  code?: string;
+  message?: string;
+  field?: string;
+  request_id?: string;
+  detail?: unknown;
+};
+
+export class ApiRequestError extends Error {
+  code: string;
+  status: number;
+  field?: string;
+  requestId?: string;
+  detail?: unknown;
+
+  constructor(message: string, options: {
+    code?: string;
+    status?: number;
+    field?: string;
+    requestId?: string;
+    detail?: unknown;
+  } = {}) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.code = options.code ?? "API_ERROR";
+    this.status = options.status ?? 0;
+    this.field = options.field;
+    this.requestId = options.requestId;
+    this.detail = options.detail;
+  }
+}
 
 export function getStoredAccessToken() {
   if (typeof window === "undefined") return null;
@@ -23,6 +56,7 @@ export function storeAuthTokens(response: AuthResponse) {
   window.sessionStorage.setItem("libraslive.access_token", response.access_token);
   window.sessionStorage.setItem("libraslive.refresh_token", response.refresh_token);
   window.sessionStorage.setItem("libraslive.user", JSON.stringify(response.user));
+  window.dispatchEvent(new CustomEvent(AUTH_SESSION_CHANGED_EVENT, { detail: response.user }));
 }
 
 export function clearAuthTokens() {
@@ -30,27 +64,120 @@ export function clearAuthTokens() {
   window.sessionStorage.removeItem("libraslive.access_token");
   window.sessionStorage.removeItem("libraslive.refresh_token");
   window.sessionStorage.removeItem("libraslive.user");
+  window.dispatchEvent(new CustomEvent(AUTH_SESSION_CHANGED_EVENT, { detail: null }));
   navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_PRIVATE_CACHE" });
 }
 
 type RequestOptions = {
   authenticated?: boolean;
+  retriedAfterRefresh?: boolean;
 };
+
+let refreshRequest: Promise<AuthResponse> | null = null;
+
+function friendlyFallback(status: number) {
+  if (status === 401) return "Sua sessão expirou. Entre novamente.";
+  if (status === 403) return "Você não tem permissão para executar esta ação.";
+  if (status === 404) return "O recurso solicitado não foi encontrado.";
+  if (status === 409) return "Este registro já existe ou foi alterado.";
+  if (status === 422) return "Revise os dados informados e tente novamente.";
+  if (status >= 500) return "O serviço está temporariamente indisponível.";
+  return "Não foi possível concluir a solicitação.";
+}
+
+async function responseError(response: Response): Promise<ApiRequestError> {
+  let payload: ApiErrorPayload = {};
+  try {
+    payload = (await response.json()) as ApiErrorPayload;
+  } catch {
+    payload = {};
+  }
+  const legacyDetail = typeof payload.detail === "string" ? payload.detail : undefined;
+  return new ApiRequestError(payload.message || legacyDetail || friendlyFallback(response.status), {
+    code: payload.code || `HTTP_${response.status}`,
+    status: response.status,
+    field: payload.field,
+    requestId: payload.request_id,
+    detail: payload.detail,
+  });
+}
+
+async function fetchApi(path: string, init?: RequestInit, token?: string | null) {
+  try {
+    return await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch (error) {
+    throw new ApiRequestError("Não foi possível conectar ao servidor. Verifique sua conexão.", {
+      code: "NETWORK_ERROR",
+      detail: error,
+    });
+  }
+}
+
+async function refreshAuthSession(): Promise<AuthResponse> {
+  if (refreshRequest) return refreshRequest;
+  const refreshToken = getStoredRefreshToken();
+  if (!refreshToken) {
+    throw new ApiRequestError("Sua sessão expirou. Entre novamente.", { code: "REFRESH_TOKEN_MISSING", status: 401 });
+  }
+
+  refreshRequest = (async () => {
+    const response = await fetchApi(
+      "/api/auth/refresh",
+      {
+        method: "POST",
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      },
+      null
+    );
+    if (!response.ok) throw await responseError(response);
+    const authResponse = (await response.json()) as AuthResponse;
+    storeAuthTokens(authResponse);
+    return authResponse;
+  })();
+
+  try {
+    return await refreshRequest;
+  } finally {
+    refreshRequest = null;
+  }
+}
+
+function expireBrowserSession() {
+  clearAuthTokens();
+  if (typeof window === "undefined" || process.env.NODE_ENV === "test") return;
+  if (window.location.pathname === "/login" || window.location.pathname === "/logout") return;
+  const next = `${window.location.pathname}${window.location.search}`;
+  window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+}
 
 async function request<T>(path: string, init?: RequestInit, options: RequestOptions = {}): Promise<T> {
   const token = options.authenticated === false ? null : getStoredAccessToken();
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`API ${response.status}: ${await response.text()}`);
+  const response = await fetchApi(path, init, token);
+  if (response.status === 401 && token && options.authenticated !== false && !options.retriedAfterRefresh) {
+    try {
+      await refreshAuthSession();
+      return request<T>(path, init, { ...options, retriedAfterRefresh: true });
+    } catch (error) {
+      expireBrowserSession();
+      throw error;
+    }
   }
+  if (!response.ok) {
+    throw await responseError(response);
+  }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
+}
+
+export function getApiErrorMessage(error: unknown, fallback = "Não foi possível concluir a solicitação.") {
+  return error instanceof Error && error.message.trim() ? error.message : fallback;
 }
 
 export function listSubjects(): Promise<Subject[]> {

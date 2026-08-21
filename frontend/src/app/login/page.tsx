@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { getRoleHome } from "@/features/auth/roles";
+import { getApiErrorMessage } from "@/services/api";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
@@ -31,8 +32,8 @@ export default function LoginPage() {
     try {
       const response = await login(email, password);
       router.replace(nextPath || getRoleHome(response.user.role));
-    } catch {
-      setError("E-mail ou senha inválidos. Verifique os dados e tente novamente.");
+    } catch (caught) {
+      setError(getApiErrorMessage(caught, "E-mail ou senha inválidos. Verifique os dados e tente novamente."));
     }
   }
 

@@ -9,9 +9,12 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 *.log
+*.tsbuildinfo
 backend/data/import_report_*.json
 backend/data/generated/*.generated.json
 backend/app/importers/manifests/*.generated.json
+frontend/playwright-report/
+frontend/test-results/
 postgres_data/
 android/.gradle/
 android/.gradle-user/

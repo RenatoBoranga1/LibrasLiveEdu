@@ -55,6 +55,8 @@ docker compose exec backend python scripts/seed_database.py
 
 ## Rodar Localmente
 
+No Windows, consulte o guia completo em [`docs/LOCAL_SETUP_WINDOWS.md`](docs/LOCAL_SETUP_WINDOWS.md).
+
 Backend:
 
 ```bash
@@ -775,7 +777,7 @@ Para um provedor compatível com chat completions, configure `AI_SUMMARY_ENABLED
 - O sistema já possui painel de avatar na tela do aluno.
 - Avatar real depende de provedor externo autorizado ou de vídeos/animações com licença e curadoria.
 - Quando não há provedor configurado, o app mostra legenda, glosa técnica quando disponível e cards visuais de palavras-chave.
-- O backend retorna `avatar_provider_configured` em `/api/health` e metadados de tradução nos eventos `translation.created`.
+- O backend expõe liveness em `/health` e readiness de banco/Redis em `/ready`; os aliases `/api/health` e `/api/ready` permanecem compatíveis.
 - O app não inventa sinais de Libras e nunca deve apresentar seed local como sinal oficial.
 - O recurso é apoio à acessibilidade e não substitui intérprete humano.
 
@@ -827,6 +829,7 @@ Backend no Render:
 - Variáveis obrigatórias:
   - `DATABASE_URL`
   - `SECRET_KEY`
+  - `ENVIRONMENT=production`
   - `CORS_ORIGINS=https://libras-live-edu-zkpy.vercel.app`
   - `DEMO_MODE=false`
   - `PYTHON_VERSION=3.11.8`
@@ -852,9 +855,18 @@ Passo a passo:
 4. Rode `alembic upgrade head` e `python scripts/seed_database.py` no ambiente do backend.
 5. Configure o frontend na Vercel apontando para a pasta `frontend`.
 6. Defina `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL` e `NEXT_PUBLIC_DEMO_MODE=false`.
-7. Teste `/api/health`, `/aluno`, `/login`, `/teacher` e a instalação PWA.
+7. Teste `/health`, `/ready`, `/aluno`, `/login`, `/teacher` e a instalação PWA.
 
 Aviso de segurança: nunca suba `.env`, credenciais, tokens, chaves de API ou senhas demo para o GitHub.
+
+## Prontidão para produção
+
+- O backend interrompe o startup quando `ENVIRONMENT=production` estiver combinado com modo demo, segredo fraco/padrão, banco local ou CORS de localhost.
+- `GET /health` indica somente que a API está viva; `GET /ready` verifica PostgreSQL e Redis quando configurado, sem expor credenciais.
+- Erros da API seguem `{ code, message, field?, request_id? }` e preservam `detail` durante a transição de compatibilidade.
+- O frontend tenta renovar o access token uma única vez em respostas `401`, repete a chamada original e encerra uma sessão que não puder ser renovada.
+- O GitHub Actions executa testes, migrations, smoke do seed, typecheck, build, Playwright, verificação de whitespace e varredura de segredos.
+- Produção deve declarar apenas origens HTTPS explícitas em `CORS_ORIGINS`; localhost fica restrito ao desenvolvimento.
 
 ## Testes
 

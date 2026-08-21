@@ -1,17 +1,31 @@
 from functools import lru_cache
+from urllib.parse import urlparse
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+DEFAULT_DATABASE_URL = "postgresql+psycopg://libraslive:libraslive@localhost:5432/libraslive"
+DEFAULT_SECRET_KEYS = {
+    "",
+    "change-me-in-production",
+    "change-me-use-a-long-random-value",
+    "changeme",
+    "default",
+    "secret",
+    "secret-key",
+}
+
+
 class Settings(BaseSettings):
     app_name: str = "LibrasLive Edu"
     environment: str = "development"
-    database_url: str = Field(
-        default="postgresql+psycopg://libraslive:libraslive@localhost:5432/libraslive"
+    database_url: str = Field(default=DEFAULT_DATABASE_URL)
+    redis_url: str | None = None
+    cors_origins: str = (
+        "http://localhost:3000,http://127.0.0.1:3000,"
+        "http://localhost:3010,http://127.0.0.1:3010"
     )
-    redis_url: str = "redis://localhost:6379/0"
-    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     demo_mode: bool = True
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 30
@@ -91,6 +105,53 @@ class Settings(BaseSettings):
     @property
     def ines_allowed_host_list(self) -> set[str]:
         return {host.strip().lower() for host in self.ines_media_allowed_hosts.split(",") if host.strip()}
+
+
+def _is_weak_secret(secret_key: str) -> bool:
+    value = secret_key.strip()
+    lowered = value.lower()
+    return (
+        len(value) < 32
+        or lowered in DEFAULT_SECRET_KEYS
+        or "change-me" in lowered
+        or "replace-me" in lowered
+    )
+
+
+def _is_local_database_url(database_url: str) -> bool:
+    lowered = database_url.strip().lower()
+    hostname = (urlparse(lowered).hostname or "").lower()
+    return (
+        lowered == DEFAULT_DATABASE_URL.lower()
+        or hostname in {"localhost", "127.0.0.1", "::1"}
+        or lowered.startswith("sqlite")
+    )
+
+
+def _has_local_cors_origin(origins: list[str]) -> bool:
+    for origin in origins:
+        hostname = (urlparse(origin).hostname or "").lower()
+        if hostname in {"localhost", "127.0.0.1", "::1"}:
+            return True
+    return False
+
+
+def validate_production_settings(settings: Settings) -> None:
+    if settings.environment.strip().lower() != "production":
+        return
+
+    problems: list[str] = []
+    if settings.demo_mode:
+        problems.append("DEMO_MODE deve ser false")
+    if _is_weak_secret(settings.secret_key):
+        problems.append("SECRET_KEY deve ter ao menos 32 caracteres e não pode usar valor padrão")
+    if _is_local_database_url(settings.database_url):
+        problems.append("DATABASE_URL não pode apontar para banco local/padrão")
+    if _has_local_cors_origin(settings.cors_origin_list):
+        problems.append("CORS_ORIGINS não pode conter localhost ou loopback")
+
+    if problems:
+        raise RuntimeError("Configuração insegura para produção: " + "; ".join(problems))
 
 
 @lru_cache

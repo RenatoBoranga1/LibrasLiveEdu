@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AuthProvider, useAuth, useRequireRole } from "@/features/auth/AuthProvider";
 
 const apiMocks = vi.hoisted(() => ({
+  AUTH_SESSION_CHANGED_EVENT: "libraslive:auth-session-changed",
   clearAuthTokens: vi.fn(),
   getMe: vi.fn(),
   getStoredAccessToken: vi.fn(),

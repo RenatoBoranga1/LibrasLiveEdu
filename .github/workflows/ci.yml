@@ -1,0 +1,189 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  backend:
+    name: Backend tests, migration and seed
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: libraslive_test
+          POSTGRES_USER: libraslive
+          POSTGRES_PASSWORD: libraslive
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U libraslive -d libraslive_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      ENVIRONMENT: test
+      DEMO_MODE: "true"
+      SECRET_KEY: ci-only-secret-key-with-more-than-32-characters
+      DATABASE_URL: postgresql+psycopg://libraslive:libraslive@127.0.0.1:5432/libraslive_test
+      REDIS_URL: redis://127.0.0.1:6379/0
+      CORS_ORIGINS: http://127.0.0.1:3010
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: pytest
+      - run: alembic upgrade head
+      - run: python scripts/seed_database.py
+
+  frontend:
+    name: Frontend tests, types and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3010
+      NEXT_PUBLIC_DEMO_MODE: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+
+  e2e:
+    name: School workflow smoke tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: libraslive_e2e
+          POSTGRES_USER: libraslive
+          POSTGRES_PASSWORD: libraslive
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U libraslive -d libraslive_e2e"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      ENVIRONMENT: test
+      DEMO_MODE: "true"
+      SECRET_KEY: ci-e2e-secret-key-with-more-than-32-characters
+      DATABASE_URL: postgresql+psycopg://libraslive:libraslive@127.0.0.1:5432/libraslive_e2e
+      REDIS_URL: redis://127.0.0.1:6379/0
+      CORS_ORIGINS: http://127.0.0.1:3010
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3010
+      NEXT_PUBLIC_DEMO_MODE: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Prepare backend
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          alembic upgrade head
+          python scripts/seed_database.py
+      - name: Start backend
+        working-directory: backend
+        run: |
+          uvicorn main:app --host 127.0.0.1 --port 8000 > ../backend-e2e.log 2>&1 &
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:8000/ready && exit 0
+            sleep 2
+          done
+          cat ../backend-e2e.log
+          exit 1
+      - name: Install frontend and Chromium
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run Playwright smoke tests
+        working-directory: frontend
+        run: npm run test:e2e
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-diagnostics
+          path: |
+            backend-e2e.log
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: ignore
+
+  quality:
+    name: Diff and secret checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check patch whitespace
+        shell: bash
+        run: |
+          if [[ -n "${{ github.base_ref }}" ]]; then
+            git diff --check "origin/${{ github.base_ref }}...HEAD"
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^..HEAD
+          else
+            git diff --check
+          fi
+      - name: Scan committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

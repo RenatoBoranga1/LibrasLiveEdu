@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  AUTH_SESSION_CHANGED_EVENT,
   clearAuthTokens,
   getMe,
   getStoredAccessToken,
@@ -38,6 +39,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const sessionRevision = useRef(0);
+
+  useEffect(() => {
+    const handleSessionChange = (event: Event) => {
+      const nextUser = (event as CustomEvent<AuthUser | null>).detail;
+      setUser(nextUser ? normalizeAuthUser(nextUser) : null);
+      setLoading(false);
+    };
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, handleSessionChange);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, handleSessionChange);
+  }, []);
 
   useEffect(() => {
     let active = true;

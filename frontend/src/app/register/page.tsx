@@ -7,6 +7,7 @@ import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { getApiErrorMessage } from "@/services/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -32,8 +33,8 @@ export default function RegisterPage() {
         guardian_email: guardianEmail || undefined,
       });
       router.replace(response.user.role === "admin" || response.user.role === "curator" ? "/admin" : "/profile");
-    } catch {
-      setError("Não foi possível criar a conta. Use uma senha com 8 ou mais caracteres e confira o e-mail.");
+    } catch (caught) {
+      setError(getApiErrorMessage(caught, "Não foi possível criar a conta. Use uma senha com 8 ou mais caracteres e confira o e-mail."));
     }
   }
 

@@ -1,4 +1,5 @@
 import type { AdminStats, AuthResponse, AuthUser, ClassReview, ClassSession, LiveSummary, SignCategory, SignRecord, Subject } from "@/types/live";
+import type { ApiErrorPayload as StandardApiErrorPayload } from "@/types/domain";
 
 export function normalizeApiBase(value?: string) {
   const normalized = (value?.trim() || "http://localhost:8000").replace(/\/+$/, "");
@@ -9,11 +10,7 @@ export const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
 export const WS_BASE = API_BASE.replace(/^http/, "ws");
 export const AUTH_SESSION_CHANGED_EVENT = "libraslive:auth-session-changed";
 
-export type ApiErrorPayload = {
-  code?: string;
-  message?: string;
-  field?: string;
-  request_id?: string;
+export type ApiErrorPayload = Partial<StandardApiErrorPayload> & {
   detail?: unknown;
 };
 

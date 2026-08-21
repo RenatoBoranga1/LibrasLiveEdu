@@ -1,3 +1,5 @@
+import type { SignStatus, UserRole } from "@/types/domain";
+
 export type ClassSession = {
   id: number;
   title: string;
@@ -42,7 +44,7 @@ export type SignCard = {
   queueKey?: string;
   word: string;
   normalizedWord?: string | null;
-  status: "approved" | "pending" | "review" | "rejected" | "missing" | "unavailable" | string;
+  status: SignStatus | (string & {});
   title?: string;
   gloss?: string | null;
   imageUrl?: string | null;
@@ -67,7 +69,7 @@ export type AuthUser = {
   id: number;
   name: string;
   email: string;
-  role: "admin" | "professor" | "student" | "curator" | "guardian" | string;
+  role: UserRole | (string & {});
   guardian_email?: string | null;
   school_name?: string | null;
 };

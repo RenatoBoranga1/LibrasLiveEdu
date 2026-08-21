@@ -10,22 +10,15 @@ import { LibrasLiveIcon } from "@/components/LibrasLiveIcon";
 import { ModeBadge } from "@/components/ModeBadge";
 import { LibrasLiveRealisticVisual } from "@/components/brand/LibrasLiveRealisticVisual";
 import { PageHero } from "@/components/ui/ProductUI";
+import { LoadingState } from "@/components/ui/AsyncStates";
 import { useRequireRole } from "@/features/auth/AuthProvider";
-import {
-  curateSign,
-  getAdminStats,
-  importSampleCsv,
-  importSampleJson,
-  importViaApi,
-  listSignAudit,
-  listCategories,
-  listSigns,
-  listSubjects,
-  rejectSign,
-  updateSignMedia,
-  validateMediaUrl,
-  type MediaValidationResult
-} from "@/services/api";
+import { ApprovalChecklist } from "@/features/curation/components/ApprovalChecklist";
+import { AuditTimeline } from "@/features/curation/components/AuditTimeline";
+import { MediaValidationPanel } from "@/features/curation/components/MediaValidationPanel";
+import { listCategories, listSubjects } from "@/services/classesApi";
+import { getAdminStats, importSampleCsv, importSampleJson, importViaApi } from "@/services/adminApi";
+import { curateSign, listSignAudit, listSigns, rejectSign, updateSignMedia } from "@/services/signsApi";
+import { validateMediaUrl, type MediaValidationResult } from "@/services/mediaApi";
 import type { AdminStats, SignCategory, SignRecord, Subject } from "@/types/live";
 
 const INES_SOURCE_NAME = "Dicionário da Língua Brasileira de Sinais - INES";
@@ -65,6 +58,7 @@ export default function AdminPage() {
   const [categoryId, setCategoryId] = useState("");
   const [subjectId, setSubjectId] = useState("");
   const [inesOnly, setInesOnly] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState("");
   const [categories, setCategories] = useState<SignCategory[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selected, setSelected] = useState<SignRecord | null>(fallbackSigns[0]);
@@ -81,6 +75,25 @@ export default function AdminPage() {
     if (inesOnly) search.set("source_name", INES_SOURCE_NAME);
     return search;
   }, [word, status, categoryId, subjectId, inesOnly]);
+
+  const visibleSigns = useMemo(() => signs.filter((sign) => {
+    const hasVideo = Boolean(sign.avatar_video_url || sign.video_url);
+    const hasGif = Boolean(sign.avatar_gif_url);
+    const hasAnimation = Boolean(sign.avatar_animation_url);
+    const hasAvatarMedia = hasVideo || hasGif || hasAnimation;
+    const hasAnyMedia = hasAvatarMedia || Boolean(sign.image_url);
+    if (mediaFilter === "video") return hasVideo;
+    if (mediaFilter === "gif") return hasGif;
+    if (mediaFilter === "animation") return hasAnimation;
+    if (mediaFilter === "image") return Boolean(sign.image_url) && !hasAvatarMedia;
+    if (mediaFilter === "none") return !hasAnyMedia;
+    if (mediaFilter === "avatar") return hasAvatarMedia;
+    if (mediaFilter === "missing-source") return !sign.source_name || !sign.source_url;
+    if (mediaFilter === "missing-license") return !sign.license || !sign.license_notes;
+    if (mediaFilter === "specialist") return sign.status === "needs_specialist_review" || sign.curator_notes?.toLowerCase().includes("especialista");
+    if (mediaFilter === "regionalism") return Boolean(sign.curator_notes?.toLowerCase().match(/regional|varia[cç][aã]o/));
+    return true;
+  }), [mediaFilter, signs]);
 
   function refresh() {
     getAdminStats().then(setStats).catch(() => setStats(fallbackStats));
@@ -216,12 +229,12 @@ export default function AdminPage() {
     return (
       <main className="min-h-screen bg-paper dark:bg-zinc-950">
         <AppHeader />
-        <div role="status" className="mx-auto max-w-lg px-4 py-10 text-lg font-black text-ink dark:text-white">
-          Verificando permissão...
-        </div>
+        <div className="mx-auto max-w-lg px-4 py-10"><LoadingState label="Verificando permissão..." /></div>
       </main>
     );
   }
+
+  const isAdmin = auth.user?.role === "admin";
 
   return (
     <main className="min-h-screen bg-paper dark:bg-zinc-950">
@@ -252,12 +265,12 @@ export default function AdminPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <ModeBadge />
-            <h2 className="mt-3 text-2xl font-black text-ink dark:text-white">Ferramentas de curadoria</h2>
+            <h2 className="mt-3 text-2xl font-black text-ink dark:text-white">{isAdmin ? "Ferramentas de administração" : "Fila de curadoria"}</h2>
             <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
-              Acesse importadores controlados, validação de mídia e rotinas de catálogo sem alterar o fluxo de aprovação manual.
+              {isAdmin ? "Acesse importadores controlados, validação de mídia e rotinas de catálogo sem alterar o fluxo de aprovação manual." : "Revise sinais, confira fonte, licença e mídia e registre a decisão de curadoria."}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {isAdmin ? <div className="flex flex-wrap gap-2">
             <Link className="focus-ring inline-flex min-h-12 items-center justify-center rounded-lg bg-ocean px-4 py-3 text-base font-bold text-white" href="/admin/signs/new">
               Novo sinal INES
             </Link>
@@ -291,7 +304,7 @@ export default function AdminPage() {
               <Database className="h-5 w-5" aria-hidden="true" />
               Importar via API
             </ActionButton>
-          </div>
+          </div> : null}
         </div>
 
         <section className="rounded-lg border border-amber/40 bg-amber/15 p-4 shadow-soft dark:border-amber/30" aria-labelledby="add-words-callout">
@@ -334,7 +347,7 @@ export default function AdminPage() {
 
         <div className="grid gap-5 lg:grid-cols-[1fr_390px]">
           <section className="rounded-lg border border-ink/10 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-            <div className="mb-4 rounded-lg border border-ocean/15 bg-teal-50 p-4 dark:border-white/10 dark:bg-zinc-800">
+            {isAdmin ? <div className="mb-4 rounded-lg border border-ocean/15 bg-teal-50 p-4 dark:border-white/10 dark:bg-zinc-800">
               <h2 className="text-lg font-black text-ink dark:text-white">Preencher URLs automaticamente</h2>
               <p className="mt-1 text-sm font-semibold leading-relaxed text-ink/70 dark:text-white/70">
                 A rotina completa roda em tela dedicada, com diagnóstico, lote pequeno, busca INES/IFPR, relatório por palavra e auditoria. Ela não roda em build/deploy.
@@ -348,7 +361,7 @@ export default function AdminPage() {
               <Link className="focus-ring ml-2 mt-3 inline-flex min-h-12 items-center rounded-lg bg-white px-4 py-3 text-sm font-bold text-ocean shadow-soft dark:bg-zinc-950 dark:text-mint" href="/admin/media-crawler">
                 Gerar catálogos
               </Link>
-            </div>
+            </div> : null}
             <div className="flex flex-wrap items-end gap-3 border-b border-ink/10 pb-4 dark:border-white/10">
               <div className="min-w-52 flex-1">
                 <label className="block text-sm font-bold text-ink/70 dark:text-white/70" htmlFor="word-filter">
@@ -377,6 +390,22 @@ export default function AdminPage() {
                   <option value="review">Revisão</option>
                   <option value="needs_specialist_review">Especialista</option>
                   <option value="rejected">Rejeitados</option>
+                </select>
+              </div>
+              <div className="min-w-52">
+                <label className="block text-sm font-bold text-ink/70 dark:text-white/70" htmlFor="media-filter">Mídia e pendências</label>
+                <select id="media-filter" className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 dark:border-white/15 dark:bg-zinc-950 dark:text-white" value={mediaFilter} onChange={(event) => setMediaFilter(event.target.value)}>
+                  <option value="">Todas</option>
+                  <option value="video">Com vídeo</option>
+                  <option value="gif">Com GIF</option>
+                  <option value="animation">Com animação</option>
+                  <option value="image">Apenas imagem de apoio</option>
+                  <option value="none">Sem mídia</option>
+                  <option value="avatar">Pronto para Avatar após aprovação</option>
+                  <option value="missing-source">Sem fonte completa</option>
+                  <option value="missing-license">Sem licença completa</option>
+                  <option value="specialist">Precisa de especialista</option>
+                  <option value="regionalism">Possível regionalismo</option>
                 </select>
               </div>
               <div className="min-w-48">
@@ -443,7 +472,8 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {signs.map((sign) => {
+                  {!visibleSigns.length ? <tr><td colSpan={6} className="rounded-lg border border-dashed border-ink/15 px-4 py-8 text-center text-sm font-bold text-ink/60 dark:border-white/15 dark:text-white/60">Nenhum sinal corresponde aos filtros atuais.</td></tr> : null}
+                  {visibleSigns.map((sign) => {
                     const hasAvatarMedia = Boolean(sign.video_url || sign.avatar_video_url || sign.avatar_gif_url || sign.avatar_animation_url);
                     const hasSupportImage = Boolean(sign.image_url);
                     const hasMedia = hasAvatarMedia || hasSupportImage;
@@ -539,6 +569,7 @@ export default function AdminPage() {
                       {selected.video_url || selected.avatar_video_url ? "Com vídeo" : selected.avatar_gif_url ? "Com GIF" : selected.avatar_animation_url ? "Com animação" : selected.image_url ? "Com imagem de apoio" : "Sem mídia"}
                     </span>
                   </div>
+                  <ApprovalChecklist sign={selected} />
                   <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
                     Fonte
                     <input
@@ -654,26 +685,7 @@ export default function AdminPage() {
                         : "Sem video/GIF/animacao cadastrado. Aprovar este sinal sem midia animada fara o Avatar Libras manter fallback visual."}
                     </div>
                   )}
-                  <div className="rounded-lg border border-ink/10 bg-teal-50 p-3 dark:border-white/10 dark:bg-zinc-800">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-black text-ink dark:text-white">Validação da mídia animada</p>
-                      <ActionButton tone="quiet" onClick={testSelectedMedia}>
-                        Testar mídia
-                      </ActionButton>
-                    </div>
-                    {mediaValidation ? (
-                      <div className={`mt-3 rounded-lg p-3 text-sm font-bold ${mediaValidation.valid ? "bg-mint/40 text-ink" : "bg-red-100 text-red-950"}`}>
-                        <p>Validada: {mediaValidation.valid ? "Sim" : "Não"}</p>
-                        <p>Status HTTP: {mediaValidation.status_code ?? "-"}</p>
-                        <p>Content-Type: {mediaValidation.content_type ?? "-"}</p>
-                        <p className="break-all">URL final: {mediaValidation.final_url || mediaValidation.url}</p>
-                        <p>{mediaValidation.reason}</p>
-                        {!mediaValidation.valid ? <p className="mt-2 font-black">Esta mídia não carregou corretamente. Não aprove como Avatar.</p> : null}
-                      </div>
-                    ) : (
-                      <p className="mt-2 text-sm font-bold text-ink/70 dark:text-white/70">Teste antes de salvar/aprovar URLs novas de vídeo, GIF ou animação.</p>
-                    )}
-                  </div>
+                  <MediaValidationPanel result={mediaValidation} onValidate={() => void testSelectedMedia()} />
                   <label className="block text-sm font-bold text-ink/70 dark:text-white/70">
                     Notas do curador
                     <textarea
@@ -697,16 +709,7 @@ export default function AdminPage() {
                 </div>
               )}
             </section>
-            <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900">
-              <h2 className="text-xl font-black text-ink dark:text-white">Historico de alteracoes</h2>
-              <div className="mt-3 space-y-2 text-sm font-semibold text-ink/70 dark:text-white/70">
-                {(auditLog.length ? auditLog : [{ id: 0, action: "Sem histórico carregado", created_at: "" }]).map((item) => (
-                  <p key={item.id} className="rounded-lg bg-teal-50 p-3 dark:bg-zinc-800">
-                    {item.action} {item.created_at ? `- ${new Date(item.created_at).toLocaleString("pt-BR")}` : ""}
-                  </p>
-                ))}
-              </div>
-            </section>
+            <AuditTimeline entries={auditLog} />
             <div className="rounded-lg bg-amber/15 p-4 text-sm font-bold leading-relaxed text-ink dark:text-white">{message}</div>
             <InstitutionalNotice />
           </aside>

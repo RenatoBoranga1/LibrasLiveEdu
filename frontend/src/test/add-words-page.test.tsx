@@ -120,5 +120,7 @@ describe("add words admin flow", () => {
 
     expect(screen.getAllByRole("link", { name: /adicionar novas palavras/i })[0]).toHaveAttribute("href", "/admin/add-words");
     expect(screen.getByText(/escolha entre cadastro manual/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /fila de curadoria/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /catálogo completo ines/i })).not.toBeInTheDocument();
   });
 });

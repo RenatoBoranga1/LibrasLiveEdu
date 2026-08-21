@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { LibrasLiveIcon } from "@/components/LibrasLiveIcon";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
 
 export function AppSection({
   id,
@@ -46,11 +48,11 @@ export function FeatureCard({ icon: Icon, title, description, accent = "ocean" }
     coral: "bg-red-50 text-coral dark:bg-red-950/30 dark:text-red-200",
   };
   return (
-    <article className="h-full rounded-lg border border-ink/10 bg-white p-5 shadow-soft transition duration-200 hover:-translate-y-1 hover:border-ocean/25 dark:border-white/10 dark:bg-zinc-900">
+    <Card className="h-full shadow-soft transition duration-200 hover:-translate-y-1 hover:border-ocean/25">
       <span className={`grid h-11 w-11 place-items-center rounded-lg ${accents[accent]}`}><Icon className="h-5 w-5" aria-hidden="true" /></span>
       <h3 className="mt-5 text-xl font-extrabold">{title}</h3>
       <p className="mt-2 text-sm font-medium leading-relaxed text-ink/66 dark:text-white/66">{description}</p>
-    </article>
+    </Card>
   );
 }
 
@@ -76,16 +78,16 @@ export function InfoBadge({ children, tone = "ocean" }: { children: ReactNode; t
     amber: "bg-amber text-amber-strong dark:bg-amber/15 dark:text-amber",
     neutral: "bg-zinc-100 text-ink/70 dark:bg-white/10 dark:text-white/70",
   };
-  return <span className={`inline-flex min-h-8 items-center rounded-full px-3 py-1 text-xs font-extrabold ${tones[tone]}`}>{children}</span>;
+  return <Badge className={`min-h-8 px-3 ${tones[tone]}`}>{children}</Badge>;
 }
 
 export function StatCard({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
   return (
-    <article className="rounded-lg border border-ink/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-zinc-900">
+    <Card>
       <p className="text-xs font-extrabold uppercase text-ink/58 dark:text-white/58">{label}</p>
       <p className="mt-2 text-3xl font-extrabold text-ocean dark:text-mint-strong">{value}</p>
       {detail && <p className="mt-1 text-xs font-medium text-ink/55 dark:text-white/55">{detail}</p>}
-    </article>
+    </Card>
   );
 }
 

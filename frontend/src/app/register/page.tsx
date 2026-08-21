@@ -7,7 +7,7 @@ import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { getApiErrorMessage } from "@/services/api";
+import { getApiErrorMessage } from "@/services/authApi";
 
 export default function RegisterPage() {
   const router = useRouter();

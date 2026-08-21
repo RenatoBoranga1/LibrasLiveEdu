@@ -1,0 +1,5 @@
+export type AuditEntry = { id: number; action: string; created_at: string };
+
+export function AuditTimeline({ entries }: { entries: AuditEntry[] }) {
+  return <section className="rounded-lg border border-ink/10 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-zinc-900" aria-labelledby="audit-timeline-title"><h2 id="audit-timeline-title" className="text-xl font-extrabold text-ink dark:text-white">Histórico de alterações</h2>{entries.length ? <ol className="mt-4 border-l-2 border-ocean/20 pl-4">{entries.map((item) => <li key={item.id} className="relative pb-4 text-sm font-semibold text-ink/70 last:pb-0 dark:text-white/70"><span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-ocean ring-4 ring-white dark:bg-mint dark:ring-zinc-900" aria-hidden="true" /><p className="font-extrabold text-ink dark:text-white">{item.action}</p>{item.created_at ? <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString("pt-BR")}</time> : null}</li>)}</ol> : <p className="mt-3 text-sm font-semibold text-ink/60 dark:text-white/60">Nenhuma alteração registrada para este sinal.</p>}</section>;
+}

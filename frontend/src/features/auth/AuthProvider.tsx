@@ -11,7 +11,7 @@ import {
   logoutRequest,
   register as registerRequest,
   storeAuthTokens,
-} from "@/services/api";
+} from "@/services/authApi";
 import type { AuthResponse, AuthUser } from "@/types/live";
 import { isRoleAllowed, normalizeAuthUser } from "./roles";
 

@@ -46,21 +46,18 @@ textarea {
   font: inherit;
 }
 
-button,
-a,
-input,
-select,
-textarea {
+.touch-target {
   min-height: 44px;
+  min-width: 44px;
 }
 
 .high-contrast {
-  background: #000 !important;
-  color: #fff !important;
+  background: #000;
+  color: #fff;
 }
 
-.high-contrast * {
-  border-color: #fff !important;
+.high-contrast :is(header, section, article, details, input, select, textarea) {
+  border-color: #fff;
 }
 
 .high-contrast button,
@@ -75,8 +72,8 @@ textarea {
 .student-classroom.high-contrast > header [role="status"],
 .student-classroom.high-contrast > div > [role="status"],
 .student-classroom.high-contrast > div > [role="alert"] {
-  background: #000 !important;
-  color: #fff !important;
+  background: #000;
+  color: #fff;
 }
 
 .student-classroom.high-contrast > header p,
@@ -84,13 +81,13 @@ textarea {
 .student-classroom.high-contrast > header [role="status"] *,
 .student-classroom.high-contrast > div > [role="status"] *,
 .student-classroom.high-contrast > div > [role="alert"] * {
-  color: #fff !important;
+  color: #fff;
 }
 
 .student-classroom.high-contrast > div > [role="status"] > span:first-child,
 .student-classroom.high-contrast > div > [role="alert"] > span:first-child {
-  background: #fff !important;
-  color: #000 !important;
+  background: #fff;
+  color: #000;
 }
 
 .focus-ring {

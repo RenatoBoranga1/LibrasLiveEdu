@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { WS_BASE } from "@/services/api";
+import { WS_BASE } from "@/services/publicApi";
 import { mapLiveSummary } from "@/services/api";
 import type { SignCard, LiveSummary, LiveTranscriptSegment } from "@/types/live";
 

@@ -7,9 +7,13 @@ import { LogIn } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { AppHeader } from "@/components/AppHeader";
 import { InstitutionalNotice } from "@/components/InstitutionalNotice";
+import { Card } from "@/components/ui/Card";
+import { InlineFeedback } from "@/components/ui/Feedback";
+import { Input } from "@/components/ui/FormControls";
+import { PageShell } from "@/components/ui/Layout";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { getRoleHome } from "@/features/auth/roles";
-import { getApiErrorMessage } from "@/services/api";
+import { getApiErrorMessage } from "@/services/authApi";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
@@ -40,17 +44,13 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-paper dark:bg-zinc-950">
       <AppHeader />
-      <section className="mx-auto grid max-w-xl gap-4 px-4 py-8">
-        <div className="rounded-lg border border-ink/10 bg-white p-6 shadow-soft dark:border-white/10 dark:bg-zinc-900">
+      <PageShell width="narrow" className="grid gap-4 py-8">
+        <Card as="section" padding="lg" className="shadow-soft">
           <h1 className="text-3xl font-black text-ink dark:text-white">Entrar</h1>
           <p className="mt-2 text-sm font-semibold text-ink/70 dark:text-white/70">
             Professores, administradores e curadores precisam de login para proteger aulas e sinais.
           </p>
-          {error && (
-            <div role="alert" className="mt-4 rounded-lg bg-red-100 p-3 text-sm font-bold text-red-900">
-              {error}
-            </div>
-          )}
+          {error ? <InlineFeedback className="mt-4" variant="error">{error}</InlineFeedback> : null}
           {demoMode && (
             <div className="mt-4 rounded-lg bg-amber/20 p-3 text-sm font-bold leading-relaxed text-ink dark:text-white">
               <p>Credenciais de demonstração</p>
@@ -59,28 +59,8 @@ export default function LoginPage() {
             </div>
           )}
           <form className="mt-5 space-y-4" onSubmit={submit}>
-            <label className="block text-sm font-bold text-ink/75 dark:text-white/75">
-              E-mail
-              <input
-                className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 text-ink dark:border-white/15 dark:bg-zinc-950 dark:text-white"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </label>
-            <label className="block text-sm font-bold text-ink/75 dark:text-white/75">
-              Senha
-              <input
-                className="focus-ring mt-2 w-full rounded-lg border border-ink/15 bg-white px-4 py-3 text-ink dark:border-white/15 dark:bg-zinc-950 dark:text-white"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
-            </label>
+            <Input label="E-mail" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+            <Input label="Senha" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
             <ActionButton>
               <LogIn className="h-5 w-5" aria-hidden="true" />
               Entrar com segurança
@@ -89,9 +69,9 @@ export default function LoginPage() {
           <p className="mt-4 text-sm font-semibold text-ink/70 dark:text-white/70">
             Ainda não tem conta? <Link className="text-ocean underline dark:text-mint" href="/register">Cadastrar</Link>
           </p>
-        </div>
+        </Card>
         <InstitutionalNotice />
-      </section>
+      </PageShell>
     </main>
   );
 }

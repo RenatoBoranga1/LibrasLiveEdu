@@ -138,4 +138,13 @@ describe("frontend authentication session", () => {
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/unauthorized"));
   });
+
+  it("opens and closes the accessible mobile navigation", async () => {
+    render(<AuthProvider><SessionHarness /></AuthProvider>);
+    const trigger = screen.getByRole("button", { name: /abrir menu/i });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(trigger);
+    expect(screen.getByRole("navigation", { name: /navegação principal no celular/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /fechar menu/i })).toHaveAttribute("aria-expanded", "true");
+  });
 });
